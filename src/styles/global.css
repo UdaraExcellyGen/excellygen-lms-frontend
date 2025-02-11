@@ -1,0 +1,38 @@
+/* src/styles/global.css */
+
+/* Import Google Fonts */
+/* Add this at the top of your global.css */
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600;6..12,700&family=Unbounded:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Add default font families in the base layer */
+@layer base {
+  html {
+    font-family: 'Nunito Sans', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Unbounded', sans-serif;
+  }
+}
+
+@layer components {
+  .tooltip {
+    @apply invisible opacity-0 absolute left-full ml-2 px-2 py-1 bg-russian-violet text-white text-sm rounded-md whitespace-nowrap;
+    transform: translateY(-50%);
+    transition: all 0.2s ease;
+  }
+
+  .tooltip::before {
+    content: '';
+    @apply absolute top-1/2 -left-1 w-2 h-2 bg-russian-violet transform rotate-45 -translate-y-1/2;
+  }
+
+  .tooltip-container:hover .tooltip {
+    @apply visible opacity-100;
+  }
+}

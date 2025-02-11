@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import LandingPage from './pages/main/LandingPage/LandingPage';
 
 
 
@@ -10,7 +11,7 @@ function App() {
     <BrowserRouter>
       <div className="min-h-screen flex flex-col">
         <Routes>
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={<LandingPage/>} />
 
 
         </Routes>
