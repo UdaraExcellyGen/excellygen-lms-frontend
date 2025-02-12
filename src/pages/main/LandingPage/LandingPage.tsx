@@ -11,7 +11,7 @@ import {
 import NavBar from '../../../components/Layout/Navbar/NavBar';
 import Footer from '../../../components/Layout/Footer/Footer';
 import LoginModal from '../LoginModal/LoginModal';
-import heroSvg from '../../assets/hero.svg'
+import heroSvg from '../../../assets/hero.svg';
 
 const LandingPage = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);

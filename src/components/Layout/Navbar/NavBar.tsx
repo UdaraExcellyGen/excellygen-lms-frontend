@@ -1,6 +1,6 @@
 // src/components/NavBar.tsx
 import React, { useState } from 'react';
-import LoginModal from './LoginModal';
+import LoginModal from '../../../pages/main/LoginModal/LoginModal';
 
 const NavBar = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
