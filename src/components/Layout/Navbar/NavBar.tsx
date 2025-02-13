@@ -1,9 +1,8 @@
-// src/components/NavBar.tsx
 import React, { useState } from 'react';
-import LoginModal from '../../../pages/main/LoginModal/LoginModal';
+import AuthContainer from '../../../features/auth/AuthContainer';
 
 const NavBar = () => {
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   return (
     <>
@@ -31,7 +30,7 @@ const NavBar = () => {
             {/* Nav Links */}
             <div className="flex items-center space-x-4">
               <button 
-                onClick={() => setIsLoginOpen(true)}
+                onClick={() => setIsAuthOpen(true)}
                 className="px-4 py-2 text-base text-french-violet hover:text-indigo transition-colors duration-200 font-medium"
               >
                 Login
@@ -44,10 +43,10 @@ const NavBar = () => {
         </div>
       </nav>
 
-      {/* Login Modal */}
-      <LoginModal 
-        isOpen={isLoginOpen} 
-        onClose={() => setIsLoginOpen(false)} 
+      {/* Auth Container (handles both Login and Reset Password) */}
+      <AuthContainer 
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
       />
     </>
   );
