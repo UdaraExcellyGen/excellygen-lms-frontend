@@ -29,7 +29,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onClose, onForgotPassword }) => {
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
       onClose();
-      navigate('/student-dashboard');
+      navigate('/learner/dashboard');
     } catch (error) {
       console.error('Login error:', error);
     } finally {

@@ -1,7 +1,7 @@
 // src/components/Layout.tsx
 import React from 'react';
-import Sidebar from './SideBar';
 import { useSidebar } from '../contexts/SidebarContext';
+import SideBar from '../Sidebar/SideBar';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,7 +12,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-[#52007C] to-[#1B0A3F]">
-      <Sidebar />
+      <SideBar />
       <div 
         className={`
           flex-1 
