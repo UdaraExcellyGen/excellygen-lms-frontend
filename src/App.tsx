@@ -19,6 +19,7 @@ function App() {
           <Route path="/coordinator/analytics" element={<CourseCoordinatorAnalytics/>} />
           <Route path="/coordinator/dashboard" element={<CourseCoordinatorDashboard/>} />
           <Route path="/learner/dashboard" element={<SidebarProvider><LearnerDashboard/></SidebarProvider>} />
+          <Route path="/learner/dashboard" element={<SidebarProvider><LearnerDashboard/></SidebarProvider>} />
           
           
 
