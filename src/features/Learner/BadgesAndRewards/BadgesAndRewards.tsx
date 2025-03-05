@@ -7,11 +7,11 @@ import StatsOverview from './components/StatsOverview';
 import BadgeGrid from './components/BadgeGrid';
 import ConfirmClaimModal from './components/ConfirmClaimModal';
 
-// Import CSS for animations
+
 import '../../../styles/animations.css';
 
 const BadgesAndRewards: React.FC = () => {
-  // State for modal management
+ 
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
   const [badges, setBadges] = useState<Badge[]>(badgesData);
@@ -23,7 +23,7 @@ const BadgesAndRewards: React.FC = () => {
 
   const confirmClaim = () => {
     if (selectedBadge) {
-      // Update the badge to mark it as claimed
+      
       setBadges(
         badges.map(badge => 
           badge.id === selectedBadge.id

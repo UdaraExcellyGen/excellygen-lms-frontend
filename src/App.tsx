@@ -7,6 +7,7 @@ import LearnerDashboard from './features/Learner/LearnerDashboard/LearnerDashboa
 import { SidebarProvider } from './components/Layout/Sidebar/contexts/SidebarContext';
 import CourseDetails from './features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails';
 import BadgesAndRewards from './features/Learner/BadgesAndRewards/BadgesAndRewards';
+import LearnerProjects from './features/Learner/LearnerProjects/LearnerProjects';
 
 
 
@@ -22,8 +23,12 @@ function App() {
           <Route path="/coordinator/dashboard" element={<CourseCoordinatorDashboard/>} />
           <Route path="/learner/dashboard" element={<SidebarProvider><LearnerDashboard/></SidebarProvider>} />
           <Route path="/badges-rewards" element={<SidebarProvider><BadgesAndRewards/></SidebarProvider>} />
+          <Route path="/learner-projects" element={<SidebarProvider><LearnerProjects/></SidebarProvider>} />
           <Route path="/coordinator/course-details" element={<CourseDetails/>} />
 
+
+
+          
 
         </Routes>
       </div>
