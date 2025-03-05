@@ -21,7 +21,7 @@ function App() {
           <Route path="/coordinator/analytics" element={<CourseCoordinatorAnalytics/>} />
           <Route path="/coordinator/dashboard" element={<CourseCoordinatorDashboard/>} />
           <Route path="/learner/dashboard" element={<SidebarProvider><LearnerDashboard/></SidebarProvider>} />
-          <Route path="/learner/badgesrewards" element={<SidebarProvider><BadgesAndRewards/></SidebarProvider>} />
+          <Route path="/badges-rewards" element={<SidebarProvider><BadgesAndRewards/></SidebarProvider>} />
           <Route path="/coordinator/course-details" element={<CourseDetails/>} />
 
 

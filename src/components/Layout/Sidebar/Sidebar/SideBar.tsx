@@ -50,7 +50,7 @@ const Sidebar = () => {
   };
 
   const learningMenuItems: MenuItem[] = [
-    { title: 'Dashboard', icon: Home, path: '/student-dashboard' },
+    { title: 'Dashboard', icon: Home, path: '/learner/dashboard' },
     { title: 'Courses', icon: BookOpen, path: '/courses' },
   ];
 
@@ -62,7 +62,7 @@ const Sidebar = () => {
 
   const progressMenuItems: MenuItem[] = [
     { title: 'Certificates', icon: Award, path: '/certificate' },
-    { title: 'Badges & Rewards', icon: Trophy, path: '/badgesrewards' },
+    { title: 'Badges & Rewards', icon: Trophy, path: '/badges-rewards' },
     { title: 'Notifications', icon: Bell, path: '/notifications' },
   ];
 

@@ -1,10 +1,10 @@
-import React from 'react';
+import { ElementType } from 'react';
 
 export interface Badge {
   id: number;
   title: string;
   description: string;
-  icon: React.ElementType;
+  icon: ElementType;
   currentProgress: number;
   targetProgress: number;
   isUnlocked: boolean;
@@ -12,9 +12,9 @@ export interface Badge {
   category?: string;
 }
 
-export interface ConfirmClaimModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  badge: Badge | null;
+export interface BadgeStat {
+  icon: ElementType;
+  label: string;
+  value: string | number;
+  color: string;
 }

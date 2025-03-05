@@ -1,7 +1,13 @@
-
 import React from 'react';
 import { X } from 'lucide-react';
-import { ConfirmClaimModalProps } from '../types/BadgeTypes';
+import { Badge } from '../types/Badge';
+
+interface ConfirmClaimModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  badge: Badge | null;
+}
 
 const ConfirmClaimModal: React.FC<ConfirmClaimModalProps> = ({ 
   isOpen, 
