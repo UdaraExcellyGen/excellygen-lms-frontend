@@ -20,10 +20,7 @@ function App() {
           <Route path="/coordinator/analytics" element={<CourseCoordinatorAnalytics/>} />
           <Route path="/coordinator/dashboard" element={<CourseCoordinatorDashboard/>} />
           <Route path="/learner/dashboard" element={<SidebarProvider><LearnerDashboard/></SidebarProvider>} />
-          <Route path="/coordinator/course-details" element={<CourseDetails/>} />
-          
-          
-
+          <Route path="/coordinator/course-details" element={<CourseDetails/>} 
 
         </Routes>
       </div>
