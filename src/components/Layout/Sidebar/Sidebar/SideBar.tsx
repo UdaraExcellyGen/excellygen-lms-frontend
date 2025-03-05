@@ -62,7 +62,7 @@ const Sidebar = () => {
 
   const progressMenuItems: MenuItem[] = [
     { title: 'Certificates', icon: Award, path: '/certificate' },
-    { title: 'Badges & Rewards', icon: Trophy, path: '/badges-rewards' },
+    { title: 'Badges & Rewards', icon: Trophy, path: '/badgesrewards' },
     { title: 'Notifications', icon: Bell, path: '/notifications' },
   ];
 
