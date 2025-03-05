@@ -5,6 +5,7 @@ import CourseCoordinatorAnalytics from './features/Coordinator/Analytics/CourseC
 import CourseCoordinatorDashboard from './features/Coordinator/CoordinatorDashboard/CourseCoordinatorDashboard';
 import LearnerDashboard from './features/Learner/LearnerDashboard/LearnerDashboard';
 import { SidebarProvider } from './components/Layout/Sidebar/contexts/SidebarContext';
+import CourseDetails from './features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails';
 
 
 
@@ -19,10 +20,7 @@ function App() {
           <Route path="/coordinator/analytics" element={<CourseCoordinatorAnalytics/>} />
           <Route path="/coordinator/dashboard" element={<CourseCoordinatorDashboard/>} />
           <Route path="/learner/dashboard" element={<SidebarProvider><LearnerDashboard/></SidebarProvider>} />
-          <Route path="/learner/dashboard" element={<SidebarProvider><LearnerDashboard/></SidebarProvider>} />
-          
-          
-
+          <Route path="/coordinator/course-details" element={<CourseDetails/>} 
 
         </Routes>
       </div>
