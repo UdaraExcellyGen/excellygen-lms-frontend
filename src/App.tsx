@@ -11,6 +11,7 @@ import LearnerProjects from './features/Learner/LearnerProjects/LearnerProjects'
 import AdminNotificationGroup from './features/Admin/AdminNotifications/Components/NotificationGroup';
 import AdminNotifications from './features/Admin/AdminNotifications/MainAdminNotification';
 import AdminAnalytics from './features/Admin/AdminAnalytics/Adminanalytics';
+import CCNotifications from './features/Coordinator/CoordinatorNotification/CCNotifications';
 
 
 
@@ -30,6 +31,7 @@ function App() {
           <Route path="/coordinator/course-details" element={<CourseDetails/>} />
           <Route path="/admin/notifications" element={<AdminNotifications/>} />
           <Route path="/admin/analytics" element={<AdminAnalytics/>} />
+          <Route path="/coordinator/notifications" element={<CCNotifications/>} />
 
 
 
