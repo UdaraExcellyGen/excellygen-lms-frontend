@@ -10,7 +10,7 @@ import BadgesAndRewards from './features/Learner/BadgesAndRewards/BadgesAndRewar
 import LearnerProjects from './features/Learner/LearnerProjects/LearnerProjects';
 import AdminNotificationGroup from './features/Admin/AdminNotifications/Components/NotificationGroup';
 import AdminNotifications from './features/Admin/AdminNotifications/MainAdminNotification';
-
+import UploadMaterials from './features/Coordinator/CreateNewCourse/UploadMaterials/UploadMaterials';
 
 
 
@@ -28,6 +28,8 @@ function App() {
           <Route path="/learner-projects" element={<SidebarProvider><LearnerProjects/></SidebarProvider>} />
           <Route path="/coordinator/course-details" element={<CourseDetails/>} />
           <Route path="/admin/notifications" element={<AdminNotifications/>} />
+          <Route path="/coordinator/upload-materials" element={<UploadMaterials/>} />
+
 
 
 
