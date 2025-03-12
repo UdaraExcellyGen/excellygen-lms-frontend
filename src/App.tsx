@@ -8,10 +8,8 @@ import { SidebarProvider } from './components/Layout/Sidebar/contexts/SidebarCon
 import CourseDetails from './features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails';
 import BadgesAndRewards from './features/Learner/BadgesAndRewards/BadgesAndRewards';
 import LearnerProjects from './features/Learner/LearnerProjects/LearnerProjects';
-
-
-
-
+import ProjectManagerDashboard from './features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard';
+import EmployeeAssign from './features/ProjectManager/Employee-assign/Employee-assign';
 
 function App() {
   return (
@@ -25,11 +23,8 @@ function App() {
           <Route path="/badges-rewards" element={<SidebarProvider><BadgesAndRewards/></SidebarProvider>} />
           <Route path="/learner-projects" element={<SidebarProvider><LearnerProjects/></SidebarProvider>} />
           <Route path="/coordinator/course-details" element={<CourseDetails/>} />
-
-
-
-          
-
+          <Route path="/project-manager/dashboard" element={<ProjectManagerDashboard/>} />
+          <Route path="/project-manager/employee-assign" element={<EmployeeAssign/>} />
         </Routes>
       </div>
     </BrowserRouter>
