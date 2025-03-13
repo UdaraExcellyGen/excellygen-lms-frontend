@@ -10,6 +10,7 @@ import BadgesAndRewards from './features/Learner/BadgesAndRewards/BadgesAndRewar
 import LearnerProjects from './features/Learner/LearnerProjects/LearnerProjects';
 import AdminNotifications from './features/Admin/AdminNotifications/MainAdminNotification';
 import Certificates from './features/Learner/Certificates/Certificates';
+import DiscussionForum from './features/Learner/DiscussionForum/DiscussionForum';
 
 
 
@@ -27,6 +28,7 @@ function App() {
           <Route path="/badges-rewards" element={<SidebarProvider><BadgesAndRewards/></SidebarProvider>} />
           <Route path="/learner-projects" element={<SidebarProvider><LearnerProjects/></SidebarProvider>} />
           <Route path="/certificate" element={<SidebarProvider><Certificates/></SidebarProvider>} />
+          <Route path="/forum" element={<SidebarProvider><DiscussionForum/></SidebarProvider>} />
           <Route path="/coordinator/course-details" element={<CourseDetails/>} />
           <Route path="/admin/notifications" element={<AdminNotifications/>} />
           
