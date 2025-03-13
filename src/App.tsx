@@ -8,8 +8,8 @@ import { SidebarProvider } from './components/Layout/Sidebar/contexts/SidebarCon
 import CourseDetails from './features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails';
 import BadgesAndRewards from './features/Learner/BadgesAndRewards/BadgesAndRewards';
 import LearnerProjects from './features/Learner/LearnerProjects/LearnerProjects';
-import AdminNotificationGroup from './features/Admin/AdminNotifications/Components/NotificationGroup';
 import AdminNotifications from './features/Admin/AdminNotifications/MainAdminNotification';
+import Certificates from './features/Learner/Certificates/Certificates';
 
 
 
@@ -26,9 +26,10 @@ function App() {
           <Route path="/learner/dashboard" element={<SidebarProvider><LearnerDashboard/></SidebarProvider>} />
           <Route path="/badges-rewards" element={<SidebarProvider><BadgesAndRewards/></SidebarProvider>} />
           <Route path="/learner-projects" element={<SidebarProvider><LearnerProjects/></SidebarProvider>} />
+          <Route path="/certificate" element={<SidebarProvider><Certificates/></SidebarProvider>} />
           <Route path="/coordinator/course-details" element={<CourseDetails/>} />
           <Route path="/admin/notifications" element={<AdminNotifications/>} />
-
+          
 
 
           
