@@ -10,6 +10,7 @@ import BadgesAndRewards from './features/Learner/BadgesAndRewards/BadgesAndRewar
 import LearnerProjects from './features/Learner/LearnerProjects/LearnerProjects';
 import AdminNotifications from './features/Admin/AdminNotifications/MainAdminNotification';
 import LearnerNotifications from './features/Learner/LearnerNotifications/LearnerNotification';
+import ProjectManagerNotification from './features/ProjectManager/PMnotifications/ProjectManagerNotification';
 
 
 
@@ -29,6 +30,8 @@ function App() {
           <Route path="/coordinator/course-details" element={<CourseDetails/>} />
           <Route path="/admin/notifications" element={<AdminNotifications/>} />
           <Route path="/Learner/notifications" element={<LearnerNotifications/>} />
+          <Route path="/ProjectManager/notifications" element={<ProjectManagerNotification/>} />
+
 
 
 
