@@ -9,9 +9,13 @@ import CourseDetails from './features/Coordinator/CreateNewCourse/BasicCourseDet
 import BadgesAndRewards from './features/Learner/BadgesAndRewards/BadgesAndRewards';
 import LearnerProjects from './features/Learner/LearnerProjects/LearnerProjects';
 import AdminNotifications from './features/Admin/AdminNotifications/MainAdminNotification';
+
+import UploadMaterials from './features/Coordinator/CreateNewCourse/UploadMaterials/UploadMaterials';
+
 import Certificates from './features/Learner/Certificates/Certificates';
 import DiscussionForum from './features/Learner/DiscussionForum/DiscussionForum';
 import L_Leaderboard from './features/Learner/L-leaderboard/L-Leaderboard';
+
 
 
 
@@ -32,8 +36,12 @@ function App() {
           <Route path="/forum" element={<SidebarProvider><DiscussionForum/></SidebarProvider>} />
           <Route path="/coordinator/course-details" element={<CourseDetails/>} />
           <Route path="/admin/notifications" element={<AdminNotifications/>} />
+
+          <Route path="/coordinator/upload-materials" element={<UploadMaterials/>} />
+
+
+
           <Route path="/learner/leaderboard" element={<L_Leaderboard/>} />
-          
 
 
           
