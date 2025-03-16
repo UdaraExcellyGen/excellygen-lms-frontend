@@ -9,6 +9,10 @@ import CourseDetails from './features/Coordinator/CreateNewCourse/BasicCourseDet
 import BadgesAndRewards from './features/Learner/BadgesAndRewards/BadgesAndRewards';
 import LearnerProjects from './features/Learner/LearnerProjects/LearnerProjects';
 import AdminNotifications from './features/Admin/AdminNotifications/MainAdminNotification';
+
+import AdminAnalytics from './features/Admin/AdminAnalytics/Adminanalytics';
+import CCNotifications from './features/Coordinator/CoordinatorNotification/CCNotifications';
+
 import LearnerNotifications from './features/Learner/LearnerNotifications/LearnerNotification';
 import ProjectManagerNotification from './features/ProjectManager/PMnotifications/ProjectManagerNotification';
 
@@ -17,6 +21,7 @@ import UploadMaterials from './features/Coordinator/CreateNewCourse/UploadMateri
 import Certificates from './features/Learner/Certificates/Certificates';
 import DiscussionForum from './features/Learner/DiscussionForum/DiscussionForum';
 import L_Leaderboard from './features/Learner/L-leaderboard/L-Leaderboard';
+
 
 
 
@@ -38,11 +43,16 @@ function App() {
           <Route path="/forum" element={<SidebarProvider><DiscussionForum/></SidebarProvider>} />
           <Route path="/coordinator/course-details" element={<CourseDetails/>} />
           <Route path="/admin/notifications" element={<AdminNotifications/>} />
+
+          <Route path="/admin/analytics" element={<AdminAnalytics/>} />
+          <Route path="/coordinator/notifications" element={<CCNotifications/>} />
+
           <Route path="/Learner/notifications" element={<LearnerNotifications/>} />
           <Route path="/ProjectManager/notifications" element={<ProjectManagerNotification/>} />
 
 
           <Route path="/coordinator/upload-materials" element={<UploadMaterials/>} />
+
 
 
 
