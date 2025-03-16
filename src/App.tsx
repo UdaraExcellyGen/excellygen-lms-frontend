@@ -21,6 +21,8 @@ import UploadMaterials from './features/Coordinator/CreateNewCourse/UploadMateri
 import Certificates from './features/Learner/Certificates/Certificates';
 import DiscussionForum from './features/Learner/DiscussionForum/DiscussionForum';
 import L_Leaderboard from './features/Learner/L-leaderboard/L-Leaderboard';
+import EmployeeManagement from './features/ProjectManager/Employee-assign/Employee-assign';
+import ProjectManagerDashboard from './features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard';
 
 
 
@@ -49,7 +51,8 @@ function App() {
 
           <Route path="/Learner/notifications" element={<LearnerNotifications/>} />
           <Route path="/ProjectManager/notifications" element={<ProjectManagerNotification/>} />
-
+          <Route path="/project-manager/dashboard" element={<ProjectManagerDashboard/>} />
+          <Route path="/project-manager/employee-assign" element={<EmployeeManagement/>} />
 
           <Route path="/coordinator/upload-materials" element={<UploadMaterials/>} />
 
