@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { initialNotifications } from './data/mockData';
 import { NotificationsState } from './types/learnerNotification';
 import LearnerNotificationGroup from './Components/LearnerNotificationGroup';
+import Layout from '../../../components/Layout/Sidebar/Layout/Layout';
 
 const LearnerNotifications: React.FC = () => {
   const [notifications, setNotifications] = useState<NotificationsState>(initialNotifications);
@@ -47,6 +48,7 @@ const LearnerNotifications: React.FC = () => {
     .length;
 
   return (
+    <Layout>
     <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-6">
       <div className="max-w-7xl mx-auto px-8 space-y-8">
         <div className="flex justify-between items-start mb-8">
@@ -93,6 +95,7 @@ const LearnerNotifications: React.FC = () => {
         </div>
       </div>
     </div>
+    </Layout>
   );
 };
 

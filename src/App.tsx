@@ -20,9 +20,9 @@ import UploadMaterials from './features/Coordinator/CreateNewCourse/UploadMateri
 
 import Certificates from './features/Learner/Certificates/Certificates';
 import DiscussionForum from './features/Learner/DiscussionForum/DiscussionForum';
-import L_Leaderboard from './features/Learner/L-leaderboard/L-Leaderboard';
 import EmployeeManagement from './features/ProjectManager/Employee-assign/Employee-assign';
 import ProjectManagerDashboard from './features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard';
+import Leaderboard from './features/Learner/Leaderboard/Leaderboard';
 
 
 
@@ -49,7 +49,7 @@ function App() {
           <Route path="/admin/analytics" element={<AdminAnalytics/>} />
           <Route path="/coordinator/notifications" element={<CCNotifications/>} />
 
-          <Route path="/Learner/notifications" element={<LearnerNotifications/>} />
+          <Route path="/notifications" element={<SidebarProvider><LearnerNotifications/></SidebarProvider>} />
           <Route path="/ProjectManager/notifications" element={<ProjectManagerNotification/>} />
           <Route path="/project-manager/dashboard" element={<ProjectManagerDashboard/>} />
           <Route path="/project-manager/employee-assign" element={<EmployeeManagement/>} />
@@ -59,7 +59,7 @@ function App() {
 
 
 
-          <Route path="/learner/leaderboard" element={<L_Leaderboard/>} />
+          <Route path="/leaderboard" element={<SidebarProvider><Leaderboard/></SidebarProvider>} /> 
 
 
           
