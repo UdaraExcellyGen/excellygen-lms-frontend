@@ -1,18 +1,11 @@
 import React from 'react';
-import { Learner } from '../types/leaderboard';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
-interface LeaderboardRowProps {
-  rank: number;
-  learner: Learner | undefined | null;
-  isCurrentUser?: boolean;
-}
-
-export const LeaderboardRow: React.FC<LeaderboardRowProps> = ({ rank, learner, isCurrentUser }) => {
+const LeaderboardRow = ({ rank, learner, isCurrentUser }) => {
   if (!learner) return null;
-
+  
   return (
-    <div className={`p-4 ${isCurrentUser ? 'bg-[#F6E6FF]' : 'bg-white'}
+    <div className={`p-4 ${isCurrentUser ? 'bg-[#F6E6FF]' : 'bg-white'} 
       rounded-xl mb-3 transform transition-all duration-300
       hover:shadow-lg hover:scale-[1.02] cursor-pointer
       ${isCurrentUser ? 'border-2 border-[#BF4BF6]' : ''}`}>
@@ -47,3 +40,5 @@ export const LeaderboardRow: React.FC<LeaderboardRowProps> = ({ rank, learner, i
     </div>
   );
 };
+
+export default LeaderboardRow;
