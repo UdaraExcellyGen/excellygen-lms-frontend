@@ -18,7 +18,7 @@ import ProjectManagerNotification from './features/ProjectManager/PMnotification
 
 import UploadMaterials from './features/Coordinator/CreateNewCourse/UploadMaterials/UploadMaterials';
 
-import Certificates from './features/Learner/Certificates/Certificates';
+import CertificatesPage from './features/Learner/Certificates/CertificatePage';
 import DiscussionForum from './features/Learner/DiscussionForum/DiscussionForum';
 import EmployeeManagement from './features/ProjectManager/Employee-assign/Employee-assign';
 import ProjectManagerDashboard from './features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard';
@@ -41,7 +41,7 @@ function App() {
           <Route path="/learner/dashboard" element={<SidebarProvider><LearnerDashboard/></SidebarProvider>} />
           <Route path="/badges-rewards" element={<SidebarProvider><BadgesAndRewards/></SidebarProvider>} />
           <Route path="/learner-projects" element={<SidebarProvider><LearnerProjects/></SidebarProvider>} />
-          <Route path="/certificate" element={<SidebarProvider><Certificates/></SidebarProvider>} />
+          <Route path="/certificate" element={<SidebarProvider><CertificatesPage/></SidebarProvider>} />
           <Route path="/forum" element={<SidebarProvider><DiscussionForum/></SidebarProvider>} />
           <Route path="/coordinator/course-details" element={<CourseDetails/>} />
           <Route path="/admin/notifications" element={<AdminNotifications/>} />
