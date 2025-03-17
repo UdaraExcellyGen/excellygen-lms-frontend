@@ -33,7 +33,7 @@ const CourseCoordinatorDashboard: React.FC = () => {
           stats={initialStats.courses}
           totalLabel="Total Courses"
           activeLabel="Active Courses"
-          onViewMore={() => navigate('/coordinator/courses')}
+          onViewMore={() => navigate('/coordinator/course-display-page')}
         />
 
         <StatCard

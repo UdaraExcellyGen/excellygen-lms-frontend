@@ -85,14 +85,14 @@ const PublishCoursePage: React.FC<PublishCoursePageProps> = () => {
 
     const handleSaveDraft = () => {
         alert('Course saved as draft successfully');
-        navigate('/coordinator/coursePage');
+        navigate('/coordinator/course-display-page');
     };
 
     const handlePublish = () => {
         console.log('Course materials on publish:', localSubtopics);
         console.log('Course published');
         alert('Course published successfully!');
-        navigate('/coordinator/CoursesPage');
+        navigate('/coordinator/course-display-page');
     };
 
     const handleViewQuiz = (quizBank: QuizBank | undefined) => {
