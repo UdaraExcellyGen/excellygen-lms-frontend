@@ -36,3 +36,27 @@
     @apply visible opacity-100;
   }
 }
+
+
+/* Add to your global.css file */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #BF4BF6 #F6E6FF;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #F6E6FF;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #BF4BF6;
+  border-radius: 10px;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+  background: #1B0A3F;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #7A00B8;
+}

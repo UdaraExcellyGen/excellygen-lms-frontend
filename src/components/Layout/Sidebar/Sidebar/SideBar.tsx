@@ -50,7 +50,7 @@ const Sidebar = () => {
   };
 
   const learningMenuItems: MenuItem[] = [
-    { title: 'Dashboard', icon: Home, path: '/student-dashboard' },
+    { title: 'Dashboard', icon: Home, path: '/learner/dashboard' },
     { title: 'Courses', icon: BookOpen, path: '/courses' },
   ];
 
