@@ -1,25 +1,25 @@
-
+// components/QuizCreator/QuizDetailsForm.tsx
 import React from 'react';
-import { QuizDetails } from '../types/quiz';
+import { QuizDetails } from '../types/QuizCreatorTypes';
 
 interface QuizDetailsFormProps {
     quizDetails: QuizDetails;
+    onQuizDetailsChange: (field: keyof QuizDetails, value: string) => void;
+    onCreateQuizQuestionsClick: () => void;
+    onCancelQuizCreator: () => void;
     bankSizeError: string;
     quizSizeError: string;
     durationError: string;
-    onQuizDetailsChange: (field: keyof QuizDetails, value: string) => void;
-    onCancelQuizCreator: () => void;
-    onCreateQuizQuestionsClick: () => void;
 }
 
 const QuizDetailsForm: React.FC<QuizDetailsFormProps> = ({
     quizDetails,
+    onQuizDetailsChange,
+    onCreateQuizQuestionsClick,
+    onCancelQuizCreator,
     bankSizeError,
     quizSizeError,
-    durationError,
-    onQuizDetailsChange,
-    onCancelQuizCreator,
-    onCreateQuizQuestionsClick
+    durationError
 }) => {
     return (
         <div className="mt-4 bg-[#1B0A3F]/40 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg p-6">

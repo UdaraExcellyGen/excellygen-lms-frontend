@@ -67,7 +67,7 @@ function App() {
           <Route path="/project-manager/dashboard" element={<ProjectManagerDashboard/>} />
           <Route path="/project-manager/employee-assign" element={<EmployeeManagement/>} />
 
-          <Route path="/coordinator/upload-materials" element={<UploadMaterials/>} />
+          <Route path="/coordinator/upload-materials" element={withCourseContex(UploadMaterials)} />
 
 
 
