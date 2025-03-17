@@ -6,6 +6,9 @@ import CourseCoordinatorDashboard from './features/Coordinator/CoordinatorDashbo
 import LearnerDashboard from './features/Learner/LearnerDashboard/LearnerDashboard';
 import { SidebarProvider } from './components/Layout/Sidebar/contexts/SidebarContext';
 import CourseDetails from './features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails';
+
+import { CourseProvider } from './features/Coordinator/contexts/CourseContext';
+
 import BadgesAndRewards from './features/Learner/BadgesAndRewards/BadgesAndRewards';
 import LearnerProjects from './features/Learner/LearnerProjects/LearnerProjects';
 import AdminNotifications from './features/Admin/AdminNotifications/MainAdminNotification';
@@ -31,6 +34,13 @@ import Leaderboard from './features/Learner/Leaderboard/Leaderboard';
 
 
 function App() {
+
+  const withCourseContex = (Component: React.ComponentType) => (
+    <CourseProvider>
+      <Component />
+    </CourseProvider>
+    
+  );
   return (
     <BrowserRouter>
       <div className="min-h-screen flex flex-col">
@@ -39,6 +49,9 @@ function App() {
           <Route path="/coordinator/analytics" element={<CourseCoordinatorAnalytics/>} />
           <Route path="/coordinator/dashboard" element={<CourseCoordinatorDashboard/>} />
           <Route path="/learner/dashboard" element={<SidebarProvider><LearnerDashboard/></SidebarProvider>} />
+
+          <Route path="/coordinator/course-details" element={withCourseContex(CourseDetails)} />
+
           <Route path="/badges-rewards" element={<SidebarProvider><BadgesAndRewards/></SidebarProvider>} />
           <Route path="/learner-projects" element={<SidebarProvider><LearnerProjects/></SidebarProvider>} />
           <Route path="/certificate" element={<SidebarProvider><CertificatesPage/></SidebarProvider>} />
@@ -63,6 +76,7 @@ function App() {
 
 
           
+
 
         </Routes>
       </div>
