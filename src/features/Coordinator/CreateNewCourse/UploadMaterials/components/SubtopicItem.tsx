@@ -1,7 +1,7 @@
 // components/SubtopicItem.tsx
 import React, { useState } from 'react';
 import { ChevronDown, X, FileText, Play, BookCheck, Upload, Plus, Edit } from 'lucide-react';
-import QuizCreator, { QuizBank } from '../../../CreateNewCourse/QuizCreator/QuizCreator';
+import QuizCreator, { QuizBank } from '../../QuizCreator/QuizCreator';
 import { MaterialFile, Subtopic as SubtopicType } from '../types/types';
 
 interface SubtopicItemProps {

@@ -26,6 +26,7 @@ import DiscussionForum from './features/Learner/DiscussionForum/DiscussionForum'
 import EmployeeManagement from './features/ProjectManager/Employee-assign/Employee-assign';
 import ProjectManagerDashboard from './features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard';
 import Leaderboard from './features/Learner/Leaderboard/Leaderboard';
+import PublishCoursePage from './features/Coordinator/CreateNewCourse/PublishCoursePage/PublishCoursePage';
 
 
 
@@ -68,6 +69,7 @@ function App() {
           <Route path="/project-manager/employee-assign" element={<EmployeeManagement/>} />
 
           <Route path="/coordinator/upload-materials" element={withCourseContex(UploadMaterials)} />
+          <Route path="/coordinator/publish-Course" element={withCourseContex(PublishCoursePage)} />
 
 
 

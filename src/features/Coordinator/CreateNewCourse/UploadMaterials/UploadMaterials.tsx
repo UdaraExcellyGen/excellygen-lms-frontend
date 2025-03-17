@@ -75,7 +75,7 @@ const UploadMaterials: React.FC = () => {
         if (!materialsSaved) {
             handleSaveMaterials();
         }
-        navigate('/coordinator/PublishCourse');
+        navigate('/coordinator/publish-course');
     };
 
     const handleSaveDraft = () => {
@@ -171,7 +171,7 @@ const UploadMaterials: React.FC = () => {
             <PageHeader
                 title="Create New Courses"
                 onSaveDraft={handleSaveDraft}
-                onBack={() => navigate('/coordinator/BasicCourseDetails')}
+                onBack={() => navigate('/coordinator/course-details')}
             />
 
             <ProgressBar activeStep={2} steps={['Course Details', 'Upload Materials', 'Publish Course']} />
@@ -192,7 +192,7 @@ const UploadMaterials: React.FC = () => {
             />
 
             <BottomNavigation
-                onBack={() => navigate('/coordinator/BasicCourseDetails')}
+                onBack={() => navigate("/coordinator/course-details")}
                 onNext={handleNext}
                 nextText="Save Materials & Next"
             />
