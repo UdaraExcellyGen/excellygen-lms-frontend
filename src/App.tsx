@@ -6,12 +6,20 @@ import CourseCoordinatorDashboard from './features/Coordinator/CoordinatorDashbo
 import LearnerDashboard from './features/Learner/LearnerDashboard/LearnerDashboard';
 import { SidebarProvider } from './components/Layout/Sidebar/contexts/SidebarContext';
 import CourseDetails from './features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails';
+import { CourseProvider } from './features/Coordinator/contexts/CourseContext';
 
 
 
 
 
 function App() {
+
+  const withCourseContex = (Component: React.ComponentType) => (
+    <CourseProvider>
+      <Component />
+    </CourseProvider>
+    
+  );
   return (
     <BrowserRouter>
       <div className="min-h-screen flex flex-col">
@@ -20,7 +28,7 @@ function App() {
           <Route path="/coordinator/analytics" element={<CourseCoordinatorAnalytics/>} />
           <Route path="/coordinator/dashboard" element={<CourseCoordinatorDashboard/>} />
           <Route path="/learner/dashboard" element={<SidebarProvider><LearnerDashboard/></SidebarProvider>} />
-          <Route path="/coordinator/course-details" element={<CourseDetails/>} 
+          <Route path="/coordinator/course-details" element={withCourseContex(CourseDetails)} />
 
         </Routes>
       </div>
