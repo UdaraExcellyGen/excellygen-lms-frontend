@@ -26,6 +26,7 @@ import DiscussionForum from './features/Learner/DiscussionForum/DiscussionForum'
 import EmployeeManagement from './features/ProjectManager/Employee-assign/Employee-assign';
 import ProjectManagerDashboard from './features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard';
 import Leaderboard from './features/Learner/Leaderboard/Leaderboard';
+import AdminDashboard from './features/Admin/AdminDashboard/AdminDashboard';
 
 
 
@@ -60,6 +61,8 @@ function App() {
           <Route path="/admin/notifications" element={<AdminNotifications/>} />
 
           <Route path="/admin/analytics" element={<AdminAnalytics/>} />
+          <Route path="/admin/dashboard" element={<AdminDashboard/>} />
+
           <Route path="/coordinator/notifications" element={<CCNotifications/>} />
 
           <Route path="/notifications" element={<SidebarProvider><LearnerNotifications/></SidebarProvider>} />
