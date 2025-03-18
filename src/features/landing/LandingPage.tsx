@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import NavBar from '../../components/Layout/Navbar/NavBar';
 import Footer from '../../components/Layout/Footer/Footer';
-import AuthContainer from '../../features/auth/AuthContainer';
-import HeroSection from '../../features/landing/components/HeroSection';
-import FeaturesSection from '../../features/landing/components/FeaturesSection';
+import AuthContainer from '../auth/AuthContainer';
+import HeroSection from './components/HeroSection';
+import FeaturesSection from './components/FeaturesSection';
 
 const LandingPage: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import LandingPage from './pages/landing/LandingPage';
+import LandingPage from './features/landing/LandingPage';
 import CourseCoordinatorAnalytics from './features/Coordinator/Analytics/CourseCoordinatorAnalytics';
 import CourseCoordinatorDashboard from './features/Coordinator/CoordinatorDashboard/CourseCoordinatorDashboard';
 import LearnerDashboard from './features/Learner/LearnerDashboard/LearnerDashboard';
