@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import LoginForm from '../../pages/auth/LoginForm';
+import LoginForm from '../landing/auth/LoginForm';
 import ResetPasswordForm from './ResetPasswordForm';
 
 export interface AuthContainerProps {
