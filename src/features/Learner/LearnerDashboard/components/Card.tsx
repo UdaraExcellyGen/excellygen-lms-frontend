@@ -1,5 +1,5 @@
 import React from 'react';
-import { CardProps, CardHeaderProps, CardTitleProps, CardContentProps } from '../../types/types';
+import { CardProps, CardHeaderProps, CardTitleProps, CardContentProps } from '../types/types';
 
 export const Card: React.FC<CardProps> = ({ children, className = '' }) => (
   <div className={`bg-white rounded-xl shadow-lg ${className}`}>
