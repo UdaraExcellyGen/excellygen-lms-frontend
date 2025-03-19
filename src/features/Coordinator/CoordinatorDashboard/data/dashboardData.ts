@@ -19,10 +19,10 @@ export const getQuickActions = (navigate: (path: string) => void): QuickAction[]
     onClick: () => navigate('/coordinator/course-details')
   },
   { 
-    text: 'View Student Progress', 
+    text: 'View Students', 
     color: 'bg-[#03045e]', 
     hoverColor: 'hover:scale-105',
-    onClick: () => navigate('/coordinator/students')
+    onClick: () => navigate('/coordinator/learner-list')
   },
   { 
     text: 'Course Analytics', 
