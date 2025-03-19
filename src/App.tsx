@@ -23,6 +23,7 @@ import CourseDetails from './features/Coordinator/CreateNewCourse/BasicCourseDet
 import CourseCoordinatorAnalytics from './features/Coordinator/Analytics/CourseCoordinatorAnalytics';
 import CourseCoordinatorDashboard from './features/Coordinator/CoordinatorDashboard/CourseCoordinatorDashboard';
 import CCNotifications from './features/Coordinator/CoordinatorNotification/CCNotifications';
+import LearnerQuizPage from './features/Coordinator/learnerQuizPage/learnerQuizPage';
 
 import CertificatesPage from './features/Learner/Certificates/CertificatePage';
 import DiscussionForum from './features/Learner/DiscussionForum/DiscussionForum';
@@ -75,7 +76,9 @@ function App() {
           <Route path="/project-manager/employee-assign" element={<EmployeeManagement/>} />
 
           <Route path="/coordinator/upload-materials" element={<UploadMaterials/>} />
+
           <Route path="/coordinator/learner-list" element={<LearnerListPage/>} />
+          <Route path="/coordinator/quiz-learner-view" element={<LearnerQuizPage/>} />
 
 
 
