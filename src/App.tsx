@@ -25,14 +25,9 @@ import CertificatesPage from './features/Learner/Certificates/CertificatePage';
 import DiscussionForum from './features/Learner/DiscussionForum/DiscussionForum';
 import EmployeeManagement from './features/ProjectManager/Employee-assign/Employee-assign';
 import ProjectManagerDashboard from './features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard';
+import ProjectCruds from './features/ProjectManager/ProjectCruds/ProjectCruds';
 import Leaderboard from './features/Learner/Leaderboard/Leaderboard';
 import AdminDashboard from './features/Admin/AdminDashboard/AdminDashboard';
-
-
-
-
-
-
 
 function App() {
 
@@ -69,18 +64,15 @@ function App() {
           <Route path="/ProjectManager/notifications" element={<ProjectManagerNotification/>} />
           <Route path="/project-manager/dashboard" element={<ProjectManagerDashboard/>} />
           <Route path="/project-manager/employee-assign" element={<EmployeeManagement/>} />
+          
+          {/* Project Cruds Routes */}
+          <Route path="/project-manager/project-cruds" element={<ProjectCruds />} />
+          <Route path="/project-manager/project-cruds/technologies" element={<ProjectCruds />} />
+          <Route path="/project-manager/project-cruds/roles" element={<ProjectCruds />} />
 
           <Route path="/coordinator/upload-materials" element={<UploadMaterials/>} />
 
-
-
-
           <Route path="/leaderboard" element={<SidebarProvider><Leaderboard/></SidebarProvider>} /> 
-
-
-          
-
-
         </Routes>
       </div>
     </BrowserRouter>
