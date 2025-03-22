@@ -31,7 +31,17 @@ import EmployeeManagement from './features/ProjectManager/Employee-assign/Employ
 import ProjectManagerDashboard from './features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard';
 import ProjectCruds from './features/ProjectManager/ProjectCruds/ProjectCruds';
 import Leaderboard from './features/Learner/Leaderboard/Leaderboard';
+
+import PublishCoursePage from './features/Coordinator/CreateNewCourse/PublishCoursePage/PublishCoursePage';
+import CoursesDisplayPage from './features/Coordinator/CoursesDisplayPage/CoursesDisplayPage';
+
+
+
+
+
+
 import AdminDashboard from './features/Admin/AdminDashboard/AdminDashboard';
+
 
 
 function App() {
@@ -75,7 +85,9 @@ function App() {
           <Route path="/project-manager/project-cruds/technologies" element={<ProjectCruds />} />
           <Route path="/project-manager/project-cruds/roles" element={<ProjectCruds />} />
 
-          <Route path="/coordinator/upload-materials" element={<UploadMaterials/>} />
+          <Route path="/coordinator/upload-materials" element={withCourseContex(UploadMaterials)} />
+          <Route path="/coordinator/publish-Course" element={withCourseContex(PublishCoursePage)} />
+          <Route path="/coordinator/course-display-page" element={withCourseContex(CoursesDisplayPage)} />
 
 
           <Route path="/coordinator/learner-list" element={<LearnerListPage/>} />

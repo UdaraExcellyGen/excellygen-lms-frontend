@@ -1,7 +1,9 @@
+// types/quiz.ts
 export interface Question {
     questionText: string;
     options: string[];
     correctAnswerIndex: number | null;
+    correctAnswer?: string;
 }
 
 export interface QuizDetails {

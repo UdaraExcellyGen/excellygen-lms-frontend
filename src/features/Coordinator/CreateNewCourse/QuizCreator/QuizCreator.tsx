@@ -1,19 +1,10 @@
-
+// features/createNewCourse/QuizCreator/QuizCreator.tsx
 import React, { useState, useEffect } from 'react';
+import { QuizCreatorProps, Question, QuizDetails, QuizBank } from './types/QuizCreatorTypes'; // Import types from a separate file
 import QuizDetailsForm from './components/QuizDetailsForm';
-import QuizQuestionForm from './components/QuizQuestionForm';
+import QuizQuestionsForm from './components/QuizQuestionsForm';
 import QuizOverviewForm from './components/QuizOverviewForm';
-import { Question, QuizBank, QuizDetails } from './types/quiz';
-import PopupMessage from './components/PopupMessage'; 
-
-interface QuizCreatorProps {
-    subtopicId: string;
-    onSaveQuiz: (subtopicId: string, quizBankData: QuizBank) => void;
-    onCancelQuizCreator: () => void;
-    editableQuizBankForOverview?: QuizBank | null;
-    onCloseQuizOverview: () => void;
-    onSaveOverviewQuizDetails: (subtopicId: string, updatedQuizBank: QuizBank) => void;
-}
+import PopupMessage from './components/PopupMessage';
 
 const initialQuestion: Question = {
     questionText: '',
@@ -28,6 +19,7 @@ const initialQuizDetails: QuizDetails = {
     duration: ''
 };
 
+
 const QuizCreator: React.FC<QuizCreatorProps> = ({
     subtopicId,
     onSaveQuiz,
@@ -40,12 +32,13 @@ const QuizCreator: React.FC<QuizCreatorProps> = ({
     const [quizDetails, setQuizDetails] = useState<QuizDetails>(editableQuizBankForOverview?.quizDetails || initialQuizDetails);
     const [questions, setQuestions] = useState<Question[]>(editableQuizBankForOverview?.questions || [initialQuestion]);
     const [showQuizQuestionsForm, setShowQuizQuestionsForm] = useState<boolean>(false);
-    const [editableQuizDetailsState, setEditableQuizDetailsState] = useState<QuizDetails | null>(editableQuizBankForOverview?.quizDetails || null);
+    const [editableQuizDetailsState, setEditableQuizDetailsState] = useState<QuizDetails | undefined>(editableQuizBankForOverview?.quizDetails);
     const [overviewQuestions, setOverviewQuestions] = useState<Question[]>(editableQuizBankForOverview?.questions || [initialQuestion]);
 
     const [bankSizeError, setBankSizeError] = useState<string>('');
     const [quizSizeError, setQuizSizeError] = useState<string>('');
     const [durationError, setDurationError] = useState<string>('');
+
     const [popupMessage, setPopupMessage] = useState<string>('');
     const [showPopup, setShowPopup] = useState<boolean>(false);
 
@@ -56,7 +49,7 @@ const QuizCreator: React.FC<QuizCreatorProps> = ({
         } else {
             setOverviewQuestions([initialQuestion]);
         }
-        setEditableQuizDetailsState(editableQuizBankForOverview?.quizDetails || initialQuizDetails);
+        setEditableQuizDetailsState(editableQuizBankForOverview?.quizDetails);
     }, [editableQuizBankForOverview]);
 
 
@@ -77,6 +70,7 @@ const QuizCreator: React.FC<QuizCreatorProps> = ({
             [field]: value
         }));
     };
+
 
     const handleQuestionTextChange = (index: number, value: string, isOverviewQuestion = false): void => {
         const questionsToUpdate = isOverviewQuestion ? [...overviewQuestions] : [...questions];
@@ -137,7 +131,7 @@ const QuizCreator: React.FC<QuizCreatorProps> = ({
         if (isOverviewQuestion) {
             setOverviewQuestions(questionsToUpdate);
         } else {
-            setQuestions(questionsToUpdate);
+            setQuestions(setQuestionsToUpdate);
         }
     };
 
@@ -187,6 +181,7 @@ const QuizCreator: React.FC<QuizCreatorProps> = ({
         }
     };
 
+
     const handleRemoveQuestion = (questionIndex: number, isOverviewQuestion = false): void => {
         const questionsToUpdate = isOverviewQuestion ? overviewQuestions : questions;
         const newQuestions = questionsToUpdate.filter((_, index) => index !== questionIndex);
@@ -198,6 +193,7 @@ const QuizCreator: React.FC<QuizCreatorProps> = ({
     };
 
     const handleSaveQuiz = (): void => {
+
         if (!quizDetails.duration) {
             setPopupMessage("Please enter the time duration for the quiz.");
             setShowPopup(true);
@@ -232,6 +228,7 @@ const QuizCreator: React.FC<QuizCreatorProps> = ({
             setShowPopup(true);
             return;
         }
+
 
         const quizBankData: QuizBank = {
             quizDetails,
@@ -275,11 +272,13 @@ const QuizCreator: React.FC<QuizCreatorProps> = ({
             hasError = true;
         }
 
+
         if (hasError) {
             return;
         }
 
         setShowQuizQuestionsForm(true);
+
     };
 
     const handleCancelQuizQuestions = () => {
@@ -315,14 +314,16 @@ const QuizCreator: React.FC<QuizCreatorProps> = ({
             }
         }
 
+
         setEditableQuizDetailsState({
             ...editableQuizDetailsState,
             [fieldName]: value,
-        });
+        } as QuizDetails); // Type assertion here
     };
 
 
     const handleSaveOverviewQuizDetails = () => {
+
         if (!editableQuizDetailsState?.duration) {
             setPopupMessage("Please enter the time duration for the quiz.");
             setShowPopup(true);
@@ -339,6 +340,7 @@ const QuizCreator: React.FC<QuizCreatorProps> = ({
 
         const quizSize = parseInt(editableQuizDetailsState?.quizSize || "0", 10);
         const bankSize = parseInt(editableQuizDetailsState?.bankSize || "0", 10);
+
 
         if (isNaN(bankSize) || isNaN(quizSize)) {
             setPopupMessage("Quiz Bank Size and Quiz Size must be valid numbers.");
@@ -358,19 +360,20 @@ const QuizCreator: React.FC<QuizCreatorProps> = ({
             return;
         }
 
+
         const updatedQuizBank: QuizBank = {
             ...editableQuizBankForOverview!,
-            quizDetails: editableQuizDetailsState,
+            quizDetails: editableQuizDetailsState!,
             questions: overviewQuestions,
             bankSize: bankSize,
             quizSize: quizSize,
-            duration: parseInt(editableQuizDetailsState.duration || "0", 10),
-            name: editableQuizDetailsState.title || 'Unnamed Quiz',
+            duration: parseInt(editableQuizDetailsState!.duration || "0", 10),
+            name: editableQuizDetailsState!.title || 'Unnamed Quiz',
         };
 
         onSaveOverviewQuizDetails(subtopicId, updatedQuizBank);
         onCloseQuizOverview();
-        setEditableQuizDetailsState(null);
+        setEditableQuizDetailsState(undefined);
     };
 
     const handleClosePopup = () => {
@@ -381,47 +384,43 @@ const QuizCreator: React.FC<QuizCreatorProps> = ({
 
     return (
         <>
-            <PopupMessage
-                showPopup={showPopup}
-                popupMessage={popupMessage}
-                onClosePopup={handleClosePopup}
-                title="Error"
-            />
+            <PopupMessage showPopup={showPopup} popupMessage={popupMessage} onClosePopup={handleClosePopup} />
 
-            {!showQuizQuestionsForm && !editableQuizBankForOverview && (
+            {!showQuizQuestionsForm && !editableQuizBankForOverview?.quizDetails && (
                 <QuizDetailsForm
                     quizDetails={quizDetails}
+                    onQuizDetailsChange={handleQuizDetailsChange}
+                    onCreateQuizQuestionsClick={handleCreateQuizQuestionsClick}
+                    onCancelQuizCreator={onCancelQuizCreator}
                     bankSizeError={bankSizeError}
                     quizSizeError={quizSizeError}
                     durationError={durationError}
-                    onQuizDetailsChange={handleQuizDetailsChange}
-                    onCancelQuizCreator={onCancelQuizCreator}
-                    onCreateQuizQuestionsClick={handleCreateQuizQuestionsClick}
                 />
             )}
 
-            {showQuizQuestionsForm && !editableQuizBankForOverview && (
-                <QuizQuestionForm
+            {showQuizQuestionsForm && !editableQuizBankForOverview?.quizDetails && (
+                <QuizQuestionsForm
                     questions={questions}
-                    onQuestionTextChange={handleQuestionTextChange}
-                    onOptionChange={handleOptionChange}
+                    onQuestionTextChange={(index, value) => handleQuestionTextChange(index, value)}
+                    onOptionChange={(questionIndex, optionIndex, value) => handleOptionChange(questionIndex, optionIndex, value)}
                     onAddOption={handleAddOption}
                     onRemoveOption={handleRemoveOption}
                     onCorrectAnswerChange={handleCorrectAnswerChange}
-                    onRemoveQuestion={handleRemoveQuestion}
                     onAddQuestion={handleAddQuestion}
-                    onCancelQuizQuestions={handleCancelQuizQuestions}
+                    onRemoveQuestion={handleRemoveQuestion}
                     onSaveQuiz={handleSaveQuiz}
+                    onCancelQuizQuestions={handleCancelQuizQuestions}
                 />
             )}
 
-            {editableQuizBankForOverview && (
+            {editableQuizBankForOverview?.quizDetails && (
                 <QuizOverviewForm
-                    editableQuizDetailsState={editableQuizDetailsState}
+                    editableQuizBankForOverview={editableQuizBankForOverview}
+                    editableQuizDetailsState={editableQuizDetailsState || initialQuizDetails} // Provide fallback
                     overviewQuestions={overviewQuestions}
-                    onCloseQuizOverview={onCloseQuizOverview}
-                    onSaveOverviewQuizDetails={handleSaveOverviewQuizDetails}
                     onOverviewInputChange={handleOverviewInputChange}
+                    onSaveOverviewQuizDetails={handleSaveOverviewQuizDetails}
+                    onCloseQuizOverview={onCloseQuizOverview}
                     onQuestionTextChange={handleQuestionTextChange}
                     onOptionChange={handleOptionChange}
                     onAddOption={handleAddOption}

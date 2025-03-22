@@ -134,7 +134,7 @@ const BasicCourseDetails: React.FC = () => {
 
         updateBasicCourseDetails(courseDetails);
         console.log("Course Details to be passed to next step:", courseDetails);
-        navigate('/coordinator/UploadMaterials');
+        navigate('/coordinator/upload-materials');
     };
 
     const handleEstimatedTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
