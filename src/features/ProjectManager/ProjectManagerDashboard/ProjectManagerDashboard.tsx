@@ -60,31 +60,31 @@ const ProjectManagerDashboard: React.FC = () => {
     }
   };
 
-  // Quick actions - navigation paths updated to match file structure
+  // Quick actions with correct paths that match App.tsx routes
   const quickActions: QuickAction[] = [
     {
-      text: "Manage Projects",
+      text: "Project Management System",
       color: 'bg-gradient-to-r from-[#34137C] to-[#03045e]',
       hoverColor: 'hover:scale-105 hover:shadow-lg hover:bg-[#34137C] hover:bg-none',
-      onClick: () => navigate('/project-manager/projects') // Updated path
+      onClick: () => navigate('/project-manager/project-cruds')
     },
     {
       text: "Assign Employees",
       color: 'bg-gradient-to-r from-[#34137C] to-[#03045e]',
       hoverColor: 'hover:scale-105 hover:shadow-lg hover:bg-[#34137C] hover:bg-none',
-      onClick: () => navigate('/project-manager/employee-assign') // Updated path to match your file structure
+      onClick: () => navigate('/project-manager/employee-assign')
     },
     {
       text: "Manage Technologies",
       color: 'bg-gradient-to-r from-[#34137C] to-[#03045e]',
       hoverColor: 'hover:scale-105 hover:shadow-lg hover:bg-[#34137C] hover:bg-none',
-      onClick: () => navigate('/project-manager/technologies') // Updated path
+      onClick: () => navigate('/project-manager/project-cruds/technologies')
     },
     {
       text: "Manage Roles",
       color: 'bg-gradient-to-r from-[#34137C] to-[#03045e]',
       hoverColor: 'hover:scale-105 hover:shadow-lg hover:bg-[#34137C] hover:bg-none',
-      onClick: () => navigate('/project-manager/roles') // Updated path
+      onClick: () => navigate('/project-manager/project-cruds/roles')
     }
   ];
 
@@ -105,7 +105,7 @@ const ProjectManagerDashboard: React.FC = () => {
           stats={stats.projects}
           totalLabel="Total Projects"
           activeLabel="Active Projects"
-          onViewMore={() => navigate('/project-manager/projects')}
+          onViewMore={() => navigate('/project-manager/project-cruds')}
         />
 
         <StatCard
@@ -123,7 +123,7 @@ const ProjectManagerDashboard: React.FC = () => {
           stats={stats.technologies}
           totalLabel="Total Technologies"
           activeLabel="Active Technologies"
-          onViewMore={() => navigate('/project-manager/technologies')}
+          onViewMore={() => navigate('/project-manager/project-cruds/technologies')}
         />
       </div>
 
