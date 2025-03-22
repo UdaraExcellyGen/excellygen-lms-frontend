@@ -1,11 +1,10 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import LandingPage from './features/landing/LandingPage';
-import CourseCoordinatorAnalytics from './features/Coordinator/Analytics/CourseCoordinatorAnalytics';
-import CourseCoordinatorDashboard from './features/Coordinator/CoordinatorDashboard/CourseCoordinatorDashboard';
+
 import LearnerDashboard from './features/Learner/LearnerDashboard/LearnerDashboard';
 import { SidebarProvider } from './components/Layout/Sidebar/contexts/SidebarContext';
-import CourseDetails from './features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails';
+
 
 import { CourseProvider } from './features/Coordinator/contexts/CourseContext';
 
@@ -14,12 +13,17 @@ import LearnerProjects from './features/Learner/LearnerProjects/LearnerProjects'
 import AdminNotifications from './features/Admin/AdminNotifications/MainAdminNotification';
 
 import AdminAnalytics from './features/Admin/AdminAnalytics/Adminanalytics';
-import CCNotifications from './features/Coordinator/CoordinatorNotification/CCNotifications';
 
 import LearnerNotifications from './features/Learner/LearnerNotifications/LearnerNotification';
 import ProjectManagerNotification from './features/ProjectManager/PMnotifications/ProjectManagerNotification';
 
 import UploadMaterials from './features/Coordinator/CreateNewCourse/UploadMaterials/UploadMaterials';
+import LearnerListPage from './features/Coordinator/LearnerListPage/LearnerListPage';
+import CourseDetails from './features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails';
+import CourseCoordinatorAnalytics from './features/Coordinator/Analytics/CourseCoordinatorAnalytics';
+import CourseCoordinatorDashboard from './features/Coordinator/CoordinatorDashboard/CourseCoordinatorDashboard';
+import CCNotifications from './features/Coordinator/CoordinatorNotification/CCNotifications';
+import LearnerQuizPage from './features/Coordinator/learnerQuizPage/learnerQuizPage';
 
 import CertificatesPage from './features/Learner/Certificates/CertificatePage';
 import DiscussionForum from './features/Learner/DiscussionForum/DiscussionForum';
@@ -27,6 +31,7 @@ import EmployeeManagement from './features/ProjectManager/Employee-assign/Employ
 import ProjectManagerDashboard from './features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard';
 import Leaderboard from './features/Learner/Leaderboard/Leaderboard';
 import AdminDashboard from './features/Admin/AdminDashboard/AdminDashboard';
+
 
 
 
@@ -71,6 +76,9 @@ function App() {
           <Route path="/project-manager/employee-assign" element={<EmployeeManagement/>} />
 
           <Route path="/coordinator/upload-materials" element={<UploadMaterials/>} />
+
+          <Route path="/coordinator/learner-list" element={<LearnerListPage/>} />
+          <Route path="/coordinator/quiz-learner-view" element={<LearnerQuizPage/>} />
 
 
 
