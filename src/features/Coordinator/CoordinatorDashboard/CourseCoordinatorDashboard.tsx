@@ -41,8 +41,8 @@ const CourseCoordinatorDashboard: React.FC = () => {
           title="Student Overview"
           stats={initialStats.students}
           totalLabel="Total Students"
-          activeLabel="Active Students"
-          onViewMore={() => navigate('/coordinator/students')}
+          activeLabel="Enrolled Students"
+          onViewMore={() => navigate('/coordinator/learner-list')}
         />
 
         <NotificationCard 

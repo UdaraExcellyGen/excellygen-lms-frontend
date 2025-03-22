@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Book, Clock, Trophy, BarChart2 } from 'lucide-react';
 import { 
   LineChart, 
@@ -20,43 +20,78 @@ import {
   RecentAchievementsProps 
 } from '../types/types';
 
-export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses }) => (
-  <Card className="lg:col-span-2">
-    <CardHeader>
-      <div className="flex justify-between items-center">
-        <CardTitle className="text-[#1B0A3F] font-unbounded flex items-center gap-2">
-          <Book className="text-[#BF4BF6]" />
-          Active Courses
-        </CardTitle>
-        <Link to="/courses" className="text-sm text-[#52007C] hover:text-[#BF4BF6] transition-colors">
-          View All
-        </Link>
-      </div>
-    </CardHeader>
-    <CardContent>
-      <div className="space-y-4">
-        {courses.map(course => (
-          <div key={course.id} className="bg-[#F6E6FF] rounded-xl p-4 hover:bg-[#F0D6FF] transition-colors">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-medium text-[#1B0A3F]">{course.title}</h3>
-            </div>
-            <div className="relative">
-              <div className="h-2 bg-white rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-[#52007C] to-[#BF4BF6] transition-all duration-300"
-                  style={{ width: `${course.progress}%` }}
-                />
+export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses }) => {
+  const navigate = useNavigate();
+
+  // Function to handle course click and navigation
+  const handleCourseClick = (courseId) => {
+    // Navigate to the course overview page
+    navigate(`/course/${courseId}`);
+  };
+
+  // Function to determine the course ID based on course title
+  const getCourseId = (title) => {
+    // Map course titles to IDs
+    const courseIdMap = {
+      "Web Development Fundamentals": 4,
+      "Machine Learning Fundamentals": 2,
+      "Cloud Architecture": 3
+    };
+    
+    return courseIdMap[title] || 1; // Default to 1 if title not found
+  };
+
+  return (
+    <Card className="lg:col-span-2">
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-[#1B0A3F] font-unbounded flex items-center gap-2">
+            <Book className="text-[#BF4BF6]" />
+            Active Courses
+          </CardTitle>
+          <Link to="/active-courses" className="text-sm text-[#52007C] hover:text-[#BF4BF6] transition-colors">
+            View All
+          </Link>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {courses.map(course => (
+            <div 
+              key={course.id} 
+              className="bg-[#F6E6FF] rounded-xl p-4 hover:bg-[#F0D6FF] transition-colors cursor-pointer"
+              onClick={() => handleCourseClick(getCourseId(course.title))}
+              role="button"
+              tabIndex={0}
+              aria-label={`View ${course.title} course`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleCourseClick(getCourseId(course.title));
+                }
+              }}
+            >
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-medium text-[#1B0A3F]">{course.title}</h3>
               </div>
-              <span className="absolute right-0 -top-6 text-sm font-medium text-[#52007C]">
-                {course.progress}%
-              </span>
+              <div className="relative">
+                <div className="h-2 bg-white rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#52007C] to-[#BF4BF6] transition-all duration-300"
+                    style={{ width: `${course.progress}%` }}
+                  />
+                </div>
+                <span className="absolute right-0 -top-6 text-sm font-medium text-[#52007C]">
+                  {course.progress}%
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
-);
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 export const RecentActivities: React.FC<RecentActivitiesProps> = ({ activities }) => (
   <Card>
