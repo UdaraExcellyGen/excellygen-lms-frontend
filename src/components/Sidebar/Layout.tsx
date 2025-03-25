@@ -51,7 +51,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     switch (location.pathname) {
       case '/settings':
         return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/student-dashboard':
+      case '/learner/dashboard':
         return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
       case '/courses':
         return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';

@@ -127,7 +127,7 @@ const Sidebar = () => {
   };
 
   const learningMenuItems: MenuItem[] = [
-    { title: 'Dashboard', icon: Home, path: '/student-dashboard' },
+    { title: 'Dashboard', icon: Home, path: '/learner/dashboard' },
     { title: 'Courses', icon: BookOpen, path: '/courses' },
   ];
 
@@ -247,7 +247,7 @@ const Sidebar = () => {
 
           {/* Logo Area */}
           <div className="flex-shrink-0 py-4">
-            <Link to="/student-dashboard" className="h-16 flex items-center px-6" aria-label="ExcellyGen Dashboard">
+            <Link to="/learner/dashboard" className="h-16 flex items-center px-6" aria-label="ExcellyGen Dashboard">
               {!isCollapsed ? (
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-[#BF4BF6] to-[#7A00B8] 
