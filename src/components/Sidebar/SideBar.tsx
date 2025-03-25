@@ -26,6 +26,32 @@ interface MenuItem {
   onClick?: () => void;
 }
 
+// Add custom scrollbar styles within the component
+const scrollbarStyles = `
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #1B0A3F;
+    border-radius: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #BF4BF6;
+    border-radius: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #D68BF9;
+  }
+  
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #BF4BF6 #1B0A3F;
+  }
+`;
+
 const Sidebar = () => {
   const { isCollapsed, setIsCollapsed } = useSidebar();
   const { searchQuery, setSearchQuery, clearSearch } = useSearch();
@@ -191,6 +217,9 @@ const Sidebar = () => {
 
   return (
     <>
+      {/* Include the custom scrollbar styles */}
+      <style>{scrollbarStyles}</style>
+      
       <MobileMenuButton />
       
       <div 
@@ -270,11 +299,10 @@ const Sidebar = () => {
             {isCollapsed ? (
               // Collapsed view
               <div className="flex flex-col h-full">
-                {/* Scrollable menu items */}
+                {/* Scrollable menu items with custom scrollbar class */}
                 <div 
                   ref={scrollContainerRef}
-                  className="flex-1 overflow-y-auto px-4 scrollbar-thin scrollbar-thumb-[#BF4BF6]/20 scrollbar-track-transparent hover:scrollbar-thumb-[#BF4BF6]/40"
-                  style={{ scrollbarWidth: 'thin' }}
+                  className="flex-1 overflow-y-auto px-4 custom-scrollbar"
                   role="navigation"
                 >
                   <div className="flex flex-col space-y-4 py-2">
@@ -354,11 +382,10 @@ const Sidebar = () => {
             ) : (
               // Expanded view
               <>
-                {/* Scrollable menu sections */}
+                {/* Scrollable menu sections with custom scrollbar class */}
                 <div 
                   ref={scrollContainerRef}
-                  className="flex-1 overflow-y-auto px-4 scrollbar-thin scrollbar-thumb-[#BF4BF6]/20 scrollbar-track-transparent hover:scrollbar-thumb-[#BF4BF6]/40"
-                  style={{ scrollbarWidth: 'thin' }}
+                  className="flex-1 overflow-y-auto px-4 custom-scrollbar"
                   role="navigation"
                 >
                   {renderMenuSection(learningMenuItems, 'Learning')}
