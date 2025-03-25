@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, FileText, Users, ChevronDown, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import Layout from '../../../components/Layout/Sidebar/Layout/Layout';
+import Layout from '../../../components/Sidebar/Layout';
 import { 
   ActiveCourses, 
   RecentActivities, 

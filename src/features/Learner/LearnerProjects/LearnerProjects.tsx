@@ -3,7 +3,7 @@ import {
   Search,
   Briefcase
 } from 'lucide-react';
-import Layout from '../../../components/Layout/Sidebar/Layout/Layout';
+import Layout from '../../../components/Sidebar/Layout';
 import { ProjectCard } from './components/ProjectCard';
 import { ProjectStats } from './components/ProjectStats';
 import { projects } from './data/projectData';

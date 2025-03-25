@@ -1,8 +1,7 @@
-// src/components/Layout.tsx
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import Sidebar from '../Sidebar/SideBar';
-import { useSidebar } from '../contexts/SidebarContext';
+import Sidebar from './SideBar';
+import { useSidebar } from '../Sidebar/contexts/SidebarContext';
 
 interface LayoutProps {
   children: React.ReactNode;

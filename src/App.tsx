@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import LandingPage from './features/landing/LandingPage';
 
 import LearnerDashboard from './features/Learner/LearnerDashboard/LearnerDashboard';
-import { SidebarProvider } from './components/Layout/Sidebar/contexts/SidebarContext';
+import { SidebarProvider } from './components/Sidebar/contexts/SidebarContext';
 
 
 import { CourseProvider } from './features/Coordinator/contexts/CourseContext';
@@ -41,6 +41,7 @@ import CoursesDisplayPage from './features/Coordinator/CoursesDisplayPage/Course
 
 
 import AdminDashboard from './features/Admin/AdminDashboard/AdminDashboard';
+import LearnerProfile from './features/Learner/LearnerProfile/LearnerProfile';
 
 
 
@@ -60,6 +61,7 @@ function App() {
           <Route path="/coordinator/analytics" element={<CourseCoordinatorAnalytics/>} />
           <Route path="/coordinator/dashboard" element={<CourseCoordinatorDashboard/>} />
           <Route path="/learner/dashboard" element={<SidebarProvider><LearnerDashboard/></SidebarProvider>} />
+          <Route path="/profile" element={<SidebarProvider><LearnerProfile/></SidebarProvider>} />
 
           <Route path="/coordinator/course-details" element={withCourseContex(CourseDetails)} />
 
@@ -80,7 +82,7 @@ function App() {
           <Route path="/project-manager/dashboard" element={<ProjectManagerDashboard/>} />
           <Route path="/project-manager/employee-assign" element={<EmployeeManagement/>} />
           
-          {/* Project Cruds Routes */}
+          
           <Route path="/project-manager/project-cruds" element={<ProjectCruds />} />
           <Route path="/project-manager/project-cruds/technologies" element={<ProjectCruds />} />
           <Route path="/project-manager/project-cruds/roles" element={<ProjectCruds />} />
