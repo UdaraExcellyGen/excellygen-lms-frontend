@@ -1,4 +1,4 @@
-import { ProfileData } from '../types';
+import { ProfileData } from '../types/index';
 
 // Create a collection of mock learner profiles for search results
 export const mockLearners: ProfileData[] = [

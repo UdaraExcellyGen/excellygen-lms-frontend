@@ -4,8 +4,11 @@ import LandingPage from './features/landing/LandingPage';
 
 import LearnerDashboard from './features/Learner/LearnerDashboard/LearnerDashboard';
 import { SidebarProvider } from './components/Sidebar/contexts/SidebarContext';
+import { SearchProvider } from './components/Sidebar/contexts/SearchContext'; // Import SearchProvider
 
-
+// Import search components
+import SearchResults from './components/Sidebar/SearchResults';
+import ViewLearnerProfile from './components/Sidebar/ViewLearnerProfile';
 import { CourseProvider } from './features/Coordinator/contexts/CourseContext';
 
 import BadgesAndRewards from './features/Learner/BadgesAndRewards/BadgesAndRewards';
@@ -35,24 +38,26 @@ import Leaderboard from './features/Learner/Leaderboard/Leaderboard';
 import PublishCoursePage from './features/Coordinator/CreateNewCourse/PublishCoursePage/PublishCoursePage';
 import CoursesDisplayPage from './features/Coordinator/CoursesDisplayPage/CoursesDisplayPage';
 
-
-
-
-
-
 import AdminDashboard from './features/Admin/AdminDashboard/AdminDashboard';
 import LearnerProfile from './features/Learner/LearnerProfile/LearnerProfile';
 
-
-
 function App() {
-
+  // Helper function to wrap component with CourseProvider
   const withCourseContex = (Component: React.ComponentType) => (
     <CourseProvider>
       <Component />
     </CourseProvider>
-    
   );
+
+  // Helper function to wrap component with SidebarProvider and SearchProvider
+  const withSidebarAndSearch = (Component: React.ComponentType) => (
+    <SidebarProvider>
+      <SearchProvider>
+        <Component />
+      </SearchProvider>
+    </SidebarProvider>
+  );
+
   return (
     <BrowserRouter>
       <div className="min-h-screen flex flex-col">
@@ -60,28 +65,29 @@ function App() {
           <Route path="/" element={<LandingPage/>} />
           <Route path="/coordinator/analytics" element={<CourseCoordinatorAnalytics/>} />
           <Route path="/coordinator/dashboard" element={<CourseCoordinatorDashboard/>} />
-          <Route path="/learner/dashboard" element={<SidebarProvider><LearnerDashboard/></SidebarProvider>} />
-          <Route path="/profile" element={<SidebarProvider><LearnerProfile/></SidebarProvider>} />
+          
+          {/* Learner routes with Search functionality */}
+          <Route path="/learner/dashboard" element={withSidebarAndSearch(LearnerDashboard)} />
+          <Route path="/profile" element={withSidebarAndSearch(LearnerProfile)} />
+          <Route path="/badges-rewards" element={withSidebarAndSearch(BadgesAndRewards)} />
+          <Route path="/learner-projects" element={withSidebarAndSearch(LearnerProjects)} />
+          <Route path="/certificate" element={withSidebarAndSearch(CertificatesPage)} />
+          <Route path="/forum" element={withSidebarAndSearch(DiscussionForum)} />
+          <Route path="/notifications" element={withSidebarAndSearch(LearnerNotifications)} />
+          <Route path="/leaderboard" element={withSidebarAndSearch(Leaderboard)} />
+          
+          {/* New search routes */}
+          <Route path="/search-results" element={withSidebarAndSearch(SearchResults)} />
+          <Route path="/learner/:id" element={withSidebarAndSearch(ViewLearnerProfile)} />
 
           <Route path="/coordinator/course-details" element={withCourseContex(CourseDetails)} />
-
-          <Route path="/badges-rewards" element={<SidebarProvider><BadgesAndRewards/></SidebarProvider>} />
-          <Route path="/learner-projects" element={<SidebarProvider><LearnerProjects/></SidebarProvider>} />
-          <Route path="/certificate" element={<SidebarProvider><CertificatesPage/></SidebarProvider>} />
-          <Route path="/forum" element={<SidebarProvider><DiscussionForum/></SidebarProvider>} />
-          <Route path="/coordinator/course-details" element={<CourseDetails/>} />
           <Route path="/admin/notifications" element={<AdminNotifications/>} />
-
           <Route path="/admin/analytics" element={<AdminAnalytics/>} />
           <Route path="/admin/dashboard" element={<AdminDashboard/>} />
-
           <Route path="/coordinator/notifications" element={<CCNotifications/>} />
-
-          <Route path="/notifications" element={<SidebarProvider><LearnerNotifications/></SidebarProvider>} />
           <Route path="/ProjectManager/notifications" element={<ProjectManagerNotification/>} />
           <Route path="/project-manager/dashboard" element={<ProjectManagerDashboard/>} />
           <Route path="/project-manager/employee-assign" element={<EmployeeManagement/>} />
-          
           
           <Route path="/project-manager/project-cruds" element={<ProjectCruds />} />
           <Route path="/project-manager/project-cruds/technologies" element={<ProjectCruds />} />
@@ -91,15 +97,8 @@ function App() {
           <Route path="/coordinator/publish-Course" element={withCourseContex(PublishCoursePage)} />
           <Route path="/coordinator/course-display-page" element={withCourseContex(CoursesDisplayPage)} />
 
-
           <Route path="/coordinator/learner-list" element={<LearnerListPage/>} />
           <Route path="/coordinator/quiz-learner-view" element={<LearnerQuizPage/>} />
-
-
-
-
-
-          <Route path="/leaderboard" element={<SidebarProvider><Leaderboard/></SidebarProvider>} /> 
         </Routes>
       </div>
     </BrowserRouter>
