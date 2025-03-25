@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Layout from '../../../components/Layout/Sidebar/Layout/Layout';
+import Layout from '../../../components/Sidebar/Layout';
 import { Badge } from './types/Badge';
 import { badgesData } from './data/badges';
 import PageHeader from './components/PageHeader';

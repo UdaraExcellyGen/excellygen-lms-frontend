@@ -14,7 +14,7 @@ import {
   LogOut,
   Briefcase
 } from 'lucide-react';
-import { useSidebar } from '../contexts/SidebarContext';
+import { useSidebar } from '../Sidebar/contexts/SidebarContext';
 
 interface MenuItem {
   title: string;

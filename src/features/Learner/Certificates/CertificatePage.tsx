@@ -6,7 +6,7 @@ import {
   CheckCircle2,
   Plus
 } from 'lucide-react';
-import Layout from '../../../components/Layout/Sidebar/Layout/Layout';
+import Layout from '../../../components/Sidebar/Layout';
 import { CertificateCard } from './components/CertificateCard';
 import { ExternalCertificateCard } from './components/ExternalCertificateCard';
 import { CertificateFormModal } from './components/CertificateFormModal';

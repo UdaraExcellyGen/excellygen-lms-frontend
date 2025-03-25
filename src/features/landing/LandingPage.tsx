@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import NavBar from '../../components/Layout/Navbar/NavBar';
-import Footer from '../../components/Layout/Footer/Footer';
+import NavBar from '../../components/Navbar/NavBar';
+import Footer from '../Coordinator/LearnerListPage/components/Footer';
 import AuthContainer from '../auth/AuthContainer';
 import HeroSection from './components/HeroSection';
 import FeaturesSection from './components/FeaturesSection';

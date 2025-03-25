@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MessageSquare, Search, Plus, Clock, MessageCircle, Edit2, Trash2, Eye } from 'lucide-react';
-import Layout from '../../../components/Layout/Sidebar/Layout/Layout';
+import Layout from '../../../components/Sidebar/Layout';
 import CreateThreadModal from './components/CreateThreadModal';
 import EditThreadModal from './components/EditThreadModal';
 import { Thread, ThreadFormData } from './types/thread';

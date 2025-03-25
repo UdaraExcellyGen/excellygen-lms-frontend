@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { initialNotifications } from './data/mockData';
 import { NotificationsState } from './types/learnerNotification';
 import LearnerNotificationGroup from './Components/LearnerNotificationGroup';
-import Layout from '../../../components/Layout/Sidebar/Layout/Layout';
+import Layout from '../../../components/Sidebar/Layout';
 
 const LearnerNotifications: React.FC = () => {
   const [notifications, setNotifications] = useState<NotificationsState>(initialNotifications);

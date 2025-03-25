@@ -6,7 +6,7 @@ import LeaderboardTable from './Components/LeaderboardTable';
 import StatCard from './Components/StatCard';
 import { courseCategories, initialData } from './data/mockData';
 import { Trophy, Star } from 'lucide-react';
-import Layout from '../../../components/Layout/Sidebar/Layout/Layout';
+import Layout from '../../../components/Sidebar/Layout';
 
 const Leaderboard = () => {
   const [timeframe, setTimeframe] = useState('weekly');
