@@ -47,6 +47,7 @@ import CourseCoordinatorAnalytics from './features/Coordinator/Analytics/CourseC
 import CourseCoordinatorDashboard from './features/Coordinator/CoordinatorDashboard/CourseCoordinatorDashboard';
 import CCNotifications from './features/Coordinator/CoordinatorNotification/CCNotifications';
 import LearnerQuizPage from './features/Coordinator/learnerQuizPage/learnerQuizPage';
+import CoordinatorCourseOverview from './features/Coordinator/coordinatorCourseView/CoordinatorCourseOverview/CoordinatorCourseOverview';
 
 function App() {
   // Helper function to wrap component with CourseProvider
@@ -111,6 +112,7 @@ function App() {
           <Route path="/coordinator/publish-Course" element={withCourseContex(PublishCoursePage)} />
           <Route path="/coordinator/course-display-page" element={withCourseContex(CoursesDisplayPage)} />
           <Route path="/coordinator/course-details" element={withCourseContex(CourseDetails)} />
+          <Route path="/coordinator/course-view" element={<CoordinatorCourseOverview/>}/>
 
         </Routes>
       </div>
