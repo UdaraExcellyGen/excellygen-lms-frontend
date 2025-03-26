@@ -1,25 +1,55 @@
-// components/ProgressBar.tsx
 import React from 'react';
 
 interface ProgressBarProps {
-    activeStep: number;
-    steps: string[];
+    stage: number; 
 }
 
-const ProgressBar: React.FC<ProgressBarProps> = ({ activeStep, steps }) => {
+const ProgressBar: React.FC<ProgressBarProps> = ({ stage }) => {
+    const getStageClasses = (stageNumber: number) => {
+        if (stageNumber < stage) {
+            return "w-8 h-8 rounded-full bg-[#F6E6FF] flex items-center justify-center text-[#1B0A3F]";
+        } else if (stageNumber === stage) {
+            return "w-8 h-8 rounded-full bg-[#BF4BF6] flex items-center justify-center text-white font-['Nunito_Sans']";
+        } else {
+            return "w-8 h-8 rounded-full bg-[#F6E6FF] flex items-center justify-center text-[#1B0A3F] font-['Nunito_Sans']";
+        }
+    };
+
+    const getTextClasses = (stageNumber: number) => {
+        return "text-white font-['Nunito_Sans']";
+    };
+
+    const getLineClasses = (stageNumber: number) => {
+        if (stageNumber < stage) {
+            return "h-0.5 flex-1 mx-4 bg-[#F6E6FF]";
+        } else {
+            return "h-0.5 flex-1 mx-4 bg-[#F6E6FF]"; // Keep same color for simplicity, can be changed if needed
+        }
+    };
+
+
     return (
         <div className="flex justify-between items-center mb-6 px-4">
-            {steps.map((step, index) => (
-                <React.Fragment key={index}>
-                    <div className="flex items-center gap-2">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[#1B0A3F] ${activeStep > index ? 'bg-[#F6E6FF]' : (activeStep === index ? 'bg-[#BF4BF6] text-white' : 'bg-[#F6E6FF]')}`}>
-                            {activeStep > index ? '✓' : (activeStep === index ? index + 1 : index + 1)}
-                        </div>
-                        <span className="text-white font-['Nunito_Sans']">{step}</span>
-                    </div>
-                    {index < steps.length - 1 && <div className="h-0.5 flex-1 mx-4 bg-[#F6E6FF]" />}
-                </React.Fragment>
-            ))}
+            <div className="flex items-center gap-2">
+                <div className={getStageClasses(1)}>
+                    {stage > 1 ? '✓' : '1'}
+                </div>
+                <span className={getTextClasses(1)}>Course Details</span>
+            </div>
+            <div className={getLineClasses(1)} />
+            <div className="flex items-center gap-2">
+                <div className={getStageClasses(2)}>
+                    {stage > 2 ? '✓' : '2'}
+                </div>
+                <span className={getTextClasses(2)}>Upload Materials</span>
+            </div>
+            <div className={getLineClasses(2)} />
+            <div className="flex items-center gap-2">
+                <div className={getStageClasses(3)}>
+                    3
+                </div>
+                <span className={getTextClasses(3)}>Publish Course</span>
+            </div>
         </div>
     );
 };
