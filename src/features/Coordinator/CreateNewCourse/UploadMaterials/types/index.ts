@@ -1,4 +1,3 @@
-// components/types.ts
 export interface MaterialFile {
     id: string;
     name: string;
@@ -17,20 +16,25 @@ export interface Subtopic {
     subtopicPoints: number;
 }
 
-export interface Question {
-    id: string;
-    questionText: string;
-    options: string[];
-    correctAnswerIndex: number;
-}
-
 export interface QuizDetails {
     title: string;
-    description?: string;
+    bankSize: string;
+    quizSize: string;
+    duration: string;
+}
+
+export interface Question {
+    questionText: string;
+    options: string[];
+    correctAnswerIndex: number | null;
+    correctAnswer?: string;
 }
 
 export interface QuizBank {
     quizDetails: QuizDetails;
     questions: Question[];
     name: string;
+    bankSize: number;
+    quizSize: number;
+    duration: number;
 }
