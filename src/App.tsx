@@ -9,7 +9,7 @@ import { SearchProvider } from './components/Sidebar/contexts/SearchContext'; //
 // Import search components
 import SearchResults from './components/Sidebar/SearchResults';
 import ViewLearnerProfile from './components/Sidebar/ViewLearnerProfile';
-import { CourseProvider } from './features/Coordinator/contexts/CourseContext';
+
 
 import BadgesAndRewards from './features/Learner/BadgesAndRewards/BadgesAndRewards';
 import LearnerProjects from './features/Learner/LearnerProjects/LearnerProjects';
@@ -20,13 +20,7 @@ import AdminAnalytics from './features/Admin/AdminAnalytics/Adminanalytics';
 import LearnerNotifications from './features/Learner/LearnerNotifications/LearnerNotification';
 import ProjectManagerNotification from './features/ProjectManager/PMnotifications/ProjectManagerNotification';
 
-import UploadMaterials from './features/Coordinator/CreateNewCourse/UploadMaterials/UploadMaterials';
-import LearnerListPage from './features/Coordinator/LearnerListPage/LearnerListPage';
-import CourseDetails from './features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails';
-import CourseCoordinatorAnalytics from './features/Coordinator/Analytics/CourseCoordinatorAnalytics';
-import CourseCoordinatorDashboard from './features/Coordinator/CoordinatorDashboard/CourseCoordinatorDashboard';
-import CCNotifications from './features/Coordinator/CoordinatorNotification/CCNotifications';
-import LearnerQuizPage from './features/Coordinator/learnerQuizPage/learnerQuizPage';
+
 
 import CertificatesPage from './features/Learner/Certificates/CertificatePage';
 import DiscussionForum from './features/Learner/DiscussionForum/DiscussionForum';
@@ -35,11 +29,24 @@ import ProjectManagerDashboard from './features/ProjectManager/ProjectManagerDas
 import ProjectCruds from './features/ProjectManager/ProjectCruds/ProjectCruds';
 import Leaderboard from './features/Learner/Leaderboard/Leaderboard';
 
-import PublishCoursePage from './features/Coordinator/CreateNewCourse/PublishCoursePage/PublishCoursePage';
-import CoursesDisplayPage from './features/Coordinator/CoursesDisplayPage/CoursesDisplayPage';
+
 
 import AdminDashboard from './features/Admin/AdminDashboard/AdminDashboard';
 import LearnerProfile from './features/Learner/LearnerProfile/LearnerProfile';
+
+
+// coordinator import
+import { CourseProvider } from './features/Coordinator/contexts/CourseContext';
+import QuizCreator from './features/Coordinator/QuizCreator/QuizCreator';
+import PublishCoursePage from './features/Coordinator/CreateNewCourse/PublishCoursePage/PublishCoursePage';
+import CoursesDisplayPage from './features/Coordinator/CoursesDisplayPage/CoursesDisplayPage';
+import UploadMaterials from './features/Coordinator/CreateNewCourse/UploadMaterials/UploadMaterials';
+import LearnerListPage from './features/Coordinator/LearnerListPage/LearnerListPage';
+import CourseDetails from './features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails';
+import CourseCoordinatorAnalytics from './features/Coordinator/Analytics/CourseCoordinatorAnalytics';
+import CourseCoordinatorDashboard from './features/Coordinator/CoordinatorDashboard/CourseCoordinatorDashboard';
+import CCNotifications from './features/Coordinator/CoordinatorNotification/CCNotifications';
+import LearnerQuizPage from './features/Coordinator/learnerQuizPage/learnerQuizPage';
 
 function App() {
   // Helper function to wrap component with CourseProvider
@@ -63,8 +70,9 @@ function App() {
       <div className="min-h-screen flex flex-col">
         <Routes>
           <Route path="/" element={<LandingPage/>} />
-          <Route path="/coordinator/analytics" element={<CourseCoordinatorAnalytics/>} />
-          <Route path="/coordinator/dashboard" element={<CourseCoordinatorDashboard/>} />
+
+
+          
           
           {/* Learner routes with Search functionality */}
           <Route path="/learner/dashboard" element={withSidebarAndSearch(LearnerDashboard)} />
@@ -80,7 +88,7 @@ function App() {
           <Route path="/search-results" element={withSidebarAndSearch(SearchResults)} />
           <Route path="/learner/:id" element={withSidebarAndSearch(ViewLearnerProfile)} />
 
-          <Route path="/coordinator/course-details" element={withCourseContex(CourseDetails)} />
+          
           <Route path="/admin/notifications" element={<AdminNotifications/>} />
           <Route path="/admin/analytics" element={<AdminAnalytics/>} />
           <Route path="/admin/dashboard" element={<AdminDashboard/>} />
@@ -93,12 +101,17 @@ function App() {
           <Route path="/project-manager/project-cruds/technologies" element={<ProjectCruds />} />
           <Route path="/project-manager/project-cruds/roles" element={<ProjectCruds />} />
 
+          {/* coordinator routes */}
+          <Route path="/coordinator/analytics" element={<CourseCoordinatorAnalytics/>} />
+          <Route path="/coordinator/dashboard" element={<CourseCoordinatorDashboard/>} />
+          <Route path="/coordinator/learner-list" element={<LearnerListPage/>} />
+          <Route path="/coordinator/quiz-learner-view" element={<LearnerQuizPage/>} />
+          <Route path="/coordinator/quiz-creator" element={withCourseContex(QuizCreator)}/>
           <Route path="/coordinator/upload-materials" element={withCourseContex(UploadMaterials)} />
           <Route path="/coordinator/publish-Course" element={withCourseContex(PublishCoursePage)} />
           <Route path="/coordinator/course-display-page" element={withCourseContex(CoursesDisplayPage)} />
+          <Route path="/coordinator/course-details" element={withCourseContex(CourseDetails)} />
 
-          <Route path="/coordinator/learner-list" element={<LearnerListPage/>} />
-          <Route path="/coordinator/quiz-learner-view" element={<LearnerQuizPage/>} />
         </Routes>
       </div>
     </BrowserRouter>

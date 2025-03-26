@@ -76,7 +76,7 @@ const UploadMaterials: React.FC = () => {
     };
 
     const handleCreateQuizClickForSubtopic = (subtopicId: string) => {
-        navigate('/coordinator/QuizCreator', {
+        navigate('/coordinator/quiz-creator', {
             state: {
                 subtopicId,
                 fromUploadMaterials: true
@@ -204,7 +204,7 @@ const UploadMaterials: React.FC = () => {
     const handleEditQuiz = (subtopicId: string, subtopicIndex: number) => {
         const subtopic = subtopics.find(s => s.id === subtopicId);
         if (subtopic && subtopic.quizBank) {
-            navigate('/coordinator/QuizCreator', {
+            navigate('/coordinator/quiz-creator', {
                 state: {
                     subtopicId,
                     quizDetails: subtopic.quizBank,

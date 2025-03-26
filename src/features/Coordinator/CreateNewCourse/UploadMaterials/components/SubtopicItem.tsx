@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronDown, X, FileText, Play, BookCheck, Plus, Upload, Edit } from 'lucide-react';
-import { MaterialFile, Subtopic } from '../types/index'; /
+import { MaterialFile, Subtopic } from '../types/index'; 
 
 interface SubtopicItemProps {
     subtopic: Subtopic;
