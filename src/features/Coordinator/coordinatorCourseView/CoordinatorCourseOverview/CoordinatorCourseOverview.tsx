@@ -137,11 +137,11 @@ const CoordinatorCourseOverview: React.FC = () => {
     };
 
     const handleBack = () => {
-        navigate("/coordinator/CoursesPage");
+        navigate("/coordinator/course-display-page");
     };
 
     const handleAssign = () => {
-        navigate("/coordinator/AssignLearners");
+        navigate("/coordinator/assign-learners");
     };
 
     const handleDeleteMaterial = (materialId: string) => {
