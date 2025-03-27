@@ -42,7 +42,7 @@ export const GridCard: React.FC<GridCardProps> = ({ course, onDeleteCourse }) =>
                     {isCoordinatorCourse && (
                         <>
                             <button
-                                onClick={() => navigate(`/coordinator/EditableCourseOverview`)}
+                                onClick={() => navigate(`/coordinator/course-view`)}
                                 className="text-gray-600 hover:text-gray-800 p-1 rounded-full"
                                 aria-label={`Edit course ${course.title}`}
                             >
@@ -68,7 +68,7 @@ export const GridCard: React.FC<GridCardProps> = ({ course, onDeleteCourse }) =>
             </div>
 
             <button className="w-full py-2 sm:py-2.5 md:py-3 text-center text-white bg-[#BF4BF6] hover:bg-[#52007C] rounded-xl transition-colors text-sm md:text-sm"
-                onClick={() => navigate('/coordinator/EditableCourseOverview')}
+                onClick={() => navigate('/coordinator/course-view')}
             >
                 View Course
             </button>

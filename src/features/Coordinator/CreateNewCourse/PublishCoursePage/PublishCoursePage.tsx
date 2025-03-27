@@ -182,7 +182,9 @@ const PublishCoursePage: React.FC<PublishCoursePageProps> = () => {
                 )}
             </div>
 
-            <PublishButton onPublish={handlePublish} />
+            <PublishButton 
+            onBack={() => navigate('/coordinator/upload-materials')}
+            onPublish={handlePublish} />
         </div>
     );
 };

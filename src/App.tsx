@@ -36,7 +36,7 @@ import LearnerProfile from './features/Learner/LearnerProfile/LearnerProfile';
 
 
 // coordinator import
-import { CourseProvider } from './features/Coordinator/contexts/CourseContext';
+import { CourseProvider, useCourseContext } from './features/Coordinator/contexts/CourseContext';
 import QuizCreator from './features/Coordinator/QuizCreator/QuizCreator';
 import PublishCoursePage from './features/Coordinator/CreateNewCourse/PublishCoursePage/PublishCoursePage';
 import CoursesDisplayPage from './features/Coordinator/CoursesDisplayPage/CoursesDisplayPage';
@@ -48,6 +48,7 @@ import CourseCoordinatorDashboard from './features/Coordinator/CoordinatorDashbo
 import CCNotifications from './features/Coordinator/CoordinatorNotification/CCNotifications';
 import LearnerQuizPage from './features/Coordinator/learnerQuizPage/learnerQuizPage';
 import CoordinatorCourseOverview from './features/Coordinator/coordinatorCourseView/CoordinatorCourseOverview/CoordinatorCourseOverview';
+import AssignLearners from './features/Coordinator/coordinatorCourseView/AssignLearners/AssignLearners';
 
 function App() {
   // Helper function to wrap component with CourseProvider
@@ -65,6 +66,11 @@ function App() {
       </SearchProvider>
     </SidebarProvider>
   );
+
+  const CourseAssignLearners = () => { // Create a wrapper component to access context
+    const { courseData } = useCourseContext();
+    return <AssignLearners courseName={courseData.basicDetails.title} />; // Pass courseName from context
+  };
 
   return (
     <BrowserRouter>
@@ -113,6 +119,7 @@ function App() {
           <Route path="/coordinator/course-display-page" element={withCourseContex(CoursesDisplayPage)} />
           <Route path="/coordinator/course-details" element={withCourseContex(CourseDetails)} />
           <Route path="/coordinator/course-view" element={<CoordinatorCourseOverview/>}/>
+          <Route path="/coordinator/assign-learners" element={withCourseContex(CourseAssignLearners)} />
 
         </Routes>
       </div>
