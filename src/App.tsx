@@ -49,6 +49,7 @@ import CCNotifications from './features/Coordinator/CoordinatorNotification/CCNo
 import LearnerQuizPage from './features/Coordinator/learnerQuizPage/learnerQuizPage';
 import CoordinatorCourseOverview from './features/Coordinator/coordinatorCourseView/CoordinatorCourseOverview/CoordinatorCourseOverview';
 import AssignLearners from './features/Coordinator/coordinatorCourseView/AssignLearners/AssignLearners';
+import ManageUser from './features/Admin/ManageUser/ManageUser';
 
 function App() {
   // Helper function to wrap component with CourseProvider
@@ -99,6 +100,7 @@ function App() {
           <Route path="/admin/notifications" element={<AdminNotifications/>} />
           <Route path="/admin/analytics" element={<AdminAnalytics/>} />
           <Route path="/admin/dashboard" element={<AdminDashboard/>} />
+          <Route path="/admin/manage-users" element={<ManageUser/>} />
           <Route path="/coordinator/notifications" element={<CCNotifications/>} />
           <Route path="/ProjectManager/notifications" element={<ProjectManagerNotification/>} />
           <Route path="/project-manager/dashboard" element={<ProjectManagerDashboard/>} />
