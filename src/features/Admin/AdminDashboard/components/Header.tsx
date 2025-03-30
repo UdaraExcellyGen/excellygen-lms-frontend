@@ -63,7 +63,7 @@ const Header: React.FC<HeaderProps> = ({
         navigate('/admin/dashboard');
         break;
       case 'Learner':
-        navigate('/student-dashboard');
+        navigate('/learner/dashboard');
         break;
       case 'CourseCoordinator':
         navigate('/coordinator/dashboard');

@@ -128,23 +128,23 @@ const Sidebar = () => {
 
   const learningMenuItems: MenuItem[] = [
     { title: 'Dashboard', icon: Home, path: '/learner/dashboard' },
-    { title: 'Courses', icon: BookOpen, path: '/courses' },
+    { title: 'Courses', icon: BookOpen, path: '/learner/course-categories' },
   ];
 
   const communityMenuItems: MenuItem[] = [
-    { title: 'Discussion Forum', icon: MessageSquare, path: '/forum' },
-    { title: 'Projects', icon: Briefcase, path: '/learner-projects' },
-    { title: 'Leaderboard', icon: BarChart2, path: '/leaderboard' },
+    { title: 'Discussion Forum', icon: MessageSquare, path: '/learner/forum' },
+    { title: 'Projects', icon: Briefcase, path: '/learner/projects' },
+    { title: 'Leaderboard', icon: BarChart2, path: '/learner/leaderboard' },
   ];
 
   const progressMenuItems: MenuItem[] = [
-    { title: 'Certificates', icon: Award, path: '/certificate' },
-    { title: 'Badges & Rewards', icon: Trophy, path: '/badges-rewards' },
-    { title: 'Notifications', icon: Bell, path: '/notifications' },
+    { title: 'Certificates', icon: Award, path: '/learner/certificate' },
+    { title: 'Badges & Rewards', icon: Trophy, path: '/learner/badges-rewards' },
+    { title: 'Notifications', icon: Bell, path: '/learner/notifications' },
   ];
 
   const bottomMenuItems: MenuItem[] = [
-    { title: 'Profile', icon: UserCircle, path: '/profile' },
+    { title: 'Profile', icon: UserCircle, path: '/learner/profile' },
     { 
       title: 'Logout', 
       icon: LogOut, 
