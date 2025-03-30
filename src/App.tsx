@@ -52,6 +52,7 @@ import AssignLearners from './features/Coordinator/coordinatorCourseView/AssignL
 import ManageUser from './features/Admin/ManageUser/ManageUser';
 import ManageTech from './features/Admin/ManageTech/ManageTech';
 import CourseCategoryManage from './features/Admin/ManageCourseCategory/CourseCategoryManage';
+import CourseCategories from './features/Learner/CourseCategories/CourseCategories';
 
 function App() {
   // Helper function to wrap component with CourseProvider
@@ -86,14 +87,15 @@ function App() {
           
           {/* Learner routes with Search functionality */}
           <Route path="/learner/dashboard" element={withSidebarAndSearch(LearnerDashboard)} />
-          <Route path="/profile" element={withSidebarAndSearch(LearnerProfile)} />
-          <Route path="/badges-rewards" element={withSidebarAndSearch(BadgesAndRewards)} />
-          <Route path="/learner-projects" element={withSidebarAndSearch(LearnerProjects)} />
-          <Route path="/certificate" element={withSidebarAndSearch(CertificatesPage)} />
-          <Route path="/forum" element={withSidebarAndSearch(DiscussionForum)} />
-          <Route path="/notifications" element={withSidebarAndSearch(LearnerNotifications)} />
-          <Route path="/leaderboard" element={withSidebarAndSearch(Leaderboard)} />
-          
+          <Route path="/learner/profile" element={withSidebarAndSearch(LearnerProfile)} />
+          <Route path="/learner/badges-rewards" element={withSidebarAndSearch(BadgesAndRewards)} />
+          <Route path="/learner/projects" element={withSidebarAndSearch(LearnerProjects)} />
+          <Route path="/learner/certificate" element={withSidebarAndSearch(CertificatesPage)} />
+          <Route path="/learner/forum" element={withSidebarAndSearch(DiscussionForum)} />
+          <Route path="/learner/notifications" element={withSidebarAndSearch(LearnerNotifications)} />
+          <Route path="/learner/leaderboard" element={withSidebarAndSearch(Leaderboard)} />
+          <Route path="/learner/course-categories" element={withSidebarAndSearch(CourseCategories)} />
+
           {/* New search routes */}
           <Route path="/search-results" element={withSidebarAndSearch(SearchResults)} />
           <Route path="/learner/:id" element={withSidebarAndSearch(ViewLearnerProfile)} />

@@ -53,23 +53,21 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
       case '/learner/dashboard':
         return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/courses':
+      case '/learner/course-categories':
         return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/forum':
+      case '/learner/forum':
         return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/leaderboard':
+      case '/learner/leaderboard':
         return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/certificate':
+      case '/learner/certificate':
         return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/notifications':
+      case '/learner/notifications':
         return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/profile':
+      case '/learner/profile':
         return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/analytics':
+      case '/learner/badges-rewards':
         return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/badges-rewards':
-        return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/learner-projects':
+      case '/learner/projects':
         return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
       case '/cv':
         return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
