@@ -51,6 +51,7 @@ import CoordinatorCourseOverview from './features/Coordinator/coordinatorCourseV
 import AssignLearners from './features/Coordinator/coordinatorCourseView/AssignLearners/AssignLearners';
 import ManageUser from './features/Admin/ManageUser/ManageUser';
 import ManageTech from './features/Admin/ManageTech/ManageTech';
+import CourseCategoryManage from './features/Admin/ManageCourseCategory/CourseCategoryManage';
 
 function App() {
   // Helper function to wrap component with CourseProvider
@@ -103,6 +104,7 @@ function App() {
           <Route path="/admin/dashboard" element={<AdminDashboard/>} />
           <Route path="/admin/manage-users" element={<ManageUser/>} />
           <Route path="/admin/manage-tech" element={<ManageTech/>} />
+          <Route path="/admin/course-categories" element={<CourseCategoryManage/>} />
           <Route path="/coordinator/notifications" element={<CCNotifications/>} />
           <Route path="/ProjectManager/notifications" element={<ProjectManagerNotification/>} />
           <Route path="/project-manager/dashboard" element={<ProjectManagerDashboard/>} />
