@@ -25,7 +25,7 @@ import CourseContent from './features/Learner/CourseContent/CourseContent';
 import AdminDashboard from './features/Admin/AdminDashboard/AdminDashboard';
 import AdminNotifications from './features/Admin/AdminNotifications/MainAdminNotification';
 import AdminAnalytics from './features/Admin/AdminAnalytics/Adminanalytics';
-import ManageUser from './features/Admin/ManageUser/ManageUser';
+
 import ManageTech from './features/Admin/ManageTech/ManageTech';
 import CourseCategoryManage from './features/Admin/ManageCourseCategory/CourseCategoryManage';
 
@@ -52,6 +52,7 @@ import ProjectCruds from './features/ProjectManager/ProjectCruds/ProjectCruds';
 // Search Components
 import SearchResults from './components/Sidebar/SearchResults';
 import ViewLearnerProfile from './components/Sidebar/ViewLearnerProfile';
+import ManageUsers from './features/Admin/ManageUser/ManageUser';
 
 function App() {
   // Helper function to wrap component with CourseProvider
@@ -113,7 +114,7 @@ function App() {
             <Route path="dashboard" element={<AdminDashboard/>} />
             <Route path="notifications" element={<AdminNotifications/>} />
             <Route path="analytics" element={<AdminAnalytics/>} />
-            <Route path="manage-users" element={<ManageUser/>} />
+            <Route path="manage-users" element={<ManageUsers/>} />
             <Route path="manage-tech" element={<ManageTech/>} />
             <Route path="course-categories" element={<CourseCategoryManage/>} />
           </Route>
