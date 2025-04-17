@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { User, X, Eye, EyeOff, Lock, Mail } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { X, Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface LoginFormProps {
   onClose: () => void;
@@ -8,32 +8,22 @@ interface LoginFormProps {
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onClose, onForgotPassword }) => {
-  const navigate = useNavigate();
+  const { login, loading, error: authError } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleForgotClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    console.log('LoginForm - Forgot password clicked');
-    if (typeof onForgotPassword === 'function') {
-      onForgotPassword();
-    }
-  };
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setError(null);
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      onClose();
-      navigate('/learner/dashboard');
+      await login(email, password);
+      onClose(); // Close the modal on successful login
     } catch (error) {
+      setError('Invalid email or password');
       console.error('Login error:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -126,13 +116,20 @@ const LoginForm: React.FC<LoginFormProps> = ({ onClose, onForgotPassword }) => {
           </label>
           <button 
             type="button" 
-            onClick={handleForgotClick}
+            onClick={onForgotPassword}
             className="text-sm text-french-violet hover:text-indigo transition-colors duration-200 cursor-pointer"
             disabled={loading}
           >
             Forgot password?
           </button>
         </div>
+
+        {/* Error Message */}
+        {(error || authError) && (
+          <div className="text-red-500 text-sm text-center">
+            {error || authError}
+          </div>
+        )}
 
         {/* Submit Button */}
         <button

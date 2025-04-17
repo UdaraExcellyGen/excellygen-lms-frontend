@@ -1,13 +1,26 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+
+// Auth Provider
+import { AuthProvider } from './contexts/AuthContext';
+
+// Protected Route
+import ProtectedRoute from './components/routing/ProtectedRoute';
 
 // Context Providers
 import { SidebarProvider } from './components/Sidebar/contexts/SidebarContext';
 import { SearchProvider } from './components/Sidebar/contexts/SearchContext';
 import { CourseProvider, useCourseContext } from './features/Coordinator/contexts/CourseContext';
 
+// User Roles
+import { UserRole } from './types/auth.types';
+
 // Landing Page
 import LandingPage from './features/landing/LandingPage';
+
+// Auth Components
+import RoleSelection from './features/auth/RoleSelection';
 
 // Learner Components
 import LearnerDashboard from './features/Learner/LearnerDashboard/LearnerDashboard';
@@ -25,7 +38,7 @@ import CourseContent from './features/Learner/CourseContent/CourseContent';
 import AdminDashboard from './features/Admin/AdminDashboard/AdminDashboard';
 import AdminNotifications from './features/Admin/AdminNotifications/MainAdminNotification';
 import AdminAnalytics from './features/Admin/AdminAnalytics/Adminanalytics';
-
+import ManageUsers from './features/Admin/ManageUser/ManageUser';
 import ManageTech from './features/Admin/ManageTech/ManageTech';
 import CourseCategoryManage from './features/Admin/ManageCourseCategory/CourseCategoryManage';
 
@@ -52,7 +65,17 @@ import ProjectCruds from './features/ProjectManager/ProjectCruds/ProjectCruds';
 // Search Components
 import SearchResults from './components/Sidebar/SearchResults';
 import ViewLearnerProfile from './components/Sidebar/ViewLearnerProfile';
-import ManageUsers from './features/Admin/ManageUser/ManageUser';
+
+function AppWrapper() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <App />
+        <Toaster position="top-right" />
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
 
 function App() {
   // Helper function to wrap component with CourseProvider
@@ -77,80 +100,368 @@ function App() {
   };
 
   return (
-    <BrowserRouter>
-      <div className="min-h-screen flex flex-col">
-        <Routes>
-          {/* Landing Page */}
-          <Route path="/" element={<LandingPage/>} />
+    <div className="min-h-screen flex flex-col">
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<LandingPage />} />
+        
+        {/* Auth Routes */}
+        <Route 
+          path="/role-selection" 
+          element={
+            <ProtectedRoute>
+              <RoleSelection />
+            </ProtectedRoute>
+          } 
+        />
 
-          {/* LEARNER ROUTES*/}
-          <Route path="/learner">
-            {/* Main Learner Pages */}
-            <Route path="dashboard" element={withSidebarAndSearch(LearnerDashboard)} />
-            <Route path="profile" element={withSidebarAndSearch(LearnerProfile)} />
-            <Route path="badges-rewards" element={withSidebarAndSearch(BadgesAndRewards)} />
-            <Route path="projects" element={withSidebarAndSearch(LearnerProjects)} />
-            <Route path="certificate" element={withSidebarAndSearch(CertificatesPage)} />
-            <Route path="forum" element={withSidebarAndSearch(DiscussionForum)} />
-            <Route path="notifications" element={withSidebarAndSearch(LearnerNotifications)} />
-            <Route path="leaderboard" element={withSidebarAndSearch(Leaderboard)} />
-            
-            {/* Course related pages */}
-            <Route path="course-categories" element={withSidebarAndSearch(CourseCategories)} />
-            <Route path="courses/:pathTitle" element={withSidebarAndSearch(CourseContent)} />
-            <Route path="course/:courseId" element={withSidebarAndSearch(CourseContent)} />
-          </Route>
+        {/* LEARNER ROUTES*/}
+        <Route path="/learner">
+          {/* Main Learner Pages */}
+          <Route 
+            path="dashboard" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
+                {withSidebarAndSearch(LearnerDashboard)}
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="profile" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
+                {withSidebarAndSearch(LearnerProfile)}
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="badges-rewards" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
+                {withSidebarAndSearch(BadgesAndRewards)}
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="projects" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
+                {withSidebarAndSearch(LearnerProjects)}
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="certificate" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
+                {withSidebarAndSearch(CertificatesPage)}
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="forum" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
+                {withSidebarAndSearch(DiscussionForum)}
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="notifications" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
+                {withSidebarAndSearch(LearnerNotifications)}
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="leaderboard" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
+                {withSidebarAndSearch(Leaderboard)}
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Course related pages */}
+          <Route 
+            path="course-categories" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
+                {withSidebarAndSearch(CourseCategories)}
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="courses/:pathTitle" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
+                {withSidebarAndSearch(CourseContent)}
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="course/:courseId" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
+                {withSidebarAndSearch(CourseContent)}
+              </ProtectedRoute>
+            } 
+          />
+        </Route>
 
-          {/* Legacy course routes (keeping for backward compatibility) */}
-          <Route path="/courses/:pathTitle" element={withSidebarAndSearch(CourseContent)} />
-          <Route path="/course/:courseId" element={withSidebarAndSearch(CourseContent)} />
+        {/* Legacy course routes (keeping for backward compatibility) */}
+        <Route 
+          path="/courses/:pathTitle" 
+          element={
+            <ProtectedRoute allowedRoles={[UserRole.Learner]}>
+              {withSidebarAndSearch(CourseContent)}
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/course/:courseId" 
+          element={
+            <ProtectedRoute allowedRoles={[UserRole.Learner]}>
+              {withSidebarAndSearch(CourseContent)}
+            </ProtectedRoute>
+          } 
+        />
 
-          {/* Search Routes */}
-          <Route path="/search-results" element={withSidebarAndSearch(SearchResults)} />
-          <Route path="/learner/:id" element={withSidebarAndSearch(ViewLearnerProfile)} />
-          
-          {/* ADMIN ROUTES */}
-          <Route path="/admin">
-            <Route path="dashboard" element={<AdminDashboard/>} />
-            <Route path="notifications" element={<AdminNotifications/>} />
-            <Route path="analytics" element={<AdminAnalytics/>} />
-            <Route path="manage-users" element={<ManageUsers/>} />
-            <Route path="manage-tech" element={<ManageTech/>} />
-            <Route path="course-categories" element={<CourseCategoryManage/>} />
-          </Route>
-          
-          {/*  COORDINATOR ROUTES */}
-          <Route path="/coordinator">
-            <Route path="dashboard" element={<CourseCoordinatorDashboard/>} />
-            <Route path="analytics" element={<CourseCoordinatorAnalytics/>} />
-            <Route path="notifications" element={<CCNotifications/>} />
-            <Route path="learner-list" element={<LearnerListPage/>} />
-            <Route path="quiz-learner-view" element={<LearnerQuizPage/>} />
-            <Route path="quiz-creator" element={withCourseContext(QuizCreator)}/>
-            <Route path="upload-materials" element={withCourseContext(UploadMaterials)} />
-            <Route path="publish-Course" element={withCourseContext(PublishCoursePage)} />
-            <Route path="course-display-page" element={withCourseContext(CoursesDisplayPage)} />
-            <Route path="course-details" element={withCourseContext(CourseDetails)} />
-            <Route path="course-view" element={<CoordinatorCourseOverview/>}/>
-            <Route path="assign-learners" element={withCourseContext(CourseAssignLearners)} />
-          </Route>
-          
-          {/* PROJECT MANAGER ROUTES  */}
-          <Route path="/project-manager">
-            <Route path="dashboard" element={<ProjectManagerDashboard/>} />
-            <Route path="notifications" element={<ProjectManagerNotification/>} />
-            <Route path="employee-assign" element={<EmployeeManagement/>} />
-            <Route path="project-cruds" element={<ProjectCruds />} />
-            <Route path="project-cruds/technologies" element={<ProjectCruds />} />
-            <Route path="project-cruds/roles" element={<ProjectCruds />} />
-          </Route>
-          
-          {/* Legacy path for ProjectManager notifications */}
-          <Route path="/ProjectManager/notifications" element={<ProjectManagerNotification/>} />
-        </Routes>
-      </div>
-    </BrowserRouter>
+        {/* Search Routes */}
+        <Route 
+          path="/search-results" 
+          element={
+            <ProtectedRoute>
+              {withSidebarAndSearch(SearchResults)}
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/learner/:id" 
+          element={
+            <ProtectedRoute>
+              {withSidebarAndSearch(ViewLearnerProfile)}
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* ADMIN ROUTES */}
+        <Route path="/admin">
+          <Route 
+            path="dashboard" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Admin]}>
+                <AdminDashboard/>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="notifications" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Admin]}>
+                <AdminNotifications/>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="analytics" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Admin]}>
+                <AdminAnalytics/>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="manage-users" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Admin]}>
+                <ManageUsers/>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="manage-tech" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Admin]}>
+                <ManageTech/>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="course-categories" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Admin]}>
+                <CourseCategoryManage/>
+              </ProtectedRoute>
+            } 
+          />
+        </Route>
+        
+        {/*  COORDINATOR ROUTES */}
+        <Route path="/coordinator">
+          <Route 
+            path="dashboard" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                <CourseCoordinatorDashboard/>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="analytics" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                <CourseCoordinatorAnalytics/>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="notifications" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                <CCNotifications/>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="learner-list" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                <LearnerListPage/>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="quiz-learner-view" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                <LearnerQuizPage/>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="quiz-creator" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                {withCourseContext(QuizCreator)}
+              </ProtectedRoute>
+            }
+          />
+          <Route 
+            path="upload-materials" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                {withCourseContext(UploadMaterials)}
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="publish-Course" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                {withCourseContext(PublishCoursePage)}
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="course-display-page" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                {withCourseContext(CoursesDisplayPage)}
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="course-details" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                {withCourseContext(CourseDetails)}
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="course-view" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                <CoordinatorCourseOverview/>
+              </ProtectedRoute>
+            }
+          />
+          <Route 
+            path="assign-learners" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                {withCourseContext(CourseAssignLearners)}
+              </ProtectedRoute>
+            } 
+          />
+        </Route>
+        
+        {/* PROJECT MANAGER ROUTES  */}
+        <Route path="/project-manager">
+          <Route 
+            path="dashboard" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
+                <ProjectManagerDashboard/>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="notifications" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
+                <ProjectManagerNotification/>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="employee-assign" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
+                <EmployeeManagement/>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="project-cruds" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
+                <ProjectCruds />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="project-cruds/technologies" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
+                <ProjectCruds />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="project-cruds/roles" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
+                <ProjectCruds />
+              </ProtectedRoute>
+            } 
+          />
+        </Route>
+        
+        {/* Legacy path for ProjectManager notifications */}
+        <Route 
+          path="/ProjectManager/notifications" 
+          element={
+            <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
+              <ProjectManagerNotification/>
+            </ProtectedRoute>
+          } 
+        />
+      </Routes>
+    </div>
   );
 }
 
-export default App;
+export default AppWrapper;
