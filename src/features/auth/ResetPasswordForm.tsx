@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Mail, ArrowLeft } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ResetPasswordFormProps {
   onClose: () => void;
@@ -10,31 +11,26 @@ const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({
   onClose,
   onBackToLogin
 }) => {
+  const { resetPassword, loading, error: authError } = useAuth();
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
     
     try {
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await resetPassword(email);
       setIsSubmitted(true);
     } catch (error) {
       setError('Failed to send reset link. Please try again.');
       console.error('Reset password error:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleBackClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    console.log('ResetPasswordForm - Back to login clicked');
     onBackToLogin();
   };
 
@@ -73,9 +69,9 @@ const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({
       </div>
 
       {/* Error Message */}
-      {error && (
+      {(error || authError) && (
         <div className="mb-4 p-3 bg-red-50 text-red-500 rounded-lg text-sm">
-          {error}
+          {error || authError}
         </div>
       )}
 

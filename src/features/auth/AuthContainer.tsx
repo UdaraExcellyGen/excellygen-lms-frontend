@@ -1,44 +1,45 @@
 import React, { useState } from 'react';
-import LoginForm from '../landing/auth/LoginForm';
+import LoginForm from './LoginForm';
 import ResetPasswordForm from './ResetPasswordForm';
 
-export interface AuthContainerProps {
+interface AuthContainerProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+enum AuthView {
+  LOGIN,
+  RESET_PASSWORD
+}
+
 const AuthContainer: React.FC<AuthContainerProps> = ({ isOpen, onClose }) => {
-  const [currentView, setCurrentView] = useState<'login' | 'reset'>('login');
-  
-  console.log('AuthContainer - Current View:', currentView);
-  
-  if (!isOpen) return null;
+  const [currentView, setCurrentView] = useState<AuthView>(AuthView.LOGIN);
 
   const handleForgotPassword = () => {
-    console.log('AuthContainer - Handling forgot password');
-    setCurrentView('reset'); 
+    setCurrentView(AuthView.RESET_PASSWORD);
   };
 
   const handleBackToLogin = () => {
-    setCurrentView('login');
+    setCurrentView(AuthView.LOGIN);
   };
 
+  if (!isOpen) {
+    return null;
+  }
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div 
-        className="bg-white rounded-xl w-full max-w-md p-8 relative shadow-2xl"
+        className="relative w-full max-w-md p-6 bg-white rounded-lg shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {currentView === 'login' ? (
+        {currentView === AuthView.LOGIN ? (
           <LoginForm 
             onClose={onClose}
-            onForgotPassword={() => {
-              console.log('AuthContainer - Calling handleForgotPassword');
-              handleForgotPassword();
-            }}
+            onForgotPassword={handleForgotPassword}
           />
         ) : (
-          <ResetPasswordForm 
+          <ResetPasswordForm
             onClose={onClose}
             onBackToLogin={handleBackToLogin}
           />
