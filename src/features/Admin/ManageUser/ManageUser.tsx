@@ -47,11 +47,14 @@ const ManageUser: React.FC = () => {
 
   // Utility functions
   const getRoleColor = (role: string) => {
-    switch (role) {
+    switch (role.toLowerCase()) {
       case 'admin': return 'bg-red-100 text-red-800';
-      case 'coordinator': return 'bg-blue-100 text-blue-800';
+      case 'coordinator': 
+      case 'course coordinator': 
+      case 'course_coordinator': return 'bg-blue-100 text-blue-800';
       case 'learner': return 'bg-green-100 text-green-800';
-      case 'project_manager': return 'bg-purple-100 text-purple-800';
+      case 'project_manager': 
+      case 'project manager': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };

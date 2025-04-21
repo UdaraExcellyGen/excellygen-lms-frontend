@@ -47,24 +47,18 @@ const UserCard: React.FC<UserCardProps> = ({
   
   // Get role color with normalization
   const getStandardRoleColor = (role: string) => {
-    // Normalize the role first
-    let normalizedRole;
     switch(role.toLowerCase()) {
-      case 'admin': normalizedRole = 'Admin'; break;
-      case 'learner': normalizedRole = 'Learner'; break;
+      case 'admin': return 'bg-red-100 text-red-800';
+      case 'learner': return 'bg-green-100 text-green-800';
       case 'coursecoordinator': 
       case 'course coordinator': 
       case 'course_coordinator': 
-        normalizedRole = 'CourseCoordinator'; break;
+      case 'coordinator': return 'bg-blue-100 text-blue-800';
       case 'projectmanager': 
       case 'project manager': 
-      case 'project_manager': 
-        normalizedRole = 'ProjectManager'; break;
-      default: normalizedRole = role;
+      case 'project_manager': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
-    
-    // Then get the color
-    return getRoleColor(normalizedRole);
   };
 
   return (
