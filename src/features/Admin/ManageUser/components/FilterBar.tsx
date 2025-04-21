@@ -31,6 +31,21 @@ const FilterBar: React.FC<FilterBarProps> = ({
   getRoleColor,
   isFetchingFilteredData
 }) => {
+  // Available roles with their normalized values and display names
+  const availableRoles = [
+    { value: 'Admin', display: 'Admin' },
+    { value: 'Learner', display: 'Learner' },
+    { value: 'CourseCoordinator', display: 'Course Coordinator' },
+    { value: 'ProjectManager', display: 'Project Manager' }
+  ];
+
+  // Helper function to check if a role is selected
+  const isRoleSelected = (role: string) => {
+    return filterState.selectedRoles.some(selectedRole => 
+      selectedRole.toLowerCase() === role.toLowerCase()
+    );
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-sm mb-6 p-6">
       <div className="flex flex-col md:flex-row gap-4">
@@ -76,23 +91,23 @@ const FilterBar: React.FC<FilterBarProps> = ({
                 </div>
                 
                 <div className="max-h-56 overflow-y-auto py-1">
-                  {['admin', 'coordinator', 'learner', 'project_manager'].map((role) => (
-                    <div key={role} className="relative flex items-start px-3 py-2">
+                  {availableRoles.map((role) => (
+                    <div key={role.value} className="relative flex items-start px-3 py-2">
                       <div className="flex items-center h-5">
                         <input
                           type="checkbox"
-                          id={`filter-role-${role}`}
-                          checked={filterState.selectedRoles.includes(role)}
-                          onChange={(e) => handleRoleChange(role, e.target.checked)}
+                          id={`filter-role-${role.value}`}
+                          checked={isRoleSelected(role.value)}
+                          onChange={(e) => handleRoleChange(role.value, e.target.checked)}
                           className="h-4 w-4 rounded border-gray-300 text-[#BF4BF6] focus:ring-[#BF4BF6]"
                         />
                       </div>
                       <div className="ml-3 text-sm">
                         <label
-                          htmlFor={`filter-role-${role}`}
+                          htmlFor={`filter-role-${role.value}`}
                           className="text-gray-900 font-['Nunito_Sans']"
                         >
-                          {formatRoleName(role)}
+                          {role.display}
                         </label>
                       </div>
                     </div>

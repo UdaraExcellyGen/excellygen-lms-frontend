@@ -53,7 +53,7 @@ export const useUsers = () => {
     name: '',
     email: '',
     phone: '',
-    roles: ['learner'],
+    roles: ['Learner'],
     department: '',
     password: ''
   });
@@ -72,26 +72,38 @@ export const useUsers = () => {
     fetchUsers();
   }, []);
 
-  // Client-side filtering implementation
+  // Case-insensitive role comparison helper
+  const roleMatches = (userRole: string, filterRole: string) => {
+    return userRole.toLowerCase() === filterRole.toLowerCase();
+  };
+
+  // Client-side filtering implementation with case-insensitive role comparison
   const filteredUsers = useMemo(() => {
     if (allUsers.length > 0) {
       return allUsers.filter(user => {
+        // Search term filter
         const matchesSearch = !debouncedSearchTerm || 
           user.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
           user.email.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
           user.id.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
         
+        // Role filter with case-insensitive comparison
         const matchesRoles = filterState.selectedRoles.length === 0 || 
-          user.roles.some(role => filterState.selectedRoles.includes(role));
+          user.roles.some(userRole => 
+            filterState.selectedRoles.some(filterRole => 
+              roleMatches(userRole, filterRole)
+            )
+          );
         
+        // Status filter
         const matchesStatus = filterState.filterStatus === 'all' || 
           user.status === filterState.filterStatus;
         
         return matchesSearch && matchesRoles && matchesStatus;
       });
     }
-    return users;
-  }, [allUsers, debouncedSearchTerm, filterState.selectedRoles, filterState.filterStatus, users]);
+    return []; // Return empty array to avoid circular dependency
+  }, [allUsers, debouncedSearchTerm, filterState.selectedRoles, filterState.filterStatus]);
 
   // Server-side filtering effect
   useEffect(() => {
@@ -102,7 +114,7 @@ export const useUsers = () => {
     } else {
       setUsers(filteredUsers);
     }
-  }, [debouncedSearchTerm, filterState.selectedRoles, filterState.filterStatus, allUsers.length, filteredUsers]);
+  }, [debouncedSearchTerm, filterState.selectedRoles, filterState.filterStatus, allUsers.length]);
 
   // Fetch all users with caching
   const fetchUsers = async () => {
@@ -120,13 +132,31 @@ export const useUsers = () => {
     }
   };
 
-  // Fetch filtered users from server
+  // Fetch filtered users from server with normalized role values
   const fetchFilteredUsers = async () => {
     try {
       setIsFetchingFilteredData(true);
+      
+      // Use consistent role format for backend
+      const normalizedRoles = filterState.selectedRoles.map(role => {
+        switch(role.toLowerCase()) {
+          case 'admin': return 'Admin';
+          case 'learner': return 'Learner';
+          case 'coursecoordinator': 
+          case 'course coordinator': 
+          case 'course_coordinator': 
+            return 'CourseCoordinator';
+          case 'projectmanager': 
+          case 'project manager': 
+          case 'project_manager': 
+            return 'ProjectManager';
+          default: return role;
+        }
+      });
+      
       const data = await searchUsers(
         debouncedSearchTerm, 
-        filterState.selectedRoles, 
+        normalizedRoles, 
         filterState.filterStatus
       );
       setUsers(data);
@@ -138,6 +168,49 @@ export const useUsers = () => {
       setIsFetchingFilteredData(false);
     }
   };
+
+  // Handle role change in a case-insensitive way
+  const handleRoleChange = useCallback((role: string, isChecked: boolean) => {
+    setFilterState(prev => {
+      // First normalize the role value
+      let normalizedRole = role;
+      switch(role.toLowerCase()) {
+        case 'admin': normalizedRole = 'Admin'; break;
+        case 'learner': normalizedRole = 'Learner'; break;
+        case 'course coordinator': 
+        case 'coordinator': 
+        case 'coursecoordinator': 
+          normalizedRole = 'CourseCoordinator'; break;
+        case 'project manager': 
+        case 'project_manager': 
+        case 'projectmanager': 
+          normalizedRole = 'ProjectManager'; break;
+      }
+      
+      if (isChecked) {
+        // Check if we already have this role (case-insensitive)
+        const alreadyHasRole = prev.selectedRoles.some(r => 
+          r.toLowerCase() === normalizedRole.toLowerCase()
+        );
+        
+        if (!alreadyHasRole) {
+          return {
+            ...prev,
+            selectedRoles: [...prev.selectedRoles, normalizedRole]
+          };
+        }
+        return prev;
+      } else {
+        // Remove the role (case-insensitive)
+        return {
+          ...prev,
+          selectedRoles: prev.selectedRoles.filter(r => 
+            r.toLowerCase() !== normalizedRole.toLowerCase()
+          )
+        };
+      }
+    });
+  }, []);
 
   // Handle adding or updating a user
   const handleAddUser = async () => {
@@ -153,9 +226,32 @@ export const useUsers = () => {
         throw new Error('Password is required for new users');
       }
       
+      // Normalize role formats
+      const normalizedRoles = newUser.roles.map(role => {
+        switch(role.toLowerCase()) {
+          case 'admin': return 'Admin';
+          case 'learner': return 'Learner';
+          case 'coursecoordinator': 
+          case 'course coordinator': 
+          case 'course_coordinator': 
+            return 'CourseCoordinator';
+          case 'projectmanager': 
+          case 'project manager': 
+          case 'project_manager': 
+            return 'ProjectManager';
+          default: return role;
+        }
+      });
+      
+      // Update the user object with normalized roles
+      const userWithNormalizedRoles = {
+        ...newUser,
+        roles: normalizedRoles
+      };
+      
       if (editingUser) {
         // Edit existing user
-        const optimisticUser = { ...editingUser, ...newUser };
+        const optimisticUser = { ...editingUser, ...userWithNormalizedRoles };
         
         setUsers(prevUsers => prevUsers.map(user => 
           user.id === editingUser.id ? optimisticUser : user
@@ -171,7 +267,7 @@ export const useUsers = () => {
         
         try {
           const updatedUser = await updateUser(editingUser.id, {
-            ...newUser,
+            ...userWithNormalizedRoles,
             status: editingUser.status
           });
           
@@ -204,7 +300,7 @@ export const useUsers = () => {
         // Create new user
         const tempId = `temp-${Date.now()}`;
         const tempUser = {
-          ...newUser,
+          ...userWithNormalizedRoles,
           id: tempId,
           status: 'active',
           joinedDate: new Date().toISOString()
@@ -219,7 +315,7 @@ export const useUsers = () => {
         setShowAddModal(false);
         
         try {
-          const createdUser = await createUser(newUser);
+          const createdUser = await createUser(userWithNormalizedRoles);
           
           setUsers(prevUsers => prevUsers.map(user => 
             user.id === tempId ? createdUser : user
@@ -255,6 +351,65 @@ export const useUsers = () => {
     }
   };
 
+  // Reset filters
+  const resetFilters = useCallback(() => {
+    setFilterState({
+      searchTerm: '',
+      selectedRoles: [],
+      filterStatus: 'all'
+    });
+  }, []);
+
+  // Reset form
+  const resetForm = () => {
+    setNewUser({ 
+      name: '', 
+      email: '', 
+      phone: '', 
+      roles: ['Learner'], 
+      department: '', 
+      password: '' 
+    });
+    setEditingUser(null);
+    setError(null);
+  };
+
+  // Update roles for new user
+  const updateNewUserRoles = (role: string, isChecked: boolean) => {
+    // Normalize role first
+    let normalizedRole = role;
+    switch(role.toLowerCase()) {
+      case 'admin': normalizedRole = 'Admin'; break;
+      case 'learner': normalizedRole = 'Learner'; break;
+      case 'course coordinator': 
+      case 'coordinator': 
+        normalizedRole = 'CourseCoordinator'; break;
+      case 'project manager': 
+      case 'project_manager': 
+        normalizedRole = 'ProjectManager'; break;
+    }
+    
+    setNewUser(prev => {
+      if (isChecked) {
+        // Check if we already have this role (case-insensitive)
+        const alreadyHasRole = prev.roles.some(r => 
+          r.toLowerCase() === normalizedRole.toLowerCase()
+        );
+        
+        if (!alreadyHasRole) {
+          return { ...prev, roles: [...prev.roles, normalizedRole] };
+        }
+        return prev;
+      } else {
+        return {
+          ...prev,
+          roles: prev.roles.filter(r => r.toLowerCase() !== normalizedRole.toLowerCase())
+        };
+      }
+    });
+  };
+
+  // Rest of the code from original useUsers hook...
   // Delete a user
   const confirmDelete = async () => {
     if (userToDelete) {
@@ -360,48 +515,6 @@ export const useUsers = () => {
     } finally {
       setLoadingUserIds(prev => prev.filter(id => id !== userId));
     }
-  };
-
-  // Reset filters
-  const resetFilters = useCallback(() => {
-    setFilterState({
-      searchTerm: '',
-      selectedRoles: [],
-      filterStatus: 'all'
-    });
-  }, []);
-
-  // Reset form
-  const resetForm = () => {
-    setNewUser({ 
-      name: '', 
-      email: '', 
-      phone: '', 
-      roles: ['learner'], 
-      department: '', 
-      password: '' 
-    });
-    setEditingUser(null);
-    setError(null);
-  };
-
-  // Helper functions
-  const handleRoleChange = useCallback((role: string, isChecked: boolean) => {
-    setFilterState(prev => ({
-      ...prev,
-      selectedRoles: isChecked 
-        ? [...prev.selectedRoles, role] 
-        : prev.selectedRoles.filter(r => r !== role)
-    }));
-  }, []);
-
-  const updateNewUserRoles = (role: string, isChecked: boolean) => {
-    setNewUser(prev => ({
-      ...prev,
-      roles: isChecked
-        ? [...prev.roles, role]
-        : prev.roles.filter(r => r !== role)
-    }));
   };
 
   const isUserLoading = (userId: string) => loadingUserIds.includes(userId);

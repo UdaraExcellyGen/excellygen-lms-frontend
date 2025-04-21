@@ -1,5 +1,4 @@
-// src/features/auth/RoleSelection.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Briefcase, 
@@ -21,14 +20,23 @@ interface Role {
 
 const RoleSelection: React.FC = () => {
   const navigate = useNavigate();
-  const { user, selectRole, loading } = useAuth();
+  const { user, selectRole, loading, initialized } = useAuth();
+
+  // Debug logging
+  useEffect(() => {
+    console.log('RoleSelection component mounted');
+    console.log('User:', user);
+    console.log('Initialized:', initialized);
+    console.log('Loading:', loading);
+  }, [user, initialized, loading]);
 
   // Redirect if no user data
-  React.useEffect(() => {
-    if (!user) {
+  useEffect(() => {
+    if (initialized && !user) {
+      console.log('No user found, redirecting to landing page');
       navigate('/');
     }
-  }, [user, navigate]);
+  }, [user, navigate, initialized]);
 
   const availableRoles: Role[] = [
     {
@@ -65,14 +73,39 @@ const RoleSelection: React.FC = () => {
     if (loading) return;
     
     try {
+      console.log(`Selecting role: ${role}`);
       await selectRole(role);
+      // The navigation will be handled by the selectRole function in the auth context
     } catch (error) {
       console.error('Error selecting role:', error);
     }
   };
 
+  // Show loading state
+  if (!initialized || loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] flex items-center justify-center p-4">
+        <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  // Show error state if no user
   if (!user) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md text-center">
+          <h2 className="text-xl font-semibold text-red-600 mb-4">Authentication Error</h2>
+          <p className="mb-4">Unable to load user data. Please try logging in again.</p>
+          <button 
+            onClick={() => navigate('/')} 
+            className="px-4 py-2 bg-french-violet text-white rounded-lg hover:bg-indigo transition-colors duration-200"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (

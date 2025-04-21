@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Book, Users, Cpu } from 'lucide-react';
+import { useAuth } from '../../../contexts/AuthContext'; // Import auth context
 
 // Import components
 import Header from './components/Header';
@@ -16,22 +17,23 @@ import {
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { user, currentRole } = useAuth(); // Use auth context
   
-  useEffect(() => {
-    // Get user data from localStorage
-    const userDataString = localStorage.getItem('user');
-    if (userDataString) {
-      setCurrentUser(JSON.parse(userDataString));
-    }
-  }, []);
+  // If user data is not available in auth context, show loading
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#52007C] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#52007C] p-4 sm:p-6 lg:p-8">
-      {/* Header Section */}
+      {/* Header Section - Pass user data from auth context */}
       <Header
         notifications={initialNotifications}
-        adminName={currentUser?.name || "Admin Name"}
+        adminName={user.name || "Admin Name"}
         role="System Administrator"
       />
 
@@ -43,7 +45,7 @@ const AdminDashboard: React.FC = () => {
           stats={initialStats.coordinators}
           totalLabel="Total Course Categories"
           activeLabel="Active Course Categories"
-          onViewMore={() => navigate('/admin/view-categories')}
+          onViewMore={() => navigate('/admin/course-categories')}
         />
 
         <StatCard
@@ -52,7 +54,7 @@ const AdminDashboard: React.FC = () => {
           stats={initialStats.users}
           totalLabel="Total Users"
           activeLabel="Active Users"
-          onViewMore={() => navigate('/admin/view-users')}
+          onViewMore={() => navigate('/admin/manage-users')}
         />
 
         <StatCard
@@ -61,7 +63,7 @@ const AdminDashboard: React.FC = () => {
           stats={initialStats.technologies}
           totalLabel="Total Technologies"
           activeLabel="Active Technologies"
-          onViewMore={() => navigate('/admin/view-techs')}
+          onViewMore={() => navigate('/admin/manage-tech')}
         />
       </div>
 

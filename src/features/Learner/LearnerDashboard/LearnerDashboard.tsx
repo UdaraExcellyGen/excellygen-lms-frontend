@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, FileText, Users, ChevronDown, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Sidebar/Layout';
+import { useAuth } from '../../../contexts/AuthContext';
+import { UserRole } from '../../../types/auth.types';
 import { 
   ActiveCourses, 
   RecentActivities, 
@@ -10,27 +12,15 @@ import {
 import { courses, activities, weeklyTimeData } from './data/mockData';
 import LearnerHeaderImage from '../../../assets/LearnerHeader.svg';
 
-const roleIcons: Record<string, React.ReactNode> = {
-  Admin: <Users size={16} />,
-  Learner: <FileText size={16} />,
-  CourseCoordinator: <Calendar size={16} />,
-  ProjectManager: <FileText size={16} />
-};
-
-const updatedCourses = courses.map(course => 
-  course.title === "Advanced React Development" 
-    ? {...course, title: "Web Development Fundamentals"} 
-    : course
-);
-
 const LearnerDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const { user, currentRole, selectRole, navigateToRoleSelection } = useAuth();
   const [currentDate, setCurrentDate] = useState('');
   const [currentDay, setCurrentDay] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   
+  // Format the current date and day
   useEffect(() => {
     const now = new Date();
     const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
@@ -39,13 +29,9 @@ const LearnerDashboard: React.FC = () => {
     
     setCurrentDate(formattedDate);
     setCurrentDay(day);
-    
-    const userDataString = localStorage.getItem('user');
-    if (userDataString) {
-      setCurrentUser(JSON.parse(userDataString));
-    }
   }, []);
 
+  // Handle outside clicks for dropdown
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -59,36 +45,8 @@ const LearnerDashboard: React.FC = () => {
     };
   }, [dropdownRef]);
 
-  const handleGenerateCV = () => {
-    navigate('/cv');
-  };
-
-  const handleViewProfile = () => {
-    navigate('/profile');
-  };
-
   const toggleDropdown = () => {
     setDropdownOpen(!dropdownOpen);
-  };
-
-  const switchToRole = (role: string) => {
-    
-    switch(role) {
-      case 'Admin':
-        navigate('/admin/dashboard');
-        break;
-      case 'Learner':
-        navigate('/student-dashboard');
-        break;
-      case 'CourseCoordinator':
-        navigate('/coordinator/dashboard');
-        break;
-      case 'ProjectManager':
-        navigate('/manager/dashboard');
-        break;
-      default:
-        navigate('/role-selection');
-    }
   };
 
   const formatRoleName = (role: string) => {
@@ -96,6 +54,45 @@ const LearnerDashboard: React.FC = () => {
     if (role === 'ProjectManager') return 'Project Manager';
     return role;
   };
+
+  const handleSwitchRole = async (role: UserRole) => {
+    try {
+      console.log(`Attempting to switch to role: ${role}`);
+      if (role === currentRole) {
+        // If already in this role, just close dropdown
+        setDropdownOpen(false);
+        return;
+      }
+      
+      // Call the selectRole function from auth context
+      setDropdownOpen(false);
+      await selectRole(role);
+    } catch (error) {
+      console.error('Error switching role:', error);
+    }
+  };
+
+  // Use the direct navigation function from auth context
+  const handleViewAllRoles = () => {
+    console.log('Navigating to role selection page from learner dashboard');
+    setDropdownOpen(false);
+    // Use direct navigation from auth context
+    navigateToRoleSelection();
+  };
+
+  const roleIcons: Record<string, React.ReactNode> = {
+    Admin: <Users size={16} />,
+    Learner: <FileText size={16} />,
+    CourseCoordinator: <Calendar size={16} />,
+    ProjectManager: <FileText size={16} />
+  };
+
+  // Modify course titles if needed
+  const updatedCourses = courses.map(course => 
+    course.title === "Advanced React Development" 
+      ? {...course, title: "Web Development Fundamentals"} 
+      : course
+  );
 
   return (
     <Layout>
@@ -116,7 +113,7 @@ const LearnerDashboard: React.FC = () => {
               </div>
 
               {/* Role Switcher Dropdown */}
-              {currentUser && currentUser.roles && currentUser.roles.length > 1 && (
+              {user && user.roles && user.roles.length > 1 && (
                 <div className="relative" ref={dropdownRef}>
                   <button 
                     onClick={toggleDropdown}
@@ -126,7 +123,7 @@ const LearnerDashboard: React.FC = () => {
                     aria-haspopup="true"
                   >
                     <Users size={18} />
-                    <span className="text-sm font-medium">Role: Learner</span>
+                    <span className="text-sm font-medium">Role: {currentRole && formatRoleName(currentRole as string)}</span>
                     <ChevronDown 
                       size={16} 
                       className={`transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`}
@@ -140,11 +137,11 @@ const LearnerDashboard: React.FC = () => {
                         Switch Role
                       </div>
                       <div className="py-1">
-                        {currentUser.roles.map((role: string) => (
+                        {user.roles.map((role) => (
                           <button
                             key={role}
-                            onClick={() => switchToRole(role)}
-                            className={`flex items-center w-full text-left px-4 py-2 text-sm transition-colors duration-200 ${role === 'Learner' ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/15 hover:text-white'}`}
+                            onClick={() => handleSwitchRole(role as UserRole)}
+                            className={`flex items-center w-full text-left px-4 py-2 text-sm transition-colors duration-200 ${role === currentRole ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/15 hover:text-white'}`}
                           >
                             <div className="flex items-center justify-between w-full">
                               <div className="flex items-center space-x-2">
@@ -153,7 +150,7 @@ const LearnerDashboard: React.FC = () => {
                                 </span>
                                 <span>{formatRoleName(role)}</span>
                               </div>
-                              {role === 'Learner' && (
+                              {role === currentRole && (
                                 <Check size={16} className="text-white" />
                               )}
                             </div>
@@ -162,7 +159,8 @@ const LearnerDashboard: React.FC = () => {
                       </div>
                       <div className="border-t border-white/10">
                         <button
-                          onClick={() => navigate('/role-selection')}
+                          type="button"
+                          onClick={handleViewAllRoles}
                           className="flex items-center w-full text-left px-4 py-2 text-sm text-white/80 hover:bg-white/15 hover:text-white transition-colors duration-200"
                         >
                           View All Roles
@@ -179,7 +177,7 @@ const LearnerDashboard: React.FC = () => {
               <div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-8 md:gap-4">
                 <div className="w-full md:w-auto z-10 px-6 md:px-8 py-6 md:py-8">
                   <h1 className="text-3xl md:text-4xl font-bold font-unbounded mb-4 bg-gradient-to-r from-white via-white to-[#D68BF9] bg-clip-text text-transparent">
-                    {currentUser ? currentUser.name : 'Learner Name'}
+                    {user ? user.name : 'Learner Name'}
                   </h1>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
                     <p className="text-[#D68BF9] px-3 py-1 bg-white/5 rounded-full text-sm">Software Engineer</p>
