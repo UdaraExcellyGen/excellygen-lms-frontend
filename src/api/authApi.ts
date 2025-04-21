@@ -1,6 +1,8 @@
 import apiClient from './apiClient';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import { mapBackendRolesToEnums, mapEnumsToBackendRoles } from '../utils/roleMapping';
+import { UserRole } from '../types/auth.types';
 
 interface LoginCredentials {
   email: string;
@@ -54,6 +56,9 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     
     console.log("JWT token received from backend");
     
+    // Convert backend roles to frontend enum format
+    const mappedRoles = mapBackendRolesToEnums(response.data.roles);
+    
     // Store auth data
     localStorage.setItem('access_token', response.data.token.accessToken);
     localStorage.setItem('refresh_token', response.data.token.refreshToken);
@@ -63,11 +68,16 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
       id: response.data.userId,
       name: response.data.name,
       email: response.data.email,
-      roles: response.data.roles
+      roles: mappedRoles
     }));
     
     console.log("Login data stored in localStorage");
-    return response.data;
+    
+    // Return response with properly mapped roles
+    return {
+      ...response.data,
+      roles: mappedRoles.map(role => role.toString())
+    };
   } catch (error) {
     console.error('Login error:', error);
     throw error;
@@ -107,7 +117,7 @@ export const logout = async (): Promise<void> => {
 };
 
 // Select role for users with multiple roles
-export const selectRole = async (role: string): Promise<TokenResponse> => {
+export const selectRole = async (role: UserRole): Promise<TokenResponse> => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const accessToken = localStorage.getItem('access_token');
@@ -116,9 +126,12 @@ export const selectRole = async (role: string): Promise<TokenResponse> => {
       throw new Error('User not authenticated');
     }
     
+    // Convert enum role to properly formatted string for backend
+    const backendRole = role.toString();
+    
     const request: SelectRoleRequest = {
       userId: user.id,
-      role,
+      role: backendRole,
       accessToken
     };
     

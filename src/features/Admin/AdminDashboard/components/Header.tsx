@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, LogOut, Users, BarChart2, ChevronDown, Check, FileText, Calendar, Book } from 'lucide-react';  
 import { useNavigate } from 'react-router-dom'; 
 import { HeaderProps } from '../types/types';  
+import { useAuth } from '../../../../contexts/AuthContext'; // Import auth context
+import { UserRole } from '../../../../types/auth.types'; // Import UserRole type
 
 // Role icon mapping
 const roleIcons: Record<string, React.ReactNode> = {
@@ -17,17 +19,9 @@ const Header: React.FC<HeaderProps> = ({
   role = "System Administrator" 
 }) => {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { user, currentRole, selectRole, logout, navigateToRoleSelection } = useAuth(); // Use auth context
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    // Get user data from localStorage
-    const userDataString = localStorage.getItem('user');
-    if (userDataString) {
-      setCurrentUser(JSON.parse(userDataString));
-    }
-  }, []);
 
   // Handle click outside to close dropdown
   useEffect(() => {
@@ -43,8 +37,13 @@ const Header: React.FC<HeaderProps> = ({
     };
   }, [dropdownRef]);
 
-  const handleLogout = () => {
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await logout(); // Use auth context's logout method
+      // The navigate will be handled by the logout function
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const toggleDropdown = () => {
@@ -56,24 +55,31 @@ const Header: React.FC<HeaderProps> = ({
     navigate('/admin/notifications');
   };
 
-  const switchToRole = (role: string) => {
-    // Navigate to appropriate dashboard
-    switch(role) {
-      case 'Admin':
-        navigate('/admin/dashboard');
-        break;
-      case 'Learner':
-        navigate('/learner/dashboard');
-        break;
-      case 'CourseCoordinator':
-        navigate('/coordinator/dashboard');
-        break;
-      case 'ProjectManager':
-        navigate('/manager/dashboard');
-        break;
-      default:
-        navigate('/role-selection');
+  // Updated to use auth context's selectRole function
+  const handleSwitchRole = async (role: UserRole) => {
+    try {
+      console.log(`Attempting to switch to role: ${role}`);
+      if (role === currentRole) {
+        // If already in this role, just close dropdown
+        setDropdownOpen(false);
+        return;
+      }
+      
+      // Call the selectRole function from auth context
+      setDropdownOpen(false);
+      await selectRole(role);
+      // Navigation will be handled by the selectRole function
+    } catch (error) {
+      console.error('Error switching role:', error);
     }
+  };
+
+  // Use the direct navigation function from auth context
+  const handleViewAllRoles = () => {
+    console.log('Navigating to role selection page from admin header');
+    setDropdownOpen(false);
+    // Use direct navigation from auth context
+    navigateToRoleSelection();
   };
 
   // Format role name for display
@@ -99,7 +105,7 @@ const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto justify-end">
           {/* View Reports Button */}
           <button 
-            onClick={() => navigate('/admin/reports')}
+            onClick={() => navigate('/admin/analytics')}
             className="flex items-center gap-2 py-2 px-4 bg-gradient-to-r from-[#BF4BF6] to-[#7A00B8] text-white rounded-lg hover:from-[#D68BF9] hover:to-[#BF4BF6] transition-all duration-300"
           >
             <BarChart2 size={20} />
@@ -116,7 +122,7 @@ const Header: React.FC<HeaderProps> = ({
           </button>
 
           {/* Role Switcher - Only show if user has multiple roles */}
-          {currentUser && currentUser.roles && currentUser.roles.length > 1 && (
+          {user && user.roles && user.roles.length > 1 && (
             <div className="relative" ref={dropdownRef}>
               <button 
                 onClick={toggleDropdown}
@@ -140,12 +146,13 @@ const Header: React.FC<HeaderProps> = ({
                     Switch Role
                   </div>
                   <div className="py-1">
-                    {currentUser.roles.map((roleOption: string) => (
+                    {user.roles.map((roleOption: string) => (
                       <button
                         key={roleOption}
-                        onClick={() => switchToRole(roleOption)}
+                        type="button"
+                        onClick={() => handleSwitchRole(roleOption as UserRole)}
                         className={`flex items-center w-full text-left px-4 py-2 text-sm transition-colors duration-200 font-['Nunito_Sans'] ${
-                          roleOption === 'Admin' 
+                          roleOption === currentRole 
                             ? 'bg-[#F6E6FF] text-[#BF4BF6]' 
                             : 'text-gray-700 hover:bg-[#F6E6FF] hover:text-[#BF4BF6]'
                         }`}
@@ -157,7 +164,7 @@ const Header: React.FC<HeaderProps> = ({
                             </span>
                             <span>{formatRoleName(roleOption)}</span>
                           </div>
-                          {roleOption === 'Admin' && (
+                          {roleOption === currentRole && (
                             <Check size={16} className="text-[#BF4BF6]" />
                           )}
                         </div>
@@ -165,12 +172,16 @@ const Header: React.FC<HeaderProps> = ({
                     ))}
                   </div>
                   <div className="border-t border-gray-100">
-                    <button
-                      onClick={() => navigate('/role-selection')}
+                    <a 
+                      href="/role-selection"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleViewAllRoles();
+                      }}
                       className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-[#F6E6FF] hover:text-[#BF4BF6] transition-colors duration-200 font-['Nunito_Sans']"
                     >
                       View All Roles
-                    </button>
+                    </a>
                   </div>
                 </div>
               )}

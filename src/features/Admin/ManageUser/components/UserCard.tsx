@@ -23,6 +23,50 @@ const UserCard: React.FC<UserCardProps> = ({
   navigate,
   onEditUser
 }) => {
+  // The formatRoleName function should handle normalization too
+  const displayRoleName = (role: string) => {
+    // First normalize to standard format
+    let normalizedRole;
+    switch(role.toLowerCase()) {
+      case 'admin': normalizedRole = 'Admin'; break;
+      case 'learner': normalizedRole = 'Learner'; break;
+      case 'coursecoordinator': 
+      case 'course coordinator': 
+      case 'course_coordinator': 
+        normalizedRole = 'CourseCoordinator'; break;
+      case 'projectmanager': 
+      case 'project manager': 
+      case 'project_manager': 
+        normalizedRole = 'ProjectManager'; break;
+      default: normalizedRole = role;
+    }
+    
+    // Then apply the formatting function
+    return formatRoleName(normalizedRole);
+  };
+  
+  // Get role color with normalization
+  const getStandardRoleColor = (role: string) => {
+    // Normalize the role first
+    let normalizedRole;
+    switch(role.toLowerCase()) {
+      case 'admin': normalizedRole = 'Admin'; break;
+      case 'learner': normalizedRole = 'Learner'; break;
+      case 'coursecoordinator': 
+      case 'course coordinator': 
+      case 'course_coordinator': 
+        normalizedRole = 'CourseCoordinator'; break;
+      case 'projectmanager': 
+      case 'project manager': 
+      case 'project_manager': 
+        normalizedRole = 'ProjectManager'; break;
+      default: normalizedRole = role;
+    }
+    
+    // Then get the color
+    return getRoleColor(normalizedRole);
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-sm p-6 transition-all duration-300 hover:shadow-md flex flex-col">
       {/* User Header */}
@@ -63,9 +107,9 @@ const UserCard: React.FC<UserCardProps> = ({
         {user.roles.map((role, index) => (
           <span 
             key={index} 
-            className={`inline-block px-3 py-1 rounded-full text-xs ${getRoleColor(role)} mb-1`}
+            className={`inline-block px-3 py-1 rounded-full text-xs ${getStandardRoleColor(role)} mb-1`}
           >
-            {formatRoleName(role)}
+            {displayRoleName(role)}
           </span>
         ))}
       </div>

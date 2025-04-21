@@ -1,9 +1,5 @@
-import axios from 'axios';
+import apiClient from '../../../../api/apiClient';
 
-// Base API URL - adjust if your API is deployed elsewhere
-const API_URL = 'http://localhost:5177/api';
-
-// Types that match your backend DTOs
 export interface User {
   id: string;
   name: string;
@@ -13,13 +9,13 @@ export interface User {
   department: string;
   status: string;
   joinedDate: string;
-  jobRole: string;
-  about: string;
-  firebaseUid: string;
+  jobRole?: string;
+  about?: string;
   avatar?: string;
 }
 
 export interface CreateUserDto {
+  id?: string; // Only for optimistic UI updates, not sent to server
   name: string;
   email: string;
   phone: string;
@@ -34,18 +30,14 @@ export interface UpdateUserDto {
   phone: string;
   roles: string[];
   department: string;
-  password?: string;
+  password?: string; // Optional for updates
   status: string;
 }
 
-// Service functions
-
-/**
- * Get all users
- */
+// Get all users
 export const getAllUsers = async (): Promise<User[]> => {
   try {
-    const response = await axios.get(`${API_URL}/Users`);
+    const response = await apiClient.get('/admin/users');
     return response.data;
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -53,25 +45,21 @@ export const getAllUsers = async (): Promise<User[]> => {
   }
 };
 
-/**
- * Get a user by ID
- */
+// Get user by ID
 export const getUserById = async (id: string): Promise<User> => {
   try {
-    const response = await axios.get(`${API_URL}/Users/${id}`);
+    const response = await apiClient.get(`/admin/users/${id}`);
     return response.data;
   } catch (error) {
-    console.error(`Error fetching user with ID ${id}:`, error);
+    console.error(`Error fetching user ${id}:`, error);
     throw error;
   }
 };
 
-/**
- * Create a new user
- */
+// Create new user
 export const createUser = async (user: CreateUserDto): Promise<User> => {
   try {
-    const response = await axios.post(`${API_URL}/Users`, user);
+    const response = await apiClient.post('/admin/users', user);
     return response.data;
   } catch (error) {
     console.error('Error creating user:', error);
@@ -79,69 +67,61 @@ export const createUser = async (user: CreateUserDto): Promise<User> => {
   }
 };
 
-/**
- * Update an existing user
- */
+// Update existing user
 export const updateUser = async (id: string, user: UpdateUserDto): Promise<User> => {
   try {
-    const response = await axios.put(`${API_URL}/Users/${id}`, user);
+    const response = await apiClient.put(`/admin/users/${id}`, user);
     return response.data;
   } catch (error) {
-    console.error(`Error updating user with ID ${id}:`, error);
+    console.error(`Error updating user ${id}:`, error);
     throw error;
   }
 };
 
-/**
- * Delete a user
- */
+// Delete user
 export const deleteUser = async (id: string): Promise<void> => {
   try {
-    await axios.delete(`${API_URL}/Users/${id}`);
+    await apiClient.delete(`/admin/users/${id}`);
   } catch (error) {
-    console.error(`Error deleting user with ID ${id}:`, error);
+    console.error(`Error deleting user ${id}:`, error);
     throw error;
   }
 };
 
-/**
- * Toggle a user's active status
- */
+// Toggle user status (active/inactive)
 export const toggleUserStatus = async (id: string): Promise<User> => {
   try {
-    const response = await axios.patch(`${API_URL}/Users/${id}/toggle-status`);
+    const response = await apiClient.post(`/admin/users/${id}/toggle-status`);
     return response.data;
   } catch (error) {
-    console.error(`Error toggling status for user with ID ${id}:`, error);
+    console.error(`Error toggling status for user ${id}:`, error);
     throw error;
   }
 };
 
-/**
- * Search users with optional filters
- */
+// Search users with filters
 export const searchUsers = async (
-  searchTerm?: string,
-  roles?: string[],
+  searchTerm?: string, 
+  roles?: string[], 
   status?: string
 ): Promise<User[]> => {
   try {
     // Build query parameters
-    const params: any = {};
+    const params = new URLSearchParams();
+    
     if (searchTerm) {
-      params.searchTerm = searchTerm;
+      params.append('searchTerm', searchTerm);
     }
+    
     if (roles && roles.length > 0) {
-      // Handle arrays in query string
-      roles.forEach((role, index) => {
-        params[`roles[${index}]`] = role;
-      });
+      roles.forEach(role => params.append('roles', role));
     }
+    
     if (status && status !== 'all') {
-      params.status = status;
+      params.append('status', status);
     }
-
-    const response = await axios.get(`${API_URL}/Users/search`, { params });
+    
+    const response = await apiClient.get(`/admin/users/search?${params.toString()}`);
     return response.data;
   } catch (error) {
     console.error('Error searching users:', error);
