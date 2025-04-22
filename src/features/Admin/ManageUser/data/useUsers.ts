@@ -212,18 +212,67 @@ export const useUsers = () => {
     });
   }, []);
 
+  // Helper function for phone number validation
+  const validatePhoneNumber = (phone: string): boolean => {
+    if (!phone) return true; // Phone is optional
+    
+    // Remove any non-digit characters for validation
+    const digitsOnly = phone.replace(/\D/g, '');
+    
+    // Check if the phone starts with + or if it has valid length
+    if (phone.startsWith('+')) {
+      return digitsOnly.length >= 10 && digitsOnly.length <= 15; // E.164 format allows 15 digits max
+    }
+    
+    // For non-prefixed numbers, accept 10-15 digits
+    return digitsOnly.length >= 10 && digitsOnly.length <= 15;
+  };
+
+  // Helper function for email validation
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   // Handle adding or updating a user
   const handleAddUser = async () => {
     try {
       setIsSubmitting(true);
       
-      // Validation
+      // Basic validation
       if (!newUser.email || !newUser.name) {
-        throw new Error('Name and email are required');
+        throw new Error('Name and email are required fields');
       }
       
+      // Email validation
+      if (!validateEmail(newUser.email)) {
+        throw new Error('Please enter a valid email address');
+      }
+      
+      // Phone validation (if provided)
+      if (newUser.phone && !validatePhoneNumber(newUser.phone)) {
+        throw new Error('Please enter a valid phone number (10-15 digits) or leave it empty');
+      }
+      
+      // Password validation for new users
       if (!editingUser && !newUser.password) {
         throw new Error('Password is required for new users');
+      }
+      
+      // Password strength validation (only for new users or when password is changed)
+      if (newUser.password && !editingUser) {
+        if (newUser.password.length < 8) {
+          throw new Error('Password must be at least 8 characters long');
+        }
+        if (!/[A-Z]/.test(newUser.password)) {
+          throw new Error('Password must contain at least one uppercase letter');
+        }
+        if (!/[a-z]/.test(newUser.password)) {
+          throw new Error('Password must contain at least one lowercase letter');
+        }
+        if (!/[0-9]/.test(newUser.password)) {
+          throw new Error('Password must contain at least one number');
+        }
       }
       
       // Normalize role formats
@@ -342,9 +391,42 @@ export const useUsers = () => {
       
       resetForm();
     } catch (err: any) {
-      const errorMessage = err.message || 'Failed to save user';
+      // Extract specific error messages from backend
+      let errorMessage = err.message || 'Failed to save user';
+      
+      // Check for specific error patterns from the backend
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.details) {
+        errorMessage = err.response.data.details;
+      }
+      
+      // Handle specific error cases with user-friendly messages
+      if (errorMessage.includes('already in use')) {
+        if (errorMessage.includes('Email')) {
+          errorMessage = 'This email address is already registered. Please use a different email address.';
+        } else if (errorMessage.includes('Phone') || errorMessage.includes('phone')) {
+          errorMessage = 'This phone number is already registered. Please use a different phone number.';
+        }
+      } else if (errorMessage.includes('Failed to create Firebase account')) {
+        errorMessage = 'Unable to create account due to authentication issues. Please try again later.';
+      } else if (errorMessage.includes('Failed to save user to database')) {
+        errorMessage = 'Unable to save user information. Please try again later.';
+      } else if (errorMessage.includes('Invalid phone number')) {
+        errorMessage = 'Please enter a valid phone number in international format (e.g., +1234567890)';
+      } else if (errorMessage.toLowerCase().includes('duplicate')) {
+        if (errorMessage.toLowerCase().includes('email')) {
+          errorMessage = 'This email address is already registered. Please use a different email address.';
+        } else if (errorMessage.toLowerCase().includes('phone')) {
+          errorMessage = 'This phone number is already registered. Please use a different phone number.';
+        }
+      }
+      
       setError(errorMessage);
-      toast.error(errorMessage);
+      toast.error(errorMessage, {
+        duration: 5000, // Show error for 5 seconds
+        icon: '⚠️',
+      });
       console.error('Error saving user:', err);
     } finally {
       setIsSubmitting(false);
@@ -376,16 +458,18 @@ export const useUsers = () => {
 
   // Update roles for new user
   const updateNewUserRoles = (role: string, isChecked: boolean) => {
-    // Normalize role first
+    // First ensure we're working with the proper standardized format
     let normalizedRole = role;
     switch(role.toLowerCase()) {
       case 'admin': normalizedRole = 'Admin'; break;
       case 'learner': normalizedRole = 'Learner'; break;
       case 'course coordinator': 
       case 'coordinator': 
+      case 'coursecoordinator': 
         normalizedRole = 'CourseCoordinator'; break;
       case 'project manager': 
       case 'project_manager': 
+      case 'projectmanager': 
         normalizedRole = 'ProjectManager'; break;
     }
     
@@ -409,7 +493,6 @@ export const useUsers = () => {
     });
   };
 
-  // Rest of the code from original useUsers hook...
   // Delete a user
   const confirmDelete = async () => {
     if (userToDelete) {

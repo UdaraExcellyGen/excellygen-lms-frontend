@@ -40,7 +40,6 @@ import AdminNotifications from './features/Admin/AdminNotifications/MainAdminNot
 import AdminAnalytics from './features/Admin/AdminAnalytics/Adminanalytics';
 import ManageUsers from './features/Admin/ManageUser/ManageUser';
 import ManageTech from './features/Admin/ManageTech/ManageTech';
-import CourseCategoryManage from './features/Admin/ManageCourseCategory/CourseCategoryManage';
 
 // Coordinator Components
 import CourseCoordinatorDashboard from './features/Coordinator/CoordinatorDashboard/CourseCoordinatorDashboard';
@@ -65,6 +64,8 @@ import ProjectCruds from './features/ProjectManager/ProjectCruds/ProjectCruds';
 // Search Components
 import SearchResults from './components/Sidebar/SearchResults';
 import ViewLearnerProfile from './components/Sidebar/ViewLearnerProfile';
+import CategoryCoursesPage from './features/Admin/CategoryCourses/CategoryCoursesPage';
+import ManageCourseCategory from './features/Admin/ManageCourseCategory/ManageCourseCategory';
 
 function AppWrapper() {
   return (
@@ -293,7 +294,16 @@ function App() {
             path="course-categories" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.Admin]}>
-                <CourseCategoryManage/>
+                <ManageCourseCategory/>
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="categories/:categoryId" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Admin]}>
+                <CategoryCoursesPage/>
               </ProtectedRoute>
             } 
           />
