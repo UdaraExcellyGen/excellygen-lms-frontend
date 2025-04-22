@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Check, User, Mail, Phone, Lock, Users, Building2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Check, User, Mail, Phone, Lock, Users, Building2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { User as UserType, CreateUserDto } from '../types';
 
 interface UserFormProps {
@@ -27,6 +27,69 @@ const UserForm: React.FC<UserFormProps> = ({
   resetForm,
   formatRoleName
 }) => {
+  const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Real-time validation functions
+  const validateEmail = (email: string): string => {
+    if (!email) return 'Email is required';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return 'Please enter a valid email address';
+    return '';
+  };
+
+  const validatePhone = (phone: string): string => {
+    if (!phone) return ''; // Phone is optional
+    const digitsOnly = phone.replace(/\D/g, '');
+    if (digitsOnly.length < 10) return 'Phone number must be at least 10 digits';
+    if (digitsOnly.length > 15) return 'Phone number cannot exceed 15 digits';
+    return '';
+  };
+
+  const validatePassword = (password: string): string => {
+    if (!editingUser && !password) return 'Password is required';
+    if (password) {
+      if (password.length < 8) return 'Password must be at least 8 characters';
+      if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter';
+      if (!/[a-z]/.test(password)) return 'Password must contain at least one lowercase letter';
+      if (!/[0-9]/.test(password)) return 'Password must contain at least one number';
+    }
+    return '';
+  };
+
+  const validateName = (name: string): string => {
+    if (!name) return 'Name is required';
+    if (name.length < 2) return 'Name must be at least 2 characters';
+    return '';
+  };
+
+  // Handle field changes with validation
+  const handleFieldChange = (field: keyof typeof newUser, value: string) => {
+    setNewUser({ ...newUser, [field]: value });
+    
+    // Real-time validation
+    let error = '';
+    switch (field) {
+      case 'email':
+        error = validateEmail(value);
+        break;
+      case 'phone':
+        error = validatePhone(value);
+        break;
+      case 'password':
+        error = validatePassword(value);
+        break;
+      case 'name':
+        error = validateName(value);
+        break;
+    }
+    
+    setValidationErrors(prev => ({
+      ...prev,
+      [field]: error
+    }));
+  };
+
   if (!showAddModal) return null;
 
   return (
@@ -62,70 +125,118 @@ const UserForm: React.FC<UserFormProps> = ({
 
         <form onSubmit={(e) => {
           e.preventDefault();
-          handleAddUser();
+          
+          // Validate all fields before submission
+          const errors: { [key: string]: string } = {};
+          errors.name = validateName(newUser.name);
+          errors.email = validateEmail(newUser.email);
+          errors.phone = validatePhone(newUser.phone);
+          errors.password = validatePassword(newUser.password || '');
+          
+          const hasErrors = Object.values(errors).some(error => error !== '');
+          setValidationErrors(errors);
+          
+          if (!hasErrors) {
+            handleAddUser();
+          }
         }}>
           <div className="space-y-4">
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none h-[42px]">
                 <User size={16} className="text-gray-500" />
               </div>
               <input
                 type="text"
                 placeholder="Full Name"
                 value={newUser.name}
-                onChange={(e) => setNewUser({...newUser, name: e.target.value})}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none 
-                         focus:ring-2 focus:ring-[#BF4BF6] font-['Nunito_Sans']"
+                onChange={(e) => handleFieldChange('name', e.target.value)}
+                className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none 
+                         focus:ring-2 font-['Nunito_Sans'] h-[42px]
+                         ${validationErrors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#BF4BF6]'}`}
                 required
                 disabled={isSubmitting}
               />
+              {validationErrors.name && (
+                <div className="mt-1 text-red-500 text-sm flex items-center gap-1">
+                  <AlertCircle size={14} />
+                  {validationErrors.name}
+                </div>
+              )}
             </div>
             
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none h-[42px]">
                 <Mail size={16} className="text-gray-500" />
               </div>
               <input
                 type="email"
                 placeholder="Email"
                 value={newUser.email}
-                onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none 
-                         focus:ring-2 focus:ring-[#BF4BF6] font-['Nunito_Sans']"
+                onChange={(e) => handleFieldChange('email', e.target.value)}
+                className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none 
+                         focus:ring-2 font-['Nunito_Sans'] h-[42px]
+                         ${validationErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#BF4BF6]'}`}
                 required
                 disabled={isSubmitting}
               />
+              {validationErrors.email && (
+                <div className="mt-1 text-red-500 text-sm flex items-center gap-1">
+                  <AlertCircle size={14} />
+                  {validationErrors.email}
+                </div>
+              )}
             </div>
             
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none h-[42px]">
                 <Phone size={16} className="text-gray-500" />
               </div>
               <input
                 type="tel"
-                placeholder="Phone"
+                placeholder="Phone (optional)"
                 value={newUser.phone}
-                onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none 
-                         focus:ring-2 focus:ring-[#BF4BF6] font-['Nunito_Sans']"
+                onChange={(e) => handleFieldChange('phone', e.target.value)}
+                className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none 
+                         focus:ring-2 font-['Nunito_Sans'] h-[42px]
+                         ${validationErrors.phone ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#BF4BF6]'}`}
                 disabled={isSubmitting}
               />
+              {validationErrors.phone && (
+                <div className="mt-1 text-red-500 text-sm flex items-center gap-1">
+                  <AlertCircle size={14} />
+                  {validationErrors.phone}
+                </div>
+              )}
             </div>
             
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none h-[42px]">
                 <Lock size={16} className="text-gray-500" />
               </div>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder={editingUser ? "New Password (leave empty to keep current)" : "Password"}
                 value={newUser.password || ''}
-                onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none 
-                         focus:ring-2 focus:ring-[#BF4BF6] font-['Nunito_Sans']"
+                onChange={(e) => handleFieldChange('password', e.target.value)}
+                className={`w-full pl-10 pr-12 py-2 border rounded-lg focus:outline-none 
+                         focus:ring-2 font-['Nunito_Sans'] h-[42px]
+                         ${validationErrors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#BF4BF6]'}`}
                 required={!editingUser}
                 disabled={isSubmitting}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center h-[42px] text-gray-500"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+              {validationErrors.password && (
+                <div className="mt-1 text-red-500 text-sm flex items-center gap-1">
+                  <AlertCircle size={14} />
+                  {validationErrors.password}
+                </div>
+              )}
             </div>
             
             <div className="w-full">
@@ -136,12 +247,12 @@ const UserForm: React.FC<UserFormProps> = ({
                 </label>
               </div>
               <div className="space-y-2 pl-6">
-                {['learner', 'admin', 'coordinator', 'project_manager'].map((role) => (
+                {['Learner', 'Admin', 'CourseCoordinator', 'ProjectManager'].map((role) => (
                   <div key={role} className="flex items-center">
                     <input
                       type="checkbox"
                       id={`role-${role}`}
-                      checked={newUser.roles.includes(role)}
+                      checked={newUser.roles.some(userRole => userRole.toLowerCase() === role.toLowerCase())}
                       onChange={(e) => updateNewUserRoles(role, e.target.checked)}
                       className="h-4 w-4 rounded border-gray-300 text-[#BF4BF6] focus:ring-[#BF4BF6]"
                       disabled={isSubmitting}
@@ -158,7 +269,7 @@ const UserForm: React.FC<UserFormProps> = ({
             </div>
             
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none h-[42px]">
                 <Building2 size={16} className="text-gray-500" />
               </div>
               <input
@@ -167,7 +278,7 @@ const UserForm: React.FC<UserFormProps> = ({
                 value={newUser.department}
                 onChange={(e) => setNewUser({...newUser, department: e.target.value})}
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none 
-                         focus:ring-2 focus:ring-[#BF4BF6] font-['Nunito_Sans']"
+                         focus:ring-2 focus:ring-[#BF4BF6] font-['Nunito_Sans'] h-[42px]"
                 disabled={isSubmitting}
               />
             </div>

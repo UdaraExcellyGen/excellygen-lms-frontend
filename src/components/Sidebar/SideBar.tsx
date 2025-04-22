@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useSidebar } from '../Sidebar/contexts/SidebarContext';
 import { useSearch } from '../Sidebar/contexts/SearchContext';
+import { useAuth } from '../../contexts/AuthContext';  // Import the AuthContext
 
 interface MenuItem {
   title: string;
@@ -55,6 +56,7 @@ const scrollbarStyles = `
 const Sidebar = () => {
   const { isCollapsed, setIsCollapsed } = useSidebar();
   const { searchQuery, setSearchQuery, clearSearch } = useSearch();
+  const { logout } = useAuth();  // Use the logout function from AuthContext
   const location = useLocation();
   const navigate = useNavigate();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -104,11 +106,6 @@ const Sidebar = () => {
     }
   }, [searchQuery, navigate]);
 
-  const handleLogout = () => {
-    // Add your logout logic here
-    navigate('/login');
-  };
-
   const handleMobileClick = () => {
     if (isMobile) {
       setMobileMenuOpen(false);
@@ -143,13 +140,14 @@ const Sidebar = () => {
     { title: 'Notifications', icon: Bell, path: '/learner/notifications' },
   ];
 
+  // Updated bottom menu items without handleLogout function
   const bottomMenuItems: MenuItem[] = [
     { title: 'Profile', icon: UserCircle, path: '/learner/profile' },
     { 
       title: 'Logout', 
       icon: LogOut, 
-      path: '/',
-      onClick: handleLogout 
+      path: '', // Empty path since we're using onClick
+      onClick: logout // Use the logout function from AuthContext
     }
   ];
 
@@ -166,6 +164,28 @@ const Sidebar = () => {
       )}
       {items.map((item, index) => {
         const isActive = isActivePath(item.path);
+        // Handle logout button separately
+        if (item.title === 'Logout') {
+          return (
+            <button
+              key={index}
+              onClick={item.onClick}
+              className={`w-full flex items-center rounded-xl px-4 py-3 mb-2 
+                transition-all duration-300 group hover:bg-white/5 text-gray-300`}
+            >
+              <item.icon
+                className="h-5 w-5 text-red-400 group-hover:text-red-500"
+                aria-hidden="true"
+              />
+              {!isCollapsed && (
+                <span className="ml-3 text-sm font-medium text-red-400 group-hover:text-red-500">
+                  {item.title}
+                </span>
+              )}
+            </button>
+          );
+        }
+        // Regular menu items
         return (
           <Link
             key={index}
@@ -344,17 +364,32 @@ const Sidebar = () => {
                   <div className="space-y-4">
                     {bottomMenuItems.map((item, index) => {
                       const isActive = isActivePath(item.path);
+                      
+                      // Handle logout button separately
+                      if (item.title === 'Logout') {
+                        return (
+                          <button
+                            key={index}
+                            onClick={item.onClick}
+                            className={`flex items-center justify-center rounded-xl p-2.5
+                              transition-all duration-300 group hover:bg-white/5`}
+                          >
+                            <item.icon 
+                              className="h-5 w-5 text-red-400 group-hover:text-red-500"
+                              aria-hidden="true"
+                            />
+                            <span className="sr-only">{item.title}</span>
+                          </button>
+                        );
+                      }
+                      
+                      // Regular menu items
                       return (
                         <Link
                           key={index}
                           to={item.path}
-                          onClick={(e) => {
-                            if (item.onClick) {
-                              e.preventDefault();
-                              item.onClick();
-                            }
-                            handleMobileClick();
-                          }}
+                          onClick={handleMobileClick}
+                          data-active={isActive}
                           className={`flex items-center justify-center rounded-xl p-2.5
                             transition-all duration-300 group
                             ${isActive
@@ -366,9 +401,7 @@ const Sidebar = () => {
                             className={`h-5 w-5 ${
                               isActive
                                 ? 'text-[#52007C]'
-                                : item.title === 'Logout' 
-                                  ? 'text-red-400 group-hover:text-red-500'
-                                  : 'text-gray-400 group-hover:text-[#D68BF9]'
+                                : 'text-gray-400 group-hover:text-[#D68BF9]'
                             }`} 
                             aria-hidden="true"
                           />
@@ -397,17 +430,33 @@ const Sidebar = () => {
                 <div className="mt-auto px-4 pb-6 pt-2 border-t border-white/10 flex-shrink-0">
                   {bottomMenuItems.map((item, index) => {
                     const isActive = isActivePath(item.path);
+                    
+                    // Handle logout button separately
+                    if (item.title === 'Logout') {
+                      return (
+                        <button
+                          key={index}
+                          onClick={item.onClick}
+                          className={`w-full flex items-center rounded-xl px-4 py-3 mb-2 
+                            transition-all duration-300 group hover:bg-white/5 text-gray-300`}
+                        >
+                          <item.icon 
+                            className="h-5 w-5 text-red-400 group-hover:text-red-500"
+                            aria-hidden="true"
+                          />
+                          <span className="ml-3 text-sm font-medium text-red-400 group-hover:text-red-500">
+                            {item.title}
+                          </span>
+                        </button>
+                      );
+                    }
+                    
+                    // Regular menu items
                     return (
                       <Link
                         key={index}
                         to={item.path}
-                        onClick={(e) => {
-                          if (item.onClick) {
-                            e.preventDefault();
-                            item.onClick();
-                          }
-                          handleMobileClick();
-                        }}
+                        onClick={handleMobileClick}
                         className={`w-full flex items-center rounded-xl px-4 py-3 mb-2 
                           transition-all duration-300 group
                           ${isActive
@@ -419,18 +468,14 @@ const Sidebar = () => {
                           className={`h-5 w-5 ${
                             isActive
                               ? 'text-[#52007C]'
-                              : item.title === 'Logout'
-                                ? 'text-red-400 group-hover:text-red-500'
-                                : 'text-gray-400 group-hover:text-[#D68BF9]'
+                              : 'text-gray-400 group-hover:text-[#D68BF9]'
                           }`}
                           aria-hidden="true"
                         />
                         <span className={`ml-3 text-sm font-medium
                           ${isActive
                             ? 'text-[#52007C]'
-                            : item.title === 'Logout'
-                              ? 'text-red-400 group-hover:text-red-500'
-                              : 'text-gray-300 group-hover:text-[#D68BF9]'}`}
+                            : 'text-gray-300 group-hover:text-[#D68BF9]'}`}
                         >
                           {item.title}
                         </span>

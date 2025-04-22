@@ -1,7 +1,7 @@
 // ManageUser.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, X, ArrowLeft } from 'lucide-react';
+import { Plus, X, ArrowLeft, AlertCircle } from 'lucide-react';
 import { useUsers } from './data/useUsers';
 import UserCard from './components/UserCard';
 import FilterBar from './components/FilterBar';
@@ -60,12 +60,22 @@ const ManageUser: React.FC = () => {
   };
   
   const formatRoleName = (role: string) => {
-    switch (role) {
-      case 'coordinator': return 'Course Coordinator';
-      case 'project_manager': return 'Project Manager';
-      case 'learner': return 'Learner';
-      case 'admin': return 'Admin';
-      default: return role.charAt(0).toUpperCase() + role.slice(1);
+    switch (role.toLowerCase()) {
+      case 'coursecoordinator': 
+      case 'coordinator': 
+      case 'course coordinator': 
+      case 'course_coordinator': 
+        return 'Course Coordinator';
+      case 'projectmanager': 
+      case 'project_manager': 
+      case 'project manager': 
+        return 'Project Manager';
+      case 'learner': 
+        return 'Learner';
+      case 'admin': 
+        return 'Admin';
+      default: 
+        return role.charAt(0).toUpperCase() + role.slice(1);
     }
   };
 
@@ -106,7 +116,7 @@ const ManageUser: React.FC = () => {
               <button
                 onClick={() => {
                   setEditingUser(null);
-                  setNewUser({ name: '', email: '', phone: '', roles: ['learner'], department: '', password: '' });
+                  setNewUser({ name: '', email: '', phone: '', roles: ['Learner'], department: '', password: '' });
                   setShowAddModal(true);
                 }}
                 className="px-6 py-3 bg-[#BF4BF6] text-white rounded-full font-['Nunito_Sans'] 
@@ -122,14 +132,29 @@ const ManageUser: React.FC = () => {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6 animate-fadeIn">
-          <span className="block sm:inline">{error}</span>
-          <span 
-            className="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer"
-            onClick={() => setError(null)}
-          >
-            <X size={20} />
-          </span>
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 animate-fadeIn">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                {error.includes('already registered') ? 'Duplicate Entry' : 'Error'}
+              </h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>{error}</p>
+              </div>
+            </div>
+            <div className="ml-auto pl-3">
+              <button
+                onClick={() => setError(null)}
+                className="inline-flex rounded-md bg-red-50 p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-red-50"
+              >
+                <span className="sr-only">Dismiss</span>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
