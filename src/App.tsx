@@ -17,10 +17,10 @@ import { CourseProvider, useCourseContext } from './features/Coordinator/context
 import { UserRole } from './types/auth.types';
 
 // Landing Page
-import LandingPage from './features/landing/LandingPage';
+import LandingPage from './features/Landing/LandingPage';
 
 // Auth Components
-import RoleSelection from './features/auth/RoleSelection';
+import RoleSelection from './features/Auth/RoleSelection';
 
 // Learner Components
 import LearnerDashboard from './features/Learner/LearnerDashboard/LearnerDashboard';

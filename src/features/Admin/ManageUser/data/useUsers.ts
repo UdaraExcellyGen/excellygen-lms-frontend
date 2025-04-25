@@ -10,7 +10,7 @@ import {
   User, 
   CreateUserDto, 
   UpdateUserDto 
-} from '../services/userService';
+} from '../../../../api/services/userService';
 import { FilterState } from '../types';
 
 export const useDebounce = (value: string, delay: number) => {

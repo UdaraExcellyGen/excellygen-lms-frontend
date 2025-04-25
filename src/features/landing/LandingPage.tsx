@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import NavBar from '../../components/Navbar/NavBar';
 import Footer from '../../components/Footer/Footer';
-import AuthContainer from '../auth/AuthContainer';
+import AuthContainer from '../Auth/AuthContainer';
 import HeroSection from './components/HeroSection';
 import FeaturesSection from './components/FeaturesSection';
 

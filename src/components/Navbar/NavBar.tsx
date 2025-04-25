@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import AuthContainer from '../../features/auth/AuthContainer';
+import AuthContainer from '../../features/Auth/AuthContainer';
 
 const NavBar = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
