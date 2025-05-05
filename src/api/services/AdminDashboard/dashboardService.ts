@@ -1,5 +1,5 @@
-import apiClient from "../apiClient";
-import { DashboardStats, Notification } from "../../features/Admin/AdminDashboard/types/types";
+import apiClient from "../../apiClient";
+import { DashboardStats, Notification } from "../../../features/Admin/AdminDashboard/types/types";
 
 /**
  * Fetches dashboard statistics from the API

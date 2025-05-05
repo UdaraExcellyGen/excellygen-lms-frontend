@@ -7,7 +7,7 @@ import {
   Loader
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
-import { getDashboardStats, getDashboardNotifications } from '../../../api/services/dashboardService';
+import { getDashboardStats, getDashboardNotifications } from '../../../api/services/AdminDashboard/dashboardService';
 import Header from './components/Header';
 import StatCard from './components/StatCard';
 import QuickActionsGrid from './components/QuickActionsGrid';
@@ -203,11 +203,16 @@ const AdminDashboard: React.FC = () => {
 
   // Retrieve user data directly from localStorage as backup
   const getUserData = () => {
-    if (userDetails) return userDetails;
+    if (userDetails) {
+      console.log("Using user details from context:", userDetails);
+      return userDetails;
+    }
     
     try {
       const userData = localStorage.getItem('user');
-      return userData ? JSON.parse(userData) : null;
+      const parsedUser = userData ? JSON.parse(userData) : null;
+      console.log("Using user data from localStorage:", parsedUser);
+      return parsedUser;
     } catch (error) {
       console.error('Error parsing user data from localStorage:', error);
       return null;
@@ -215,6 +220,9 @@ const AdminDashboard: React.FC = () => {
   };
   
   const userData = getUserData();
+  
+  // Log avatar information to help debug
+  console.log('User avatar path:', userData?.avatar);
 
   return (
     <div className="min-h-screen bg-[#52007C] p-4 sm:p-6 lg:p-8">

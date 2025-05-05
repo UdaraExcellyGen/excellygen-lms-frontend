@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import TechnologyService from '../../../../api/services/TechnologyService';
+import TechnologyService from '../../../../api/services/AdminDashboard/TechnologyService';
 import { Technology, TechFormValues, TechFilters } from '../types/technology.types';
 
 // Filter technologies based on search term and status filter

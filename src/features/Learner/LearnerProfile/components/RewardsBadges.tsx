@@ -1,10 +1,17 @@
 import React, { useRef } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Award, Book, Trophy } from 'lucide-react';
 import { ProfileData } from '../types';
 
 interface RewardsBadgesProps {
   profileData: ProfileData;
 }
+
+// Map for rendering icons when they aren't FC components
+const iconMap = {
+  'Award': Award,
+  'Book': Book,
+  'Trophy': Trophy
+};
 
 const RewardsBadges: React.FC<RewardsBadgesProps> = ({
   profileData
@@ -39,18 +46,44 @@ const RewardsBadges: React.FC<RewardsBadgesProps> = ({
           ref={scrollContainerRef}
           className="flex gap-4 overflow-x-auto sm:overflow-x-hidden scroll-smooth px-2 sm:px-4 pb-2"
         >
-          {profileData.rewards.recentBadges.map((badge, index) => (
-            <div key={index} className="flex-none w-64 sm:w-72 md:w-64 bg-[#F6E6FF] rounded-xl p-4 md:p-6 text-center transform transition-transform hover:scale-105">
-              <div
-                className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl mx-auto mb-4 flex items-center justify-center shadow-lg"
-                style={{ backgroundColor: badge.color }}
-              >
-                <badge.icon className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
+          {profileData.rewards.recentBadges.map((badge, index) => {
+            // Determine the icon to use
+            let IconComponent: React.ElementType = Award;
+            
+            if (badge.icon) {
+              // If badge has an icon as FC
+              IconComponent = badge.icon;
+            } else if (typeof badge.name === 'string' && badge.name in iconMap) {
+              // Use from our map if the name matches
+              IconComponent = iconMap[badge.name as keyof typeof iconMap];
+            }
+            
+            return (
+              <div key={badge.id || index} className="flex-none w-64 sm:w-72 md:w-64 bg-[#F6E6FF] rounded-xl p-4 md:p-6 text-center transform transition-transform hover:scale-105">
+                {badge.imageUrl ? (
+                  <img 
+                    src={badge.imageUrl} 
+                    alt={badge.name} 
+                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl mx-auto mb-4 object-cover shadow-lg"
+                  />
+                ) : (
+                  <div
+                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl mx-auto mb-4 flex items-center justify-center shadow-lg"
+                    style={{ backgroundColor: badge.color || '#BF4BF6' }}
+                  >
+                    <IconComponent className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
+                  </div>
+                )}
+                <h3 className="font-medium text-[#1B0A3F] mb-2">{badge.name}</h3>
+                <p className="text-sm text-[#52007C]">{badge.description}</p>
+                {badge.earnedDate && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Earned: {new Date(badge.earnedDate).toLocaleDateString()}
+                  </p>
+                )}
               </div>
-              <h3 className="font-medium text-[#1B0A3F] mb-2">{badge.name}</h3>
-              <p className="text-sm text-[#52007C]">{badge.description}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <button
           onClick={() => scroll('right')}

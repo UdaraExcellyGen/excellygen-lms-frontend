@@ -49,6 +49,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
     localStorage.removeItem(TOKEN_EXPIRY_STORAGE_KEY);
     localStorage.removeItem(CURRENT_ROLE_STORAGE_KEY);
+    localStorage.removeItem('userId'); // Also remove userId
     
     // Clear any existing refresh timer
     if (refreshTimerRef.current) {
@@ -198,6 +199,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // Just use the stored data and set up the refresh timer
           const user = JSON.parse(storedUser) as User;
           
+          // Ensure userId is stored separately for easy access
+          if (user.id) {
+            localStorage.setItem('userId', user.id);
+          }
+          
           setState({
             user,
             currentRole: currentRole as UserRole,
@@ -303,6 +309,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem(TOKEN_EXPIRY_STORAGE_KEY, token.expiresAt);
       localStorage.setItem(CURRENT_ROLE_STORAGE_KEY, token.currentRole);
       
+      // Store user ID separately for easier access
+      localStorage.setItem('userId', userId);
+      
       console.log('Login successful, tokens stored');
       
       setState(prevState => ({
@@ -379,6 +388,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw new Error('No access token available');
       }
       
+      // Save user ID before role change
+      const userId = state.user.id;
+      
       const tokenData = await apiSelectRole(role);
       
       // Update tokens in localStorage
@@ -386,6 +398,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, tokenData.refreshToken);
       localStorage.setItem(TOKEN_EXPIRY_STORAGE_KEY, tokenData.expiresAt);
       localStorage.setItem(CURRENT_ROLE_STORAGE_KEY, tokenData.currentRole);
+      
+      // Make sure userId is maintained when switching roles
+      if (userId) {
+        localStorage.setItem('userId', userId);
+      }
       
       setState(prevState => ({
         ...prevState,

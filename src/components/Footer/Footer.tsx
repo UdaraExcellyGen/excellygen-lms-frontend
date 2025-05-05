@@ -1,6 +1,7 @@
 // src/components/Footer.tsx
 import React from 'react';
-import { Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react';
+import { Mail, Phone, MapPin, Facebook, Linkedin, Youtube, Globe } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -36,9 +37,9 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
-              <li><button className="text-gray-300 hover:text-phlox transition-colors duration-200">About Us</button></li>
-              <li><button className="text-gray-300 hover:text-phlox transition-colors duration-200">Services</button></li>
-              <li><button className="text-gray-300 hover:text-phlox transition-colors duration-200">Contact</button></li>
+              <li><Link to="/about-us" className="text-gray-300 hover:text-phlox transition-colors duration-200">About Us</Link></li>
+              <li><Link to="/services" className="text-gray-300 hover:text-phlox transition-colors duration-200">Services</Link></li>
+              <li><Link to="/contact-us" className="text-gray-300 hover:text-phlox transition-colors duration-200">Contact</Link></li>
             </ul>
           </div>
 
@@ -65,18 +66,38 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">Follow Us</h3>
             <div className="flex space-x-4">
-              <button className="text-gray-300 hover:text-phlox transition-colors duration-200">
+              <a 
+                href="https://web.facebook.com/people/ExcellyGen/61567888501807/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-300 hover:text-phlox transition-colors duration-200"
+              >
                 <Facebook size={24} />
-              </button>
-              <button className="text-gray-300 hover:text-phlox transition-colors duration-200">
-                <Twitter size={24} />
-              </button>
-              <button className="text-gray-300 hover:text-phlox transition-colors duration-200">
+              </a>
+              <a 
+                href="https://www.linkedin.com/company/excellygen/posts/?feedView=all" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-300 hover:text-phlox transition-colors duration-200"
+              >
                 <Linkedin size={24} />
-              </button>
-              <button className="text-gray-300 hover:text-phlox transition-colors duration-200">
-                <Instagram size={24} />
-              </button>
+              </a>
+              <a 
+                href="https://www.youtube.com/@ExcellyGen" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-300 hover:text-phlox transition-colors duration-200"
+              >
+                <Youtube size={24} />
+              </a>
+              <a 
+                href="https://www.excellygen.io/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-300 hover:text-phlox transition-colors duration-200"
+              >
+                <Globe size={24} />
+              </a>
             </div>
           </div>
         </div>
@@ -86,8 +107,8 @@ const Footer: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400">© {currentYear} ExcellyGen. All rights reserved.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">
-              <button className="text-gray-400 hover:text-white">Privacy Policy</button>
-              <button className="text-gray-400 hover:text-white">Terms of Service</button>
+              <Link to="/privacy-policy" className="text-gray-400 hover:text-white">Privacy Policy</Link>
+              <Link to="/terms-of-service" className="text-gray-400 hover:text-white">Terms of Service</Link>
             </div>
           </div>
         </div>

@@ -67,6 +67,7 @@ import ViewLearnerProfile from './components/Sidebar/ViewLearnerProfile';
 import CategoryCoursesPage from './features/Admin/CategoryCourses/CategoryCoursesPage';
 import ManageCourseCategory from './features/Admin/ManageCourseCategory/ManageCourseCategory';
 
+
 function AppWrapper() {
   return (
     <BrowserRouter>
@@ -106,6 +107,7 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LandingPage />} />
+        
         
         {/* Auth Routes */}
         <Route 
@@ -247,6 +249,7 @@ function App() {
             </ProtectedRoute>
           } 
         />
+
         
         {/* ADMIN ROUTES */}
         <Route path="/admin">

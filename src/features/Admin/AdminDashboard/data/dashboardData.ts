@@ -6,11 +6,7 @@ import {
 } from 'lucide-react';
 import { QuickAction } from '../types/types';
 
-/**
- * Returns quick action buttons for Admin Dashboard
- * @param navigate Navigation function to handle routing
- * @returns Array of quick action configuration objects
- */
+
 export const getQuickActions = (navigate: (path: string) => void): QuickAction[] => [
   {
     text: 'Manage Course Categories',

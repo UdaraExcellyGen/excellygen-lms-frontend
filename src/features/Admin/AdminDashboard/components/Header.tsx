@@ -22,7 +22,7 @@ const roleIcons: Record<string, React.ReactNode> = {
   ProjectManager: <Book size={16} />
 };
 
-// Define base URL for assets
+// Define base URL for assets - make sure this matches your backend URL
 const BASE_URL = 'http://localhost:5177';
 
 const Header: React.FC<HeaderProps> = ({
@@ -35,6 +35,7 @@ const Header: React.FC<HeaderProps> = ({
   const { user, currentRole, selectRole, navigateToRoleSelection } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [avatarError, setAvatarError] = useState(false);
 
   // Handle click outside to close dropdown
   useEffect(() => {
@@ -105,7 +106,19 @@ const Header: React.FC<HeaderProps> = ({
   // Process avatar URL (handle both absolute and relative paths)
   const getAvatarUrl = (avatarPath: string | null) => {
     if (!avatarPath) return null;
-    return avatarPath.startsWith('http') ? avatarPath : `${BASE_URL}${avatarPath}`;
+    
+    // If the avatar path is already a full URL, return it as is
+    if (avatarPath.startsWith('http') || avatarPath.startsWith('https')) {
+      return avatarPath;
+    }
+    
+    // If the avatar path starts with a slash, make sure we don't duplicate slashes
+    if (avatarPath.startsWith('/')) {
+      return `${BASE_URL}${avatarPath}`;
+    }
+    
+    // Otherwise, add a slash between BASE_URL and avatarPath
+    return `${BASE_URL}/${avatarPath}`;
   };
 
   // Get initials for fallback avatar
@@ -113,8 +126,17 @@ const Header: React.FC<HeaderProps> = ({
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
+  // Reset avatar error when avatar changes
+  useEffect(() => {
+    setAvatarError(false);
+  }, [avatar]);
+
   // Count new notifications
   const newNotificationsCount = notifications.filter(n => n.isNew).length;
+
+  // Get avatar URL
+  const avatarUrl = getAvatarUrl(avatar);
+  console.log('Avatar URL:', avatarUrl); // Debug log
 
   return (
     <div className="bg-white rounded-2xl shadow-sm mb-6 transition-all duration-300 hover:shadow-md">
@@ -122,19 +144,14 @@ const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-4 mb-4 sm:mb-0">
           {/* User Avatar with improved implementation */}
           <div className="w-12 sm:w-16 h-12 sm:h-16 rounded-full overflow-hidden bg-gradient-to-br from-[#52007C] to-[#BF4BF6] border-2 border-[#BF4BF6] flex items-center justify-center transition-transform duration-300 hover:scale-105">
-            {avatar ? (
+            {avatar && !avatarError ? (
               <img 
-                src={getAvatarUrl(avatar)}
+                src={avatarUrl || ''}
                 alt={`${adminName}'s avatar`} 
                 className="h-full w-full object-cover"
                 onError={(e) => {
-                  console.error("Image failed to load:", avatar);
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.parentElement!.innerHTML = `
-                    <span class="text-xl sm:text-2xl font-bold text-white">
-                      ${getInitials(adminName)}
-                    </span>
-                  `;
+                  console.error("Image failed to load:", avatarUrl);
+                  setAvatarError(true);
                 }}
               />
             ) : (
@@ -169,7 +186,7 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center">
                   <div className="absolute w-full h-full rounded-full bg-[#BF4BF6] animate-pulse-slow opacity-60"></div>
                   <div className="absolute w-full h-full rounded-full bg-[#BF4BF6] flex items-center justify-center">
-                    <span className="text-[10px] font-semibold text-white leading-none">1</span>
+                    <span className="text-[10px] font-semibold text-white leading-none">{newNotificationsCount}</span>
                   </div>
                 </div>
               )}
@@ -177,7 +194,7 @@ const Header: React.FC<HeaderProps> = ({
             
             {/* Tooltip */}
             <div className="absolute hidden md:group-hover:block right-0 mt-2 bg-gray-800 text-white text-xs py-1.5 px-3 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap z-50">
-              1 new notification
+              {newNotificationsCount} new notification{newNotificationsCount !== 1 ? 's' : ''}
             </div>
           </button>
 

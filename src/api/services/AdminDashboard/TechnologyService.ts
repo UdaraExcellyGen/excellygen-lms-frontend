@@ -1,4 +1,4 @@
-import apiClient from "../apiClient";// Changed from 'api' to 'apiClient'
+import apiClient from "../../apiClient";// Changed from 'api' to 'apiClient'
 
 export interface Technology {
   id: string;

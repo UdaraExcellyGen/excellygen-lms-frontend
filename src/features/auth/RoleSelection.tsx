@@ -28,6 +28,12 @@ const RoleSelection: React.FC = () => {
     console.log('User:', user);
     console.log('Initialized:', initialized);
     console.log('Loading:', loading);
+    
+    // Ensure userId is stored in localStorage
+    if (user && user.id) {
+      localStorage.setItem('userId', user.id);
+      console.log('Ensured userId is in localStorage:', user.id);
+    }
   }, [user, initialized, loading]);
 
   // Redirect if no user data
@@ -74,6 +80,12 @@ const RoleSelection: React.FC = () => {
     
     try {
       console.log(`Selecting role: ${role}`);
+      
+      // Ensure user ID is stored before navigating
+      if (user && user.id) {
+        localStorage.setItem('userId', user.id);
+      }
+      
       await selectRole(role);
       // The navigation will be handled by the selectRole function in the auth context
     } catch (error) {
@@ -119,6 +131,7 @@ const RoleSelection: React.FC = () => {
           <p className="text-gray-500">
             Select your role to access the dashboard
           </p>
+          {/* Removed the User ID display line */}
         </div>
 
         {/* Role Grid */}

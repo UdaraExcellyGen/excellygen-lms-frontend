@@ -64,14 +64,20 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     localStorage.setItem('refresh_token', response.data.token.refreshToken);
     localStorage.setItem('token_expiry', response.data.token.expiresAt);
     localStorage.setItem('current_role', response.data.token.currentRole);
-    localStorage.setItem('user', JSON.stringify({
+    
+    // Store user data
+    const userData = {
       id: response.data.userId,
       name: response.data.name,
       email: response.data.email,
       roles: mappedRoles
-    }));
+    };
+    localStorage.setItem('user', JSON.stringify(userData));
     
-    console.log("Login data stored in localStorage");
+    // Store userId separately for easier access
+    localStorage.setItem('userId', response.data.userId);
+    
+    console.log("Login data stored in localStorage, userId:", response.data.userId);
     
     // Return response with properly mapped roles
     return {
@@ -102,6 +108,7 @@ export const logout = async (): Promise<void> => {
     localStorage.removeItem('token_expiry');
     localStorage.removeItem('current_role');
     localStorage.removeItem('user');
+    localStorage.removeItem('userId'); // Also remove userId
   } catch (error) {
     console.error('Logout error:', error);
     
@@ -111,6 +118,7 @@ export const logout = async (): Promise<void> => {
     localStorage.removeItem('token_expiry');
     localStorage.removeItem('current_role');
     localStorage.removeItem('user');
+    localStorage.removeItem('userId'); // Also remove userId
     
     throw error;
   }
@@ -135,6 +143,8 @@ export const selectRole = async (role: UserRole): Promise<TokenResponse> => {
       accessToken
     };
     
+    console.log('Selecting role for user:', user.id);
+    
     const response = await apiClient.post<TokenResponse>('/auth/select-role', request);
     
     // Update stored tokens
@@ -142,6 +152,11 @@ export const selectRole = async (role: UserRole): Promise<TokenResponse> => {
     localStorage.setItem('refresh_token', response.data.refreshToken);
     localStorage.setItem('token_expiry', response.data.expiresAt);
     localStorage.setItem('current_role', response.data.currentRole);
+    
+    // Make sure userId is still in localStorage when changing roles
+    if (user.id) {
+      localStorage.setItem('userId', user.id);
+    }
     
     return response.data;
   } catch (error) {
