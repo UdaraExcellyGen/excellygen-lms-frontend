@@ -23,8 +23,8 @@ const ProjectsList: React.FC<ProjectsListProps> = ({
         {completedProjects.length === 0 ? (
           <p className="text-gray-500 text-sm">No completed projects found.</p>
         ) : (
-          completedProjects.map((project, index) => (
-            <div key={index} className="bg-[#F6E6FF] rounded-xl p-4 sm:p-6">
+          completedProjects.map((project) => (
+            <div key={project.id} className="bg-[#F6E6FF] rounded-xl p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-2 sm:gap-0">
                 <div>
                   <h3 className="text-lg font-medium text-[#1B0A3F]">{project.name}</h3>
@@ -37,9 +37,9 @@ const ProjectsList: React.FC<ProjectsListProps> = ({
               </div>
               <p className="text-[#1B0A3F] mb-4">{project.description}</p>
               <div className="flex flex-wrap gap-2">
-                {project.technologies.map((tech, techIndex) => (
+                {project.technologies && project.technologies.map((tech, techIndex) => (
                   <span
-                    key={techIndex}
+                    key={`${project.id}-tech-${techIndex}`}
                     className="px-3 py-1 bg-gradient-to-r from-[#7A00B8] to-[#BF4BF6] text-white rounded-full text-sm"
                   >
                     {tech}

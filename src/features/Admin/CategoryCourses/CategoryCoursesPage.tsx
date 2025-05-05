@@ -58,6 +58,24 @@ const CategoryCoursesPage: React.FC = () => {
     description: ''
   });
   
+  // Inject styles to remove any pseudo-elements that might be creating the blue edge
+  useEffect(() => {
+    const styleEl = document.createElement('style');
+    styleEl.innerHTML = `
+      body::before, body::after,
+      #root::before, #root::after,
+      div::before, div::after {
+        content: none !important;
+        display: none !important;
+      }
+    `;
+    document.head.appendChild(styleEl);
+    
+    return () => {
+      document.head.removeChild(styleEl);
+    };
+  }, []);
+  
   // Fetch data when component mounts or categoryId changes
   useEffect(() => {
     if (categoryId) {
@@ -296,7 +314,7 @@ const CategoryCoursesPage: React.FC = () => {
       )}
 
       {/* Search Bar */}
-      <div className="bg-white rounded-2xl shadow-sm mb-6 p-6">
+      <div className="bg-white rounded-xl shadow-sm mb-6 p-6">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
           <input
@@ -318,7 +336,7 @@ const CategoryCoursesPage: React.FC = () => {
         </div>
       ) : (
         /* Courses List */
-        <div className="bg-white rounded-2xl shadow-sm">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           {filteredCourses.length === 0 ? (
             <div className="p-10 text-center">
               <h3 className="text-xl text-gray-600 font-['Nunito_Sans']">
@@ -339,7 +357,7 @@ const CategoryCoursesPage: React.FC = () => {
                     <th className="px-6 py-4 text-right text-sm font-semibold text-gray-600">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody style={{ position: 'relative' }}>
                   {filteredCourses.map((course) => (
                     <tr key={course.id} className="border-b border-gray-200 hover:bg-[#F6E6FF] transition-colors duration-200">
                       <td className="px-6 py-4">

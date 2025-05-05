@@ -11,7 +11,7 @@ import {
   deleteCategory,
   toggleCategoryStatus
 } from './data/api';
-import { Category, CreateCategoryDto, UpdateCategoryDto } from './types/ManageCourseCategory.types';
+import { Category, CreateCategoryDto, UpdateCategoryDto } from './types/category.types';
 import useDebounce from './components/useDebounce';
 import StatusFilter from './components/StatusFilter';
 import IconSelector from './components/IconSelector';

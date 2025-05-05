@@ -17,10 +17,10 @@ import { CourseProvider, useCourseContext } from './features/Coordinator/context
 import { UserRole } from './types/auth.types';
 
 // Landing Page
-import LandingPage from './features/landing/LandingPage';
+import LandingPage from './features/Landing/LandingPage';
 
 // Auth Components
-import RoleSelection from './features/auth/RoleSelection';
+import RoleSelection from './features/Auth/RoleSelection';
 
 // Learner Components
 import LearnerDashboard from './features/Learner/LearnerDashboard/LearnerDashboard';
@@ -67,6 +67,7 @@ import ViewLearnerProfile from './components/Sidebar/ViewLearnerProfile';
 import CategoryCoursesPage from './features/Admin/CategoryCourses/CategoryCoursesPage';
 import ManageCourseCategory from './features/Admin/ManageCourseCategory/ManageCourseCategory';
 
+
 function AppWrapper() {
   return (
     <BrowserRouter>
@@ -106,6 +107,7 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LandingPage />} />
+        
         
         {/* Auth Routes */}
         <Route 
@@ -247,6 +249,7 @@ function App() {
             </ProtectedRoute>
           } 
         />
+
         
         {/* ADMIN ROUTES */}
         <Route path="/admin">

@@ -17,12 +17,12 @@ const Bio: React.FC<BioProps> = ({
       <h2 className="text-xl font-semibold text-[#1B0A3F] mb-3">About</h2>
       {isEditing ? (
         <textarea
-          value={profileData.bio}
-          onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+          value={profileData.about || ''}
+          onChange={(e) => setProfileData({ ...profileData, about: e.target.value })}
           className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 h-32"
         />
       ) : (
-        <p className="text-[#1B0A3F] leading-relaxed">{profileData.bio}</p>
+        <p className="text-[#1B0A3F] leading-relaxed">{profileData.about || 'No bio provided.'}</p>
       )}
     </div>
   );

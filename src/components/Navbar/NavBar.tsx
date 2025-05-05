@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import AuthContainer from '../../features/auth/AuthContainer';
+import { useNavigate } from 'react-router-dom';
+import AuthContainer from '../../features/Auth/AuthContainer';
 
 const NavBar = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <>
@@ -35,7 +37,10 @@ const NavBar = () => {
               >
                 Login
               </button>
-              <button className="px-4 py-2 text-base bg-french-violet hover:bg-indigo text-white rounded-md transition-colors duration-200 font-medium">
+              <button 
+                onClick={() => navigate('/contact-us')}
+                className="px-4 py-2 text-base bg-french-violet hover:bg-indigo text-white rounded-md transition-colors duration-200 font-medium"
+              >
                 Contact Us
               </button>
             </div>

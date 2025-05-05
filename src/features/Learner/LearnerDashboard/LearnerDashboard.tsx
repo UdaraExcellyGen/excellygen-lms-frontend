@@ -176,7 +176,7 @@ const LearnerDashboard: React.FC = () => {
             <div className="relative">
               <div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-8 md:gap-4">
                 <div className="w-full md:w-auto z-10 px-6 md:px-8 py-6 md:py-8">
-                  <h1 className="text-3xl md:text-4xl font-bold font-unbounded mb-4 bg-gradient-to-r from-white via-white to-[#D68BF9] bg-clip-text text-transparent">
+                  <h1 className="text-3xl md:text-4xl font-bold font-unbounded mb-4 bg-[white] bg-clip-text text-transparent">
                     {user ? user.name : 'Learner Name'}
                   </h1>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">

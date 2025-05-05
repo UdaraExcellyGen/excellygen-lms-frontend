@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Camera, Edit2, FileText, Save, X } from 'lucide-react';
 import { ProfileData } from '../types';
 
@@ -10,6 +10,8 @@ interface ProfileHeaderProps {
   handleSave: () => void;
   handleCancel: () => void;
   isViewOnly?: boolean;
+  onAvatarUpload?: (file: File) => void;
+  isSaving?: boolean;
 }
 
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -19,27 +21,70 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   handleEdit,
   handleSave,
   handleCancel,
-  isViewOnly = false
+  isViewOnly = false,
+  onAvatarUpload,
+  isSaving = false
 }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0] && onAvatarUpload) {
+      onAvatarUpload(e.target.files[0]);
+    }
+  };
+
   return (
     <div className="p-4 md:p-8 flex flex-col md:flex-row items-center md:items-start justify-between border-b gap-4 md:gap-0">
       <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 text-center md:text-left">
         <div className="relative">
-          <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-gradient-to-br from-[#52007C] to-[#BF4BF6] flex items-center justify-center shadow-lg">
-            <span className="text-3xl sm:text-4xl font-bold text-white">
-              {profileData.name.split(' ').map(n => n[0]).join('')}
-            </span>
-          </div>
+          {profileData.avatar ? (
+            <img 
+              src={profileData.avatar} 
+              alt={profileData.name} 
+              className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl object-cover shadow-lg"
+            />
+          ) : (
+            <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-gradient-to-br from-[#52007C] to-[#BF4BF6] flex items-center justify-center shadow-lg">
+              <span className="text-3xl sm:text-4xl font-bold text-white">
+                {profileData.name.split(' ').map(n => n[0]).join('')}
+              </span>
+            </div>
+          )}
           {isEditing && !isViewOnly && (
-            <button className="absolute bottom-2 right-2 p-2 bg-white rounded-lg shadow-lg">
-              <Camera className="h-4 w-4 text-[#52007C]" />
-            </button>
+            <>
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
+              />
+              <button 
+                className="absolute bottom-2 right-2 p-2 bg-white rounded-lg shadow-lg"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Camera className="h-4 w-4 text-[#52007C]" />
+              </button>
+            </>
           )}
         </div>
         <div>
           <h1 className="text-2xl font-bold text-[#1B0A3F] mb-1">{profileData.name}</h1>
-          <p className="text-lg text-[#52007C]">{profileData.role}</p>
-          {profileData.id && <p className="text-sm text-gray-500 mt-1">ID: {profileData.id}</p>}
+          
+          {/* Editable Job Role */}
+          {isEditing ? (
+            <input 
+              type="text"
+              value={profileData.role || ''}
+              onChange={(e) => setProfileData({...profileData, role: e.target.value})}
+              className="text-lg text-[#52007C] bg-gray-100 border border-gray-300 rounded px-2 py-1 w-full md:w-64"
+              placeholder="Enter job role"
+            />
+          ) : (
+            <p className="text-lg text-[#52007C]">{profileData.role || profileData.jobRole || 'Job Role'}</p>
+          )}
+          
+          {/* Removed the user ID display line */}
         </div>
       </div>
       <div className="space-x-2 sm:space-x-3 flex flex-wrap justify-center gap-2 sm:gap-0">
@@ -47,14 +92,20 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           <>
             <button
               onClick={handleSave}
-              className="px-4 sm:px-6 py-2.5 bg-[#BF4BF6] text-white rounded-lg inline-flex items-center gap-2 hover:bg-[#A030D6] transition-colors shadow-md"
+              disabled={isSaving}
+              className="px-4 sm:px-6 py-2.5 bg-[#BF4BF6] text-white rounded-lg inline-flex items-center gap-2 hover:bg-[#A030D6] transition-colors shadow-md disabled:opacity-70"
             >
-              <Save className="h-4 w-4" />
-              Save
+              {isSaving ? 'Saving...' : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Save
+                </>
+              )}
             </button>
             <button
               onClick={handleCancel}
-              className="px-4 sm:px-6 py-2.5 bg-gray-100 text-gray-600 rounded-lg inline-flex items-center gap-2 hover:bg-gray-200 transition-colors"
+              disabled={isSaving}
+              className="px-4 sm:px-6 py-2.5 bg-gray-100 text-gray-600 rounded-lg inline-flex items-center gap-2 hover:bg-gray-200 transition-colors disabled:opacity-70"
             >
               <X className="h-4 w-4" />
               Cancel
