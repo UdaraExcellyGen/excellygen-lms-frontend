@@ -107,6 +107,8 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LandingPage />} />
+
+        
         
         
         {/* Auth Routes */}
