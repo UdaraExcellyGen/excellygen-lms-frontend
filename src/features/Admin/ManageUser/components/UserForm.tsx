@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Check, User, Mail, Phone, Lock, Users, Building2, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { X, Check, User, Mail, Phone, Users, Building2, AlertCircle, ChevronDown } from 'lucide-react';
 import { User as UserType, CreateUserDto } from '../types';
 
 interface UserFormProps {
@@ -28,7 +28,20 @@ const UserForm: React.FC<UserFormProps> = ({
   formatRoleName
 }) => {
   const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
-  const [showPassword, setShowPassword] = useState(false);
+  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false);
+  const [generateTempPassword, setGenerateTempPassword] = useState<boolean>(!editingUser);
+
+  // Available departments
+  const departments = [
+    'Development',
+    'Cybersecurity',
+    'Analytics',
+    'Product Management',
+    'PMO',
+    'R&D',
+    'Finance',
+    'HR'
+  ];
 
   // Real-time validation functions
   const validateEmail = (email: string): string => {
@@ -43,17 +56,6 @@ const UserForm: React.FC<UserFormProps> = ({
     const digitsOnly = phone.replace(/\D/g, '');
     if (digitsOnly.length < 10) return 'Phone number must be at least 10 digits';
     if (digitsOnly.length > 15) return 'Phone number cannot exceed 15 digits';
-    return '';
-  };
-
-  const validatePassword = (password: string): string => {
-    if (!editingUser && !password) return 'Password is required';
-    if (password) {
-      if (password.length < 8) return 'Password must be at least 8 characters';
-      if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter';
-      if (!/[a-z]/.test(password)) return 'Password must contain at least one lowercase letter';
-      if (!/[0-9]/.test(password)) return 'Password must contain at least one number';
-    }
     return '';
   };
 
@@ -76,9 +78,6 @@ const UserForm: React.FC<UserFormProps> = ({
       case 'phone':
         error = validatePhone(value);
         break;
-      case 'password':
-        error = validatePassword(value);
-        break;
       case 'name':
         error = validateName(value);
         break;
@@ -88,6 +87,11 @@ const UserForm: React.FC<UserFormProps> = ({
       ...prev,
       [field]: error
     }));
+  };
+
+  const handleDepartmentSelect = (department: string) => {
+    setNewUser({ ...newUser, department });
+    setShowDepartmentDropdown(false);
   };
 
   if (!showAddModal) return null;
@@ -131,12 +135,17 @@ const UserForm: React.FC<UserFormProps> = ({
           errors.name = validateName(newUser.name);
           errors.email = validateEmail(newUser.email);
           errors.phone = validatePhone(newUser.phone);
-          errors.password = validatePassword(newUser.password || '');
           
           const hasErrors = Object.values(errors).some(error => error !== '');
           setValidationErrors(errors);
           
           if (!hasErrors) {
+            // If editing and generating temp password, set the password field to empty
+            // to signal the backend to generate a temporary password
+            if (editingUser && generateTempPassword) {
+              setNewUser(prev => ({ ...prev, password: '' }));
+            }
+            
             handleAddUser();
           }
         }}>
@@ -209,34 +218,40 @@ const UserForm: React.FC<UserFormProps> = ({
               )}
             </div>
             
+            {/* Department Dropdown */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none h-[42px]">
-                <Lock size={16} className="text-gray-500" />
+                <Building2 size={16} className="text-gray-500" />
               </div>
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder={editingUser ? "New Password (leave empty to keep current)" : "Password"}
-                value={newUser.password || ''}
-                onChange={(e) => handleFieldChange('password', e.target.value)}
-                className={`w-full pl-10 pr-12 py-2 border rounded-lg focus:outline-none 
-                         focus:ring-2 font-['Nunito_Sans'] h-[42px]
-                         ${validationErrors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-[#BF4BF6]'}`}
-                required={!editingUser}
-                disabled={isSubmitting}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center h-[42px] text-gray-500"
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-              {validationErrors.password && (
-                <div className="mt-1 text-red-500 text-sm flex items-center gap-1">
-                  <AlertCircle size={14} />
-                  {validationErrors.password}
-                </div>
-              )}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowDepartmentDropdown(!showDepartmentDropdown)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none 
+                           focus:ring-2 focus:ring-[#BF4BF6] font-['Nunito_Sans'] h-[42px] flex justify-between items-center"
+                  disabled={isSubmitting}
+                >
+                  <span className={newUser.department ? 'text-[#1B0A3F]' : 'text-gray-500'}>
+                    {newUser.department || 'Select Department'}
+                  </span>
+                  <ChevronDown size={16} className="text-gray-500" />
+                </button>
+                {showDepartmentDropdown && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {departments.map((dept) => (
+                      <div
+                        key={dept}
+                        className={`px-4 py-2 hover:bg-gray-100 cursor-pointer ${
+                          newUser.department === dept ? 'bg-gray-100 text-[#BF4BF6]' : ''
+                        }`}
+                        onClick={() => handleDepartmentSelect(dept)}
+                      >
+                        {dept}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="w-full">
@@ -268,19 +283,35 @@ const UserForm: React.FC<UserFormProps> = ({
               </div>
             </div>
             
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none h-[42px]">
-                <Building2 size={16} className="text-gray-500" />
+            {/* Temporary Password Checkbox for Editing Users */}
+            {editingUser && (
+              <div className="flex items-center mt-4">
+                <input
+                  type="checkbox"
+                  id="generate-temp-password"
+                  checked={generateTempPassword}
+                  onChange={(e) => setGenerateTempPassword(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-[#BF4BF6] focus:ring-[#BF4BF6]"
+                  disabled={isSubmitting}
+                />
+                <label
+                  htmlFor="generate-temp-password"
+                  className="ml-2 text-sm text-gray-700 font-['Nunito_Sans']"
+                >
+                  Generate temporary password
+                </label>
               </div>
-              <input
-                type="text"
-                placeholder="Department"
-                value={newUser.department}
-                onChange={(e) => setNewUser({...newUser, department: e.target.value})}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none 
-                         focus:ring-2 focus:ring-[#BF4BF6] font-['Nunito_Sans'] h-[42px]"
-                disabled={isSubmitting}
-              />
+            )}
+            
+            {/* Password Info Message */}
+            <div className="bg-blue-50 text-blue-800 p-3 rounded-lg text-sm">
+              {!editingUser ? (
+                <p>A secure temporary password will be generated for this user. They will be required to change it on first login.</p>
+              ) : generateTempPassword ? (
+                <p>A new temporary password will be generated for this user. They will be required to change it on next login.</p>
+              ) : (
+                <p>The user's current password will be maintained.</p>
+              )}
             </div>
           </div>
 

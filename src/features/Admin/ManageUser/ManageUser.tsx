@@ -7,6 +7,7 @@ import UserCard from './components/UserCard';
 import FilterBar from './components/FilterBar';
 import UserForm from './components/UserForm';
 import DeleteConfirmationModal from './components/DeleteConfirmationModal';
+import TempPasswordDialog from './components/TempPasswordDialog';
 import SkeletonLoader from './components/SkeletonLoader';
 import { User } from './types';
 
@@ -24,6 +25,9 @@ const ManageUser: React.FC = () => {
     error,
     showAddModal,
     showDeleteModal,
+    showTempPasswordModal,
+    tempPasswordData,
+    setShowTempPasswordModal,
     editingUser,
     newUser,
     filterState,
@@ -244,6 +248,17 @@ const ManageUser: React.FC = () => {
         confirmDelete={confirmDelete}
         isDeleting={isDeleting}
       />
+      
+      {/* Temporary Password Dialog */}
+      {tempPasswordData && (
+        <TempPasswordDialog
+          isOpen={showTempPasswordModal}
+          onClose={() => setShowTempPasswordModal(false)}
+          userName={tempPasswordData.userName}
+          userEmail={tempPasswordData.userEmail}
+          tempPassword={tempPasswordData.tempPassword}
+        />
+      )}
     </div>
   );
 };
