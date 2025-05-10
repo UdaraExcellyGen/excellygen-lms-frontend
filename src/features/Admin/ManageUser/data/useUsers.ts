@@ -47,6 +47,14 @@ export const useUsers = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   
+  // Temporary password states
+  const [showTempPasswordModal, setShowTempPasswordModal] = useState(false);
+  const [tempPasswordData, setTempPasswordData] = useState<{
+    userName: string;
+    userEmail: string;
+    tempPassword: string;
+  } | null>(null);
+  
   // Form states
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newUser, setNewUser] = useState<Omit<CreateUserDto, 'id'>>({
@@ -254,27 +262,6 @@ export const useUsers = () => {
         throw new Error('Please enter a valid phone number (10-15 digits) or leave it empty');
       }
       
-      // Password validation for new users
-      if (!editingUser && !newUser.password) {
-        throw new Error('Password is required for new users');
-      }
-      
-      // Password strength validation (only for new users or when password is changed)
-      if (newUser.password && !editingUser) {
-        if (newUser.password.length < 8) {
-          throw new Error('Password must be at least 8 characters long');
-        }
-        if (!/[A-Z]/.test(newUser.password)) {
-          throw new Error('Password must contain at least one uppercase letter');
-        }
-        if (!/[a-z]/.test(newUser.password)) {
-          throw new Error('Password must contain at least one lowercase letter');
-        }
-        if (!/[0-9]/.test(newUser.password)) {
-          throw new Error('Password must contain at least one number');
-        }
-      }
-      
       // Normalize role formats
       const normalizedRoles = newUser.roles.map(role => {
         switch(role.toLowerCase()) {
@@ -315,10 +302,27 @@ export const useUsers = () => {
         setShowAddModal(false);
         
         try {
-          const updatedUser = await updateUser(editingUser.id, {
+          // When updating, check if the special 'generateTemporaryPassword' flag should be set
+          const updateDto: UpdateUserDto = {
             ...userWithNormalizedRoles,
-            status: editingUser.status
-          });
+            status: editingUser.status,
+            // Set generateTemporaryPassword if the password field is empty (indicating we want to generate one)
+            generateTemporaryPassword: userWithNormalizedRoles.password === ''
+          };
+          
+          const updatedUser = await updateUser(editingUser.id, updateDto);
+          
+          // Check if a temporary password was returned
+          if (updatedUser.temporaryPassword) {
+            setTempPasswordData({
+              userName: updatedUser.name,
+              userEmail: updatedUser.email,
+              tempPassword: updatedUser.temporaryPassword
+            });
+            setShowTempPasswordModal(true);
+          } else {
+            toast.success('User updated successfully');
+          }
           
           setUsers(prevUsers => prevUsers.map(user => 
             user.id === editingUser.id ? updatedUser : user
@@ -329,8 +333,6 @@ export const useUsers = () => {
               user.id === editingUser.id ? updatedUser : user
             ));
           }
-          
-          toast.success('User updated successfully');
         } catch (error) {
           // Revert on error
           setUsers(prevUsers => prevUsers.map(user => 
@@ -364,7 +366,20 @@ export const useUsers = () => {
         setShowAddModal(false);
         
         try {
+          // For new users, we always generate a temporary password if the password field is empty
           const createdUser = await createUser(userWithNormalizedRoles);
+          
+          // Check if a temporary password was returned
+          if (createdUser.temporaryPassword) {
+            setTempPasswordData({
+              userName: createdUser.name,
+              userEmail: createdUser.email,
+              tempPassword: createdUser.temporaryPassword
+            });
+            setShowTempPasswordModal(true);
+          } else {
+            toast.success('User created successfully');
+          }
           
           setUsers(prevUsers => prevUsers.map(user => 
             user.id === tempId ? createdUser : user
@@ -375,8 +390,6 @@ export const useUsers = () => {
               user.id === tempId ? createdUser : user
             ));
           }
-          
-          toast.success('User created successfully');
         } catch (error) {
           // Remove temp user on error
           setUsers(prevUsers => prevUsers.filter(user => user.id !== tempId));
@@ -617,6 +630,9 @@ export const useUsers = () => {
     // Modal states
     showAddModal,
     showDeleteModal,
+    showTempPasswordModal,
+    tempPasswordData,
+    setShowTempPasswordModal,
     
     // Form states
     editingUser,

@@ -12,6 +12,8 @@ export interface User {
   jobRole?: string;
   about?: string;
   avatar?: string;
+  requirePasswordChange?: boolean;
+  temporaryPassword?: string; // Only populated during creation/reset
 }
 
 export interface CreateUserDto {
@@ -21,7 +23,7 @@ export interface CreateUserDto {
   phone: string;
   roles: string[];
   department: string;
-  password: string;
+  password: string; // Optional - if empty, a temporary password will be generated
 }
 
 export interface UpdateUserDto {
@@ -32,6 +34,7 @@ export interface UpdateUserDto {
   department: string;
   password?: string; // Optional for updates
   status: string;
+  generateTemporaryPassword?: boolean; // Flag to request a temporary password
 }
 
 // Get all users

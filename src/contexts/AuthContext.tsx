@@ -7,9 +7,11 @@ import {
   selectRole as apiSelectRole, 
   resetPassword as apiResetPassword,
   validateToken,
-  refreshToken as apiRefreshToken
+  refreshToken as apiRefreshToken,
+  changePassword as apiChangePassword
 } from '../api/authApi';
-import { User, UserRole, AuthState, TokenData } from '../types/auth.types';
+import { User, UserRole, AuthState } from '../types/auth.types';
+import PasswordChangeModal from '../features/auth/PasswordChangeModal';
 
 type AuthContextType = AuthState & {
   login: (email: string, password: string) => Promise<void>;
@@ -17,6 +19,7 @@ type AuthContextType = AuthState & {
   selectRole: (role: UserRole) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   navigateToRoleSelection: () => void;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 };
 
 const AUTH_STORAGE_KEY = 'user';
@@ -24,13 +27,15 @@ const TOKEN_STORAGE_KEY = 'access_token';
 const REFRESH_TOKEN_STORAGE_KEY = 'refresh_token';
 const TOKEN_EXPIRY_STORAGE_KEY = 'token_expiry';
 const CURRENT_ROLE_STORAGE_KEY = 'current_role';
+const REQUIRE_PASSWORD_CHANGE_KEY = 'require_password_change';
 
 const initialState: AuthState = {
   user: null,
   currentRole: null,
   loading: false,
   initialized: false,
-  error: null
+  error: null,
+  requirePasswordChange: false
 };
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,6 +44,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const navigate = useNavigate();
   const location = useLocation();
   const [state, setState] = useState<AuthState>(initialState);
+  const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializingRef = useRef(true);
 
@@ -50,6 +57,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem(TOKEN_EXPIRY_STORAGE_KEY);
     localStorage.removeItem(CURRENT_ROLE_STORAGE_KEY);
     localStorage.removeItem('userId'); // Also remove userId
+    localStorage.removeItem(REQUIRE_PASSWORD_CHANGE_KEY);
     
     // Clear any existing refresh timer
     if (refreshTimerRef.current) {
@@ -114,10 +122,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem(TOKEN_EXPIRY_STORAGE_KEY, tokenData.expiresAt);
       localStorage.setItem(CURRENT_ROLE_STORAGE_KEY, tokenData.currentRole);
       
+      // Store password change requirement
+      localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, tokenData.requirePasswordChange.toString());
+      
       setState(prevState => ({
         ...prevState,
-        currentRole: tokenData.currentRole as UserRole
+        currentRole: tokenData.currentRole as UserRole,
+        requirePasswordChange: tokenData.requirePasswordChange
       }));
+      
+      // Check if password change is required after refresh
+      if (tokenData.requirePasswordChange) {
+        setShowPasswordChangeModal(true);
+      }
       
       console.log('Token refreshed successfully');
       
@@ -191,6 +208,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const token = localStorage.getItem(TOKEN_STORAGE_KEY);
         const currentRole = localStorage.getItem(CURRENT_ROLE_STORAGE_KEY);
         const tokenExpiry = localStorage.getItem(TOKEN_EXPIRY_STORAGE_KEY);
+        const requirePasswordChange = localStorage.getItem(REQUIRE_PASSWORD_CHANGE_KEY) === 'true';
 
         if (storedUser && token && currentRole) {
           console.log('Found stored auth data');
@@ -209,16 +227,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             currentRole: currentRole as UserRole,
             loading: false,
             initialized: true,
-            error: null
+            error: null,
+            requirePasswordChange: requirePasswordChange
           });
           
           // Setup refresh timer for the token
           setupRefreshTimer();
           
-          // Navigate to appropriate dashboard based on role if on landing or role selection
-          const isOnPublicPage = location.pathname === '/' || location.pathname === '/login';
-          if (isOnPublicPage) {
-            navigateByRole(currentRole as UserRole);
+          // Check if password change is required
+          if (requirePasswordChange) {
+            setShowPasswordChangeModal(true);
+          } else {
+            // Navigate to appropriate dashboard based on role if on landing or role selection
+            const isOnPublicPage = location.pathname === '/' || location.pathname === '/login';
+            if (isOnPublicPage) {
+              navigateByRole(currentRole as UserRole);
+            }
           }
         } else {
           console.log('No stored auth data found');
@@ -293,7 +317,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('Attempting login...');
       const authResponse = await apiLogin({ email, password });
       
-      const { userId, name, email: userEmail, roles, token } = authResponse;
+      const { userId, name, email: userEmail, roles, token, requirePasswordChange } = authResponse;
       
       // Store auth data in localStorage
       const user: User = {
@@ -308,6 +332,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, token.refreshToken);
       localStorage.setItem(TOKEN_EXPIRY_STORAGE_KEY, token.expiresAt);
       localStorage.setItem(CURRENT_ROLE_STORAGE_KEY, token.currentRole);
+      localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, requirePasswordChange.toString());
       
       // Store user ID separately for easier access
       localStorage.setItem('userId', userId);
@@ -319,7 +344,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user,
         currentRole: token.currentRole as UserRole,
         loading: false,
-        error: null
+        error: null,
+        requirePasswordChange
       }));
 
       // Set up refresh timer after successful login
@@ -327,11 +353,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       toast.success('Login successful!');
       
-      // Handle role selection for users with multiple roles
-      if (roles.length > 1) {
-        navigate('/role-selection');
+      // Check if password change is required
+      if (requirePasswordChange) {
+        setShowPasswordChangeModal(true);
       } else {
-        navigateByRole(token.currentRole as UserRole);
+        // Handle role selection for users with multiple roles
+        if (roles.length > 1) {
+          navigate('/role-selection');
+        } else {
+          navigateByRole(token.currentRole as UserRole);
+        }
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -398,6 +429,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, tokenData.refreshToken);
       localStorage.setItem(TOKEN_EXPIRY_STORAGE_KEY, tokenData.expiresAt);
       localStorage.setItem(CURRENT_ROLE_STORAGE_KEY, tokenData.currentRole);
+      localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, tokenData.requirePasswordChange.toString());
       
       // Make sure userId is maintained when switching roles
       if (userId) {
@@ -408,7 +440,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ...prevState,
         currentRole: tokenData.currentRole as UserRole,
         loading: false,
-        error: null
+        error: null,
+        requirePasswordChange: tokenData.requirePasswordChange
       }));
       
       console.log('Role selection successful, tokens updated');
@@ -416,8 +449,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Setup refresh timer after role change
       setupRefreshTimer();
       
-      toast.success(`Switched to ${role} role`);
-      navigateByRole(role);
+      // Check if password change is required
+      if (tokenData.requirePasswordChange) {
+        setShowPasswordChangeModal(true);
+      } else {
+        toast.success(`Switched to ${role} role`);
+        navigateByRole(role);
+      }
     } catch (error) {
       console.error('Role selection error:', error);
       setState(prevState => ({
@@ -446,6 +484,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw error;
     }
   };
+  
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    setIsChangingPassword(true);
+    
+    try {
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+      
+      await apiChangePassword({
+        userId,
+        currentPassword,
+        newPassword
+      });
+      
+      // Update the local storage flag
+      localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, 'false');
+      
+      // Update state
+      setState(prevState => ({
+        ...prevState,
+        requirePasswordChange: false
+      }));
+      
+      // Close modal
+      setShowPasswordChangeModal(false);
+      setIsChangingPassword(false);
+      
+      toast.success('Password changed successfully');
+      
+      // Navigate based on role after password change
+      if (state.currentRole) {
+        navigateByRole(state.currentRole);
+      }
+    } catch (error) {
+      console.error('Password change error:', error);
+      setIsChangingPassword(false);
+      toast.error('Failed to change password. Please check your current password and try again.');
+      throw error;
+    }
+  };
 
   return (
     <AuthContext.Provider
@@ -455,10 +535,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         logout,
         selectRole,
         resetPassword,
-        navigateToRoleSelection
+        navigateToRoleSelection,
+        changePassword
       }}
     >
       {children}
+      
+      {/* Password Change Modal */}
+      <PasswordChangeModal
+        isOpen={showPasswordChangeModal}
+        onClose={() => {
+          // Don't allow closing if password change is required
+          if (!state.requirePasswordChange) {
+            setShowPasswordChangeModal(false);
+          }
+        }}
+        onSubmit={changePassword}
+        isSubmitting={isChangingPassword}
+      />
     </AuthContext.Provider>
   );
 };

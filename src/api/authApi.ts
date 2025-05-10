@@ -1,219 +1,112 @@
-import apiClient from './apiClient';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../config/firebase';
-import { mapBackendRolesToEnums, mapEnumsToBackendRoles } from '../utils/roleMapping';
-import { UserRole } from '../types/auth.types';
+import apiClient from "./apiClient";
 
-interface LoginCredentials {
+export interface LoginRequest {
   email: string;
   password: string;
+  firebaseToken?: string;
 }
 
-interface TokenResponse {
+export interface RefreshTokenRequest {
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface TokenResponse {
   accessToken: string;
   refreshToken: string;
   expiresAt: string;
   currentRole: string;
+  requirePasswordChange: boolean;
 }
 
-interface AuthResponse {
+export interface AuthResponse {
   userId: string;
   name: string;
   email: string;
   roles: string[];
   token: TokenResponse;
+  requirePasswordChange: boolean;
 }
 
-interface SelectRoleRequest {
+export interface SelectRoleRequest {
   userId: string;
   role: string;
   accessToken: string;
 }
 
-// Login with Firebase and then exchange Firebase token for JWT
-export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
-  try {
-    console.log("Starting login process");
-    
-    // First authenticate with Firebase
-    const firebaseAuth = await signInWithEmailAndPassword(
-      auth,
-      credentials.email,
-      credentials.password
-    );
-    
-    console.log("Firebase authentication successful");
-    
-    // Get Firebase ID token
-    const firebaseToken = await firebaseAuth.user.getIdToken();
-    console.log(`Firebase token (first 20 chars): ${firebaseToken.substring(0, 20)}...`);
-    
-    // Exchange Firebase token for our application JWT
-    const response = await apiClient.post<AuthResponse>('/auth/login', {
-      email: credentials.email,
-      firebaseToken: firebaseToken
-    });
-    
-    console.log("JWT token received from backend");
-    
-    // Convert backend roles to frontend enum format
-    const mappedRoles = mapBackendRolesToEnums(response.data.roles);
-    
-    // Store auth data
-    localStorage.setItem('access_token', response.data.token.accessToken);
-    localStorage.setItem('refresh_token', response.data.token.refreshToken);
-    localStorage.setItem('token_expiry', response.data.token.expiresAt);
-    localStorage.setItem('current_role', response.data.token.currentRole);
-    
-    // Store user data
-    const userData = {
-      id: response.data.userId,
-      name: response.data.name,
-      email: response.data.email,
-      roles: mappedRoles
-    };
-    localStorage.setItem('user', JSON.stringify(userData));
-    
-    // Store userId separately for easier access
-    localStorage.setItem('userId', response.data.userId);
-    
-    console.log("Login data stored in localStorage, userId:", response.data.userId);
-    
-    // Return response with properly mapped roles
-    return {
-      ...response.data,
-      roles: mappedRoles.map(role => role.toString())
-    };
-  } catch (error) {
-    console.error('Login error:', error);
-    throw error;
-  }
+export interface ChangePasswordRequest {
+  userId: string;
+  currentPassword: string;
+  newPassword: string;
+}
+
+// Login
+export const login = async (data: LoginRequest): Promise<AuthResponse> => {
+  const response = await apiClient.post('/auth/login', data);
+  return response.data;
 };
 
-// Logout from both Firebase and backend
+// Logout
 export const logout = async (): Promise<void> => {
-  try {
-    const refreshToken = localStorage.getItem('refresh_token');
-    
-    if (refreshToken) {
-      await apiClient.post('/auth/revoke-token', JSON.stringify(refreshToken));
-    }
-    
-    // Sign out from Firebase
-    await auth.signOut();
-    
-    // Clear local storage
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('token_expiry');
-    localStorage.removeItem('current_role');
-    localStorage.removeItem('user');
-    localStorage.removeItem('userId'); // Also remove userId
-  } catch (error) {
-    console.error('Logout error:', error);
-    
-    // Clear local storage even if API call fails
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('token_expiry');
-    localStorage.removeItem('current_role');
-    localStorage.removeItem('user');
-    localStorage.removeItem('userId'); // Also remove userId
-    
-    throw error;
-  }
-};
-
-// Select role for users with multiple roles
-export const selectRole = async (role: UserRole): Promise<TokenResponse> => {
-  try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const accessToken = localStorage.getItem('access_token');
-    
-    if (!user.id || !accessToken) {
-      throw new Error('User not authenticated');
-    }
-    
-    // Convert enum role to properly formatted string for backend
-    const backendRole = role.toString();
-    
-    const request: SelectRoleRequest = {
-      userId: user.id,
-      role: backendRole,
-      accessToken
-    };
-    
-    console.log('Selecting role for user:', user.id);
-    
-    const response = await apiClient.post<TokenResponse>('/auth/select-role', request);
-    
-    // Update stored tokens
-    localStorage.setItem('access_token', response.data.accessToken);
-    localStorage.setItem('refresh_token', response.data.refreshToken);
-    localStorage.setItem('token_expiry', response.data.expiresAt);
-    localStorage.setItem('current_role', response.data.currentRole);
-    
-    // Make sure userId is still in localStorage when changing roles
-    if (user.id) {
-      localStorage.setItem('userId', user.id);
-    }
-    
-    return response.data;
-  } catch (error) {
-    console.error('Role selection error:', error);
-    throw error;
-  }
-};
-
-// Reset password using Firebase
-export const resetPassword = async (email: string): Promise<void> => {
-  try {
-    // Firebase password reset
-    await sendPasswordResetEmail(auth, email);
-    
-    // Also notify our backend
-    await apiClient.post('/auth/reset-password', { email });
-  } catch (error) {
-    console.error('Password reset error:', error);
-    throw error;
+  const refreshToken = localStorage.getItem('refresh_token');
+  if (refreshToken) {
+    await apiClient.post('/auth/revoke-token', JSON.stringify(refreshToken), {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
   }
 };
 
 // Refresh token
 export const refreshToken = async (): Promise<TokenResponse> => {
-  try {
-    const accessToken = localStorage.getItem('access_token');
-    const refreshToken = localStorage.getItem('refresh_token');
-    
-    if (!accessToken || !refreshToken) {
-      throw new Error('No tokens available');
-    }
-    
-    const response = await apiClient.post<TokenResponse>('/auth/refresh-token', {
-      accessToken,
-      refreshToken
-    });
-    
-    // Update stored tokens
-    localStorage.setItem('access_token', response.data.accessToken);
-    localStorage.setItem('refresh_token', response.data.refreshToken);
-    localStorage.setItem('token_expiry', response.data.expiresAt);
-    localStorage.setItem('current_role', response.data.currentRole);
-    
-    return response.data;
-  } catch (error) {
-    console.error('Token refresh error:', error);
-    throw error;
+  const accessToken = localStorage.getItem('access_token');
+  const refreshToken = localStorage.getItem('refresh_token');
+  
+  if (!accessToken || !refreshToken) {
+    throw new Error('No tokens available');
   }
+  
+  const response = await apiClient.post('/auth/refresh-token', {
+    accessToken,
+    refreshToken
+  });
+  
+  return response.data;
 };
 
-// Check if token is valid
-export const validateToken = async (token: string): Promise<boolean> => {
-  try {
-    const response = await apiClient.get<{ isValid: boolean }>(`/auth/validate-token?token=${token}`);
-    return response.data.isValid;
-  } catch (error) {
-    console.error('Token validation error:', error);
-    return false;
+// Select role
+export const selectRole = async (role: string): Promise<TokenResponse> => {
+  const userId = localStorage.getItem('userId');
+  const accessToken = localStorage.getItem('access_token');
+  
+  if (!userId || !accessToken) {
+    throw new Error('No user ID or access token available');
   }
+  
+  const response = await apiClient.post('/auth/select-role', {
+    userId,
+    role,
+    accessToken
+  });
+  
+  return response.data;
+};
+
+// Reset password (send reset link)
+export const resetPassword = async (email: string): Promise<void> => {
+  await apiClient.post('/auth/reset-password', { email });
+};
+
+// Change password
+export const changePassword = async (data: ChangePasswordRequest): Promise<void> => {
+  await apiClient.post('/auth/change-password', data);
+};
+
+// Validate token
+export const validateToken = async (token: string): Promise<boolean> => {
+  const response = await apiClient.get('/auth/validate-token', {
+    params: { token }
+  });
+  return response.data.isValid;
 };
