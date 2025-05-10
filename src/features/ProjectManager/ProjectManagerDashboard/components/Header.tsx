@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'; 
-import { Bell, LogOut, Users, BarChart2, ChevronDown, Check, FileText, Calendar, Book, FolderKanban } from 'lucide-react';  
+import { Bell, LogOut, Users, ChevronDown, Check, FileText, Calendar, FolderKanban } from 'lucide-react';  
 import { useNavigate } from 'react-router-dom'; 
 import { HeaderProps } from '../types/types';  
 
@@ -20,6 +20,9 @@ const Header: React.FC<HeaderProps> = ({
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Check if there are any unread notifications
+  const hasUnreadNotifications = notifications.some((notification) => notification.isNew);
   
   useEffect(() => {
     // Get user data from localStorage
@@ -97,44 +100,66 @@ const Header: React.FC<HeaderProps> = ({
         </div>
                 
         <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto justify-end">
-         
+
 
           {/* Notification Bell */}
+
           <button 
+            type="button"
             onClick={navigateToNotifications}
             className="relative hover:text-[#BF4BF6] transition-colors duration-200"
             aria-label="View notifications"
+            title="View notifications"
           >
             <Bell size={20} className="text-gray-500 hover:text-[#BF4BF6]" />
+            {/* Show notification indicator dot if there are unread notifications */}
+            {hasUnreadNotifications && (
+              <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full" aria-hidden="true"></span>
+            )}
+            {/* Use the notifications count if needed */}
+            {notifications.length > 0 && (
+              <span className="sr-only">{notifications.length} notifications</span>
+            )}
           </button>
 
           {/* Role Switcher - Only show if user has multiple roles */}
           {currentUser && currentUser.roles && currentUser.roles.length > 1 && (
             <div className="relative" ref={dropdownRef}>
+            
               <button 
+                type="button"
                 onClick={toggleDropdown}
                 className="flex items-center gap-2 text-gray-500 hover:text-[#BF4BF6] transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-[#F6E6FF]"
                 aria-label="Switch role"
-                aria-expanded={dropdownOpen}
+                aria-expanded={dropdownOpen ? "true" : "false"}
                 aria-haspopup="true"
+                title="Switch role"
               >
+                
                 <Users size={20} />
                 <span className="font-['Nunito_Sans'] hidden sm:inline">Roles</span>
                 <ChevronDown 
                   size={16} 
                   className={`transition-transform duration-300 hidden sm:block ${dropdownOpen ? 'rotate-180' : ''}`}
+                  aria-hidden="true"
                 />
               </button>
               
               {/* Dropdown Menu */}
               {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white border border-gray-100 overflow-hidden z-50">
+                <div 
+                  className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white border border-gray-100 overflow-hidden z-50"
+                  role="menu"
+                  aria-orientation="vertical"
+                  aria-labelledby="role-menu"
+                >
                   <div className="text-sm text-gray-500 px-4 py-2 border-b border-gray-100 font-['Nunito_Sans']">
                     Switch Role
                   </div>
                   <div className="py-1">
                     {currentUser.roles.map((roleOption: string) => (
                       <button
+                        type="button"
                         key={roleOption}
                         onClick={() => switchToRole(roleOption)}
                         className={`flex items-center w-full text-left px-4 py-2 text-sm transition-colors duration-200 font-['Nunito_Sans'] ${
@@ -142,6 +167,8 @@ const Header: React.FC<HeaderProps> = ({
                             ? 'bg-[#F6E6FF] text-[#BF4BF6]' 
                             : 'text-gray-700 hover:bg-[#F6E6FF] hover:text-[#BF4BF6]'
                         }`}
+                        role="menuitem"
+                        title={`Switch to ${formatRoleName(roleOption)} role`}
                       >
                         <div className="flex items-center justify-between w-full">
                           <div className="flex items-center gap-2">
@@ -151,7 +178,7 @@ const Header: React.FC<HeaderProps> = ({
                             <span>{formatRoleName(roleOption)}</span>
                           </div>
                           {roleOption === 'ProjectManager' && (
-                            <Check size={16} className="text-[#BF4BF6]" />
+                            <Check size={16} className="text-[#BF4BF6]" aria-hidden="true" />
                           )}
                         </div>
                       </button>
@@ -159,8 +186,11 @@ const Header: React.FC<HeaderProps> = ({
                   </div>
                   <div className="border-t border-gray-100">
                     <button
+                      type="button"
                       onClick={() => navigate('/role-selection')}
                       className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-[#F6E6FF] hover:text-[#BF4BF6] transition-colors duration-200 font-['Nunito_Sans']"
+                      role="menuitem"
+                      title="View all roles"
                     >
                       View All Roles
                     </button>
@@ -172,8 +202,11 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Logout Button */}
           <button 
+            type="button"
             onClick={handleLogout}
             className="flex items-center gap-2 text-gray-500 hover:text-[#BF4BF6] transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-[#F6E6FF]"
+            aria-label="Logout"
+            title="Logout"
           >
             <LogOut size={20} />
             <span className="font-['Nunito_Sans'] hidden sm:inline">Logout</span>
