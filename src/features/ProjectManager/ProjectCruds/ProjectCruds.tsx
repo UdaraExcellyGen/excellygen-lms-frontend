@@ -1,11 +1,12 @@
-// ProjectCruds/ProjectCruds.tsx
+// Path: src/features/ProjectManager/ProjectCruds/ProjectCruds.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     ArrowLeft, Search, Plus, Edit, Trash2, Hash,
     Lock, ChevronDown, Menu, X as XIcon
 } from 'lucide-react';
+import { toast } from 'react-hot-toast'; // Import toast for notifications
 
 // Import components
 import DeleteConfirmationDialog from './components/DeleteConfirmationDialog';
@@ -13,9 +14,15 @@ import ProjectForm from './components/ProjectForm';
 import TechnologyForm from './components/TechnologyForm';
 import RoleForm from './components/RoleForm';
 
-// Import types and mock data
-import { Project, EmployeeTechnology, ProjectRole, RoleAssignment } from './data/types';
-import { projectsData, employeeTechnologiesData, projectRolesData } from './data/mockData';
+// Import API services
+import { 
+    getAllProjects, getProjectById, createProject, updateProject, deleteProject,
+    getAllRoles, createRole, updateRole, deleteRole,
+    getProjectTechnologies, createTechnology, updateTechnology, deleteTechnology
+} from '../../../api/projectManagerApi';
+
+// Import types
+import { Project, EmployeeTechnology, ProjectRole, CreateProjectRequest, UpdateProjectRequest, CreateRoleRequest, UpdateRoleRequest } from './data/types';
 
 const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return '';
@@ -23,7 +30,7 @@ const formatDate = (dateString: string | null | undefined) => {
     return date.toISOString().split('T')[0];
 };
 
-const ProjectCRUD = () => {
+const ProjectCRUD: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const pathname = location.pathname;
@@ -35,8 +42,12 @@ const ProjectCRUD = () => {
         projects: false,
         technologies: false,
         roles: false
-    });
-    const [error, setError] = useState({
+    });    const [error, setError] = useState<{
+        projects: string | null,
+        technologies: string | null,
+        roles: string | null,
+        form: string | null
+    }>({
         projects: null,
         technologies: null,
         roles: null,
@@ -50,28 +61,28 @@ const ProjectCRUD = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchType, setSearchType] = useState('name');
     const [showForm, setShowForm] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingId, setEditingId] = useState<number | string | null>(null);
     const [selectedTechnologiesDisplay, setSelectedTechnologiesDisplay] = useState<string[]>([]);
     const [showProjects, setShowProjects] = useState(true);
     const [isTechnologySectionActive, setIsTechnologySectionActive] = useState(false);
     const [isTechnologyFormOpen, setIsTechnologyFormOpen] = useState(false);
-    const [editingTechnologyId, setEditingTechnologyId] = useState<number | null>(null);
+    const [editingTechnologyId, setEditingTechnologyId] = useState<number | string | null>(null);
     const [projectStatusFilter, setProjectStatusFilter] = useState('All');
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const [showRoles, setShowRoles] = useState(false);
     const [projectRoles, setProjectRoles] = useState<ProjectRole[]>([]);
-    const [editingRoleId, setEditingRoleId] = useState<number | null>(null);
+    const [editingRoleId, setEditingRoleId] = useState<number | string | null>(null);
     const [showRoleForm, setShowRoleForm] = useState(false);
     const [roleFormData, setRoleFormData] = useState({ name: "" });
     const [roleFormErrors, setRoleFormErrors] = useState({ name: false });
 
     const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-    const [projectIdToDelete, setProjectIdToDelete] = useState<number | null>(null);
-    const [technologyIdToDelete, setTechnologyIdToDelete] = useState<number | null>(null);
+    const [projectIdToDelete, setProjectIdToDelete] = useState<number | string | null>(null);
+    const [technologyIdToDelete, setTechnologyIdToDelete] = useState<number | string | null>(null);
     const [showTechnologyDeleteConfirmation, setShowTechnologyDeleteConfirmation] = useState(false);
-    const [roleIdToDelete, setRoleIdToDelete] = useState<number | null>(null);
+    const [roleIdToDelete, setRoleIdToDelete] = useState<number | string | null>(null);
     const [showRoleDeleteConfirmation, setShowRoleDeleteConfirmation] = useState(false);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -83,10 +94,10 @@ const ProjectCRUD = () => {
         deadline: "",
         description: "",
         shortDescription: "",
-        requiredTechnologies: [] as { id: number, name: string }[],
+        requiredTechnologies: [] as { id: number | string, name: string }[],
         progress: 0,
         startDate: "",
-        assignedRoles: [] as RoleAssignment[],
+        assignedRoles: [] as { roleId: number | string, roleName: string, amount: number }[],
     });
     const [technologyFormData, setTechnologyFormData] = useState({ name: "" });
 
@@ -107,16 +118,15 @@ const ProjectCRUD = () => {
         }
     }, [pathname]);
 
-    // Mock fetch functions
+    // Fetch functions
     const fetchProjects = async () => {
         setIsLoading((prev) => ({ ...prev, projects: true }));
         setError((prev) => ({ ...prev, projects: null }));
         try {
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 500));
-            setProjects(projectsData);
-        } catch (err) {
-            setError((prev) => ({ ...prev, projects: "Error fetching projects" }));
+            const fetchedProjects = await getAllProjects(projectStatusFilter !== 'All' ? projectStatusFilter : undefined);
+            setProjects(fetchedProjects);
+        } catch (err: any) {
+            setError((prev) => ({ ...prev, projects: err.message || "Error fetching projects" }));
         } finally {
             setIsLoading((prev) => ({ ...prev, projects: false }));
         }
@@ -126,12 +136,11 @@ const ProjectCRUD = () => {
         setIsLoading((prev) => ({ ...prev, technologies: true }));
         setError((prev) => ({ ...prev, technologies: null }));
         try {
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 300));
-            setEmployeeTechnologies(employeeTechnologiesData);
-            setAvailableTechnologies(employeeTechnologiesData);
-        } catch (err) {
-            setError((prev) => ({ ...prev, technologies: "Error fetching technologies" }));
+            const technologies = await getProjectTechnologies();
+            setEmployeeTechnologies(technologies);
+            setAvailableTechnologies(technologies);
+        } catch (err: any) {
+            setError((prev) => ({ ...prev, technologies: err.message || "Error fetching technologies" }));
         } finally {
             setIsLoading((prev) => ({ ...prev, technologies: false }));
         }
@@ -141,11 +150,10 @@ const ProjectCRUD = () => {
         setIsLoading((prev) => ({ ...prev, roles: true }));
         setError((prev) => ({ ...prev, roles: null }));
         try {
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 300));
-            setProjectRoles(projectRolesData);
-        } catch (err) {
-            setError((prev) => ({ ...prev, roles: "Error fetching roles" }));
+            const roles = await getAllRoles();
+            setProjectRoles(roles);
+        } catch (err: any) {
+            setError((prev) => ({ ...prev, roles: err.message || "Error fetching roles" }));
         } finally {
             setIsLoading((prev) => ({ ...prev, roles: false }));
         }
@@ -155,7 +163,7 @@ const ProjectCRUD = () => {
         fetchProjects();
         fetchTechnologies();
         fetchRoles();
-    }, []);
+    }, [projectStatusFilter]);
 
     const validateForm = () => {
         const errors = {
@@ -167,6 +175,7 @@ const ProjectCRUD = () => {
         return !Object.values(errors).some((error) => error);
     };
 
+    // Project Management Functions
     const handleCreate = async () => {
         setIsLoading((prev) => ({ ...prev, projects: true }));
         
@@ -187,34 +196,28 @@ const ProjectCRUD = () => {
         }
 
         try {
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const newProject: Project = {
-                id: Math.max(...projects.map(p => p.id), 0) + 1,
+            const createProjectData: CreateProjectRequest = {
                 name: formData.name,
                 status: formData.status,
-                deadline: formData.deadline,
-                startDate: formData.startDate,
+                deadline: formData.deadline || null,
+                startDate: formData.startDate || null,
                 description: formData.description,
                 shortDescription: formData.shortDescription,
                 progress: formData.progress,
-                requiredSkills: formData.requiredTechnologies.map(tech => ({
-                    id: tech.id,
-                    name: tech.name
-                })),
+                requiredTechnologyIds: formData.requiredTechnologies.map(tech => tech.id.toString()),
                 requiredRoles: formData.assignedRoles.map(role => ({
-                    roleId: role.roleId,
-                    roleName: role.roleName,
+                    roleId: role.roleId.toString(),
                     count: role.amount
                 }))
             };
 
+            const newProject = await createProject(createProjectData);
             setProjects([...projects, newProject]);
             setShowForm(false);
             resetForm();
-        } catch (err) {
-            setError((prev) => ({ ...prev, form: "Error creating project" }));
+            toast.success("Project created successfully");
+        } catch (err: any) {
+            setError((prev) => ({ ...prev, form: err.message || "Error creating project" }));
         } finally {
             setIsLoading((prev) => ({ ...prev, projects: false }));
             // Reset submission state after a delay
@@ -226,6 +229,8 @@ const ProjectCRUD = () => {
     };
 
     const handleUpdate = async () => {
+        if (!editingId) return;
+        
         setIsLoading((prev) => ({ ...prev, projects: true }));
         
         // Prevent multiple submissions
@@ -245,40 +250,33 @@ const ProjectCRUD = () => {
         }
 
         try {
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const updatedProjects = projects.map(project => {
-                if (project.id === editingId) {
-                    return {
-                        ...project,
-                        name: formData.name,
-                        status: formData.status,
-                        deadline: formData.deadline,
-                        startDate: formData.startDate,
-                        description: formData.description,
-                        shortDescription: formData.shortDescription,
-                        progress: formData.progress,
-                        requiredSkills: formData.requiredTechnologies.map(tech => ({
-                            id: tech.id,
-                            name: tech.name
-                        })),
-                        requiredRoles: formData.assignedRoles.map(role => ({
-                            roleId: role.roleId,
-                            roleName: role.roleName,
-                            count: role.amount
-                        }))
-                    };
-                }
-                return project;
-            });
+            const updateProjectData: UpdateProjectRequest = {
+                name: formData.name,
+                status: formData.status,
+                deadline: formData.deadline || null,
+                startDate: formData.startDate || null,
+                description: formData.description,
+                shortDescription: formData.shortDescription,
+                progress: formData.progress,
+                requiredTechnologyIds: formData.requiredTechnologies.map(tech => tech.id.toString()),
+                requiredRoles: formData.assignedRoles.map(role => ({
+                    roleId: role.roleId.toString(),
+                    count: role.amount
+                }))
+            };
 
-            setProjects(updatedProjects);
+            const updatedProject = await updateProject(editingId.toString(), updateProjectData);
+            
+            setProjects(projects.map(project => 
+                project.id === editingId ? updatedProject : project
+            ));
+            
             setEditingId(null);
             setShowForm(false);
             resetForm();
-        } catch (err) {
-            setError((prev) => ({ ...prev, form: "Error updating project" }));
+            toast.success("Project updated successfully");
+        } catch (err: any) {
+            setError((prev) => ({ ...prev, form: err.message || "Error updating project" }));
         } finally {
             setIsLoading((prev) => ({ ...prev, projects: false }));
             // Reset submission state after a delay
@@ -289,23 +287,23 @@ const ProjectCRUD = () => {
         }
     };
 
-    const handleDelete = (id: number) => {
+    const handleDelete = (id: number | string) => {
         setProjectIdToDelete(id);
         setShowDeleteConfirmation(true);
     };
 
     const confirmDeleteProject = async () => {
+        if (!projectIdToDelete) return;
+        
         setIsLoading((prev) => ({ ...prev, projects: true }));
         try {
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const filteredProjects = projects.filter(project => project.id !== projectIdToDelete);
-            setProjects(filteredProjects);
+            await deleteProject(projectIdToDelete.toString());
+            setProjects(projects.filter(project => project.id !== projectIdToDelete));
             setShowDeleteConfirmation(false);
             setProjectIdToDelete(null);
-        } catch (err) {
-            setError((prev) => ({ ...prev, projects: "Error deleting project" }));
+            toast.success("Project deleted successfully");
+        } catch (err: any) {
+            setError((prev) => ({ ...prev, projects: err.message || "Error deleting project" }));
         } finally {
             setIsLoading((prev) => ({ ...prev, projects: false }));
         }
@@ -316,24 +314,106 @@ const ProjectCRUD = () => {
         setProjectIdToDelete(null);
     };
 
-    const handleDeleteTechnologyConfirmation = (id: number) => {
+    // Technology Management Functions
+    const handleCreateTechnology = async () => {
+        setError((prev) => ({ ...prev, form: null }));
+        if (!technologyFormData.name.trim()) {
+            setError((prev) => ({ ...prev, form: "Technology name is required" }));
+            return;
+        }
+        
+        setIsLoading((prev) => ({ ...prev, technologies: true }));
+        try {
+            const newTechnology = await createTechnology({ name: technologyFormData.name.trim() });
+            
+            // Add the new technology to both local lists
+            setEmployeeTechnologies([...employeeTechnologies, newTechnology]);
+            setAvailableTechnologies([...availableTechnologies, newTechnology]);
+            
+            setIsTechnologyFormOpen(false);
+            resetTechnologyForm();
+            toast.success("Technology created successfully");
+        } catch (err: any) {
+            // Check if it's a permission error
+            if (err.status === 403) {
+                setError((prev) => ({ ...prev, form: "You need Admin privileges to manage technologies" }));
+                toast.error("Admin privileges required to manage technologies");
+            } else {
+                setError((prev) => ({ ...prev, form: err.message || "Error creating technology" }));
+            }
+        } finally {
+            setIsLoading((prev) => ({ ...prev, technologies: false }));
+        }
+    };
+
+    const handleUpdateTechnology = async () => {
+        if (!editingTechnologyId) return;
+        
+        setError((prev) => ({ ...prev, form: null }));
+        if (!technologyFormData.name.trim()) {
+            setError((prev) => ({ ...prev, form: "Technology name is required" }));
+            return;
+        }
+        
+        setIsLoading((prev) => ({ ...prev, technologies: true }));
+        try {
+            const updatedTechnology = await updateTechnology(
+                editingTechnologyId.toString(), 
+                { name: technologyFormData.name.trim() }
+            );
+            
+            // Update both local lists with the updated technology
+            setEmployeeTechnologies(employeeTechnologies.map(tech => 
+                tech.id === editingTechnologyId ? updatedTechnology : tech
+            ));
+            setAvailableTechnologies(availableTechnologies.map(tech => 
+                tech.id === editingTechnologyId ? updatedTechnology : tech
+            ));
+            
+            setEditingTechnologyId(null);
+            setIsTechnologyFormOpen(false);
+            resetTechnologyForm();
+            toast.success("Technology updated successfully");
+        } catch (err: any) {
+            // Check if it's a permission error
+            if (err.status === 403) {
+                setError((prev) => ({ ...prev, form: "You need Admin privileges to manage technologies" }));
+                toast.error("Admin privileges required to manage technologies");
+            } else {
+                setError((prev) => ({ ...prev, form: err.message || "Error updating technology" }));
+            }
+        } finally {
+            setIsLoading((prev) => ({ ...prev, technologies: false }));
+        }
+    };
+
+    const handleDeleteTechnologyConfirmation = (id: number | string) => {
         setTechnologyIdToDelete(id);
         setShowTechnologyDeleteConfirmation(true);
     };
 
     const confirmDeleteTechnology = async () => {
+        if (!technologyIdToDelete) return;
+        
         setIsLoading((prev) => ({ ...prev, technologies: true }));
         try {
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await deleteTechnology(technologyIdToDelete.toString());
             
-            const filteredTechnologies = employeeTechnologies.filter(tech => tech.id !== technologyIdToDelete);
-            setEmployeeTechnologies(filteredTechnologies);
-            setAvailableTechnologies(filteredTechnologies);
+            // Remove the technology from local lists
+            setEmployeeTechnologies(employeeTechnologies.filter(tech => tech.id !== technologyIdToDelete));
+            setAvailableTechnologies(availableTechnologies.filter(tech => tech.id !== technologyIdToDelete));
+            
             setShowTechnologyDeleteConfirmation(false);
             setTechnologyIdToDelete(null);
-        } catch (err) {
-            setError((prev) => ({ ...prev, technologies: "Error deleting technology" }));
+            toast.success("Technology deleted successfully");
+        } catch (err: any) {
+            // Check if it's a permission error
+            if (err.status === 403) {
+                setError((prev) => ({ ...prev, technologies: "You need Admin privileges to manage technologies" }));
+                toast.error("Admin privileges required to manage technologies");
+            } else {
+                setError((prev) => ({ ...prev, technologies: err.message || "Error deleting technology" }));
+            }
         } finally {
             setIsLoading((prev) => ({ ...prev, technologies: false }));
         }
@@ -344,23 +424,79 @@ const ProjectCRUD = () => {
         setTechnologyIdToDelete(null);
     };
 
-    const handleDeleteRoleConfirmation = (id: number) => {
+    // Role Management Functions
+    const handleCreateRole = async () => {
+        setError((prev) => ({ ...prev, form: null }));
+        if (!validateRoleForm()) {
+            setError((prev) => ({ ...prev, form: "Please fill in the role name" }));
+            return;
+        }
+        setIsLoading((prev) => ({ ...prev, roles: true }));
+        try {
+            const createRoleData: CreateRoleRequest = {
+                name: roleFormData.name.trim()
+            };
+            
+            const newRole = await createRole(createRoleData);
+            setProjectRoles([...projectRoles, newRole]);
+            setShowRoleForm(false);
+            resetRoleForm();
+            toast.success("Role created successfully");
+        } catch (err: any) {
+            setError((prev) => ({ ...prev, form: err.message || "Error creating role" }));
+        } finally {
+            setIsLoading((prev) => ({ ...prev, roles: false }));
+        }
+    };
+
+    const handleUpdateRole = async () => {
+        if (!editingRoleId) return;
+        
+        setError((prev) => ({ ...prev, form: null }));
+        if (!validateRoleForm()) {
+            setError((prev) => ({ ...prev, form: "Role name is required" }));
+            return;
+        }
+        setIsLoading((prev) => ({ ...prev, roles: true }));
+        try {
+            const updateRoleData: UpdateRoleRequest = {
+                name: roleFormData.name.trim()
+            };
+            
+            const updatedRole = await updateRole(editingRoleId.toString(), updateRoleData);
+            
+            setProjectRoles(projectRoles.map(role => 
+                role.id === editingRoleId ? updatedRole : role
+            ));
+            
+            setShowRoleForm(false);
+            setEditingRoleId(null);
+            resetRoleForm();
+            toast.success("Role updated successfully");
+        } catch (err: any) {
+            setError((prev) => ({ ...prev, form: err.message || "Error updating role" }));
+        } finally {
+            setIsLoading((prev) => ({ ...prev, roles: false }));
+        }
+    };
+
+    const handleDeleteRoleConfirmation = (id: number | string) => {
         setRoleIdToDelete(id);
         setShowRoleDeleteConfirmation(true);
     };
 
     const confirmDeleteRole = async () => {
+        if (!roleIdToDelete) return;
+        
         setIsLoading((prev) => ({ ...prev, roles: true }));
         try {
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const filteredRoles = projectRoles.filter(role => role.id !== roleIdToDelete);
-            setProjectRoles(filteredRoles);
+            await deleteRole(roleIdToDelete.toString());
+            setProjectRoles(projectRoles.filter(role => role.id !== roleIdToDelete));
             setShowRoleDeleteConfirmation(false);
             setRoleIdToDelete(null);
-        } catch (err) {
-            setError((prev) => ({ ...prev, roles: "Error deleting role" }));
+            toast.success("Role deleted successfully");
+        } catch (err: any) {
+            setError((prev) => ({ ...prev, roles: err.message || "Error deleting role" }));
         } finally {
             setIsLoading((prev) => ({ ...prev, roles: false }));
         }
@@ -371,116 +507,7 @@ const ProjectCRUD = () => {
         setRoleIdToDelete(null);
     };
 
-    const handleCreateTechnology = async () => {
-        if (!technologyFormData.name.trim()) {
-            setError((prev) => ({ ...prev, form: "Technology name is required" }));
-            return;
-        }
-        setIsLoading((prev) => ({ ...prev, technologies: true }));
-        try {
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const newTechnology: EmployeeTechnology = {
-                id: Math.max(...employeeTechnologies.map(t => t.id), 0) + 1,
-                name: technologyFormData.name.trim()
-            };
-            
-            setEmployeeTechnologies([...employeeTechnologies, newTechnology]);
-            setAvailableTechnologies([...availableTechnologies, newTechnology]);
-            setIsTechnologyFormOpen(false);
-            resetTechnologyForm();
-        } catch (err) {
-            setError((prev) => ({ ...prev, form: "Error creating technology" }));
-        } finally {
-            setIsLoading((prev) => ({ ...prev, technologies: false }));
-        }
-    };
-
-    const handleUpdateTechnology = async () => {
-        if (!technologyFormData.name.trim()) {
-            setError((prev) => ({ ...prev, form: "Technology name is required" }));
-            return;
-        }
-        setIsLoading((prev) => ({ ...prev, technologies: true }));
-        try {
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const updatedTechnologies = employeeTechnologies.map(tech => {
-                if (tech.id === editingTechnologyId) {
-                    return { ...tech, name: technologyFormData.name.trim() };
-                }
-                return tech;
-            });
-            
-            setEmployeeTechnologies(updatedTechnologies);
-            setAvailableTechnologies(updatedTechnologies);
-            setEditingTechnologyId(null);
-            setIsTechnologyFormOpen(false);
-            resetTechnologyForm();
-        } catch (err) {
-            setError((prev) => ({ ...prev, form: "Error updating technology" }));
-        } finally {
-            setIsLoading((prev) => ({ ...prev, technologies: false }));
-        }
-    };
-
-    const handleCreateRole = async () => {
-        setError((prev) => ({ ...prev, form: null }));
-        if (!validateRoleForm()) {
-            setError((prev) => ({ ...prev, form: "Please fill in the role name" }));
-            return;
-        }
-        setIsLoading((prev) => ({ ...prev, roles: true }));
-        try {
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const newRole: ProjectRole = {
-                id: Math.max(...projectRoles.map(r => r.id), 0) + 1,
-                name: roleFormData.name.trim()
-            };
-            
-            setProjectRoles([...projectRoles, newRole]);
-            setShowRoleForm(false);
-            resetRoleForm();
-        } catch (err) {
-            setError((prev) => ({ ...prev, form: "Error creating role" }));
-        } finally {
-            setIsLoading((prev) => ({ ...prev, roles: false }));
-        }
-    };
-
-    const handleUpdateRole = async () => {
-        setError((prev) => ({ ...prev, form: null }));
-        if (!validateRoleForm()) {
-            setError((prev) => ({ ...prev, form: "Role name is required" }));
-            return;
-        }
-        setIsLoading((prev) => ({ ...prev, roles: true }));
-        try {
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const updatedRoles = projectRoles.map(role => {
-                if (role.id === editingRoleId) {
-                    return { ...role, name: roleFormData.name.trim() };
-                }
-                return role;
-            });
-            
-            setProjectRoles(updatedRoles);
-            setShowRoleForm(false);
-            setEditingRoleId(null);
-            resetRoleForm();
-        } catch (err) {
-            setError((prev) => ({ ...prev, form: "Error updating role" }));
-        } finally {
-            setIsLoading((prev) => ({ ...prev, roles: false }));
-        }
-    };
-
+    // Reset Form Functions
     const resetForm = () => {
         setFormData({
             name: "",
@@ -488,10 +515,10 @@ const ProjectCRUD = () => {
             deadline: "",
             description: "",
             shortDescription: "",
-            requiredTechnologies: [] as { id: number, name: string }[],
+            requiredTechnologies: [],
             progress: 0,
             startDate: "",
-            assignedRoles: [] as RoleAssignment[],
+            assignedRoles: [],
         });
         setSelectedTechnologiesDisplay([]);
         setFormErrors({
@@ -512,57 +539,59 @@ const ProjectCRUD = () => {
         setError((prev) => ({ ...prev, form: null }));
     };
 
-    const startEdit = (id: number) => {
-        const project = projects.find((proj) => proj.id === id);
-        if (project) {
-            const formatDateForInput = (dateString) => {
-                if (!dateString) return '';
-                const date = new Date(dateString);
-                return date.toISOString().split('T')[0];
-            };
+    // Edit Functions
+    const startEdit = async (id: number | string) => {
+        try {
+            const project = await getProjectById(id.toString());
+            if (project) {
+                // Format dates for form input
+                const formatDateForInput = (dateString: string | null | undefined) => {
+                    if (!dateString) return '';
+                    const date = new Date(dateString);
+                    return date.toISOString().split('T')[0];
+                };
 
-            // Handle required technologies
-            const requiredTechnologiesObjects = (project.requiredSkills || []).map((tech) => ({
-                id: tech.id,
-                name: tech.name
-            }));
-
-            const selectedTechnologies = requiredTechnologiesObjects.map((tech) => tech.name);
-
-            // Improved role assignment handling
-            let assignedRoles = [];
-
-            if (project.requiredRoles && project.requiredRoles.length > 0) {
-                assignedRoles = project.requiredRoles.map((role) => ({
-                    roleId: role.roleId || 0,
-                    roleName: projectRoles.find((r) => r.id === role.roleId)?.name || "",
-                    amount: role.count || 1
+                // Handle required technologies
+                const requiredTechnologiesObjects = (project.requiredSkills || []).map((tech) => ({
+                    id: tech.id,
+                    name: tech.name
                 }));
-            }
-            // Fallback to assignedRoles if present
-            else if (project.assignedRoles && project.assignedRoles.length > 0) {
-                assignedRoles = project.assignedRoles;
-            }
 
-            setFormData({
-                name: project.name || '',
-                status: project.status || 'Active',
-                deadline: formatDateForInput(project.deadline),
-                description: project.description || '',
-                shortDescription: project.shortDescription || '',
-                requiredTechnologies: requiredTechnologiesObjects,
-                progress: project.progress || 0,
-                startDate: formatDateForInput(project.startDate),
-                assignedRoles: assignedRoles,
-            });
+                const selectedTechnologies = requiredTechnologiesObjects.map((tech) => tech.name);
 
-            setSelectedTechnologiesDisplay(selectedTechnologies);
-            setEditingId(id);
-            setShowForm(true);
+                // Prepare role assignments
+                let assignedRoles: { roleId: number | string, roleName: string, amount: number }[] = [];
+
+                if (project.requiredRoles && project.requiredRoles.length > 0) {
+                    assignedRoles = project.requiredRoles.map((role) => ({
+                        roleId: role.roleId,
+                        roleName: role.roleName || projectRoles.find((r) => r.id === role.roleId)?.name || "",
+                        amount: role.count
+                    }));
+                }
+
+                setFormData({
+                    name: project.name || '',
+                    status: project.status || 'Active',
+                    deadline: formatDateForInput(project.deadline),
+                    description: project.description || '',
+                    shortDescription: project.shortDescription || '',
+                    requiredTechnologies: requiredTechnologiesObjects,
+                    progress: project.progress || 0,
+                    startDate: formatDateForInput(project.startDate),
+                    assignedRoles: assignedRoles,
+                });
+
+                setSelectedTechnologiesDisplay(selectedTechnologies);
+                setEditingId(id);
+                setShowForm(true);
+            }
+        } catch (err: any) {
+            setError((prev) => ({ ...prev, form: err.message || "Error fetching project details" }));
         }
     };
 
-    const startEditTechnology = (id: number) => {
+    const startEditTechnology = (id: number | string) => {
         const technology = employeeTechnologies.find((tech) => tech.id === id);
         if (technology) {
             setTechnologyFormData({ name: technology.name });
@@ -571,7 +600,7 @@ const ProjectCRUD = () => {
         }
     };
 
-    const startEditRole = (id: number) => {
+    const startEditRole = (id: number | string) => {
         const role = projectRoles.find((role) => role.id === id);
         if (role) {
             setRoleFormData({ name: role.name });
@@ -580,6 +609,7 @@ const ProjectCRUD = () => {
         }
     };
 
+    // Form Change Handlers
     const handleTechnologyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedTechnologyNames = Array.from(e.target.selectedOptions, (option) => option.value);
 
@@ -599,7 +629,7 @@ const ProjectCRUD = () => {
     };
 
     const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>, index: number) => {
-        const roleId = parseInt(e.target.value, 10);
+        const roleId = parseInt(e.target.value, 10) || e.target.value;
         const roleName = projectRoles.find((r) => r.id === roleId)?.name || "";
 
         setFormData((prevFormData) => {
@@ -663,6 +693,7 @@ const ProjectCRUD = () => {
         return !Object.values(errors).some((error) => error);
     };
 
+    // Filtered data for displays
     const filteredProjects = projects.filter((project) => {
         const searchLower = searchTerm.toLowerCase();
         const searchMatch = searchType === 'name'
@@ -680,22 +711,29 @@ const ProjectCRUD = () => {
     const filteredRoles = projectRoles.filter((role) => {
         const searchLower = searchTerm.toLowerCase();
         return role.name.toLowerCase().includes(searchLower);
-    });const calculateRemainingDays = (deadlineStr: string | null | undefined) => {
+    });
+
+    const calculateRemainingDays = (deadlineStr: string | null | undefined): number | null => {
         if (!deadlineStr) return null;
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        try {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
-        const deadlineDate = new Date(deadlineStr);
-        deadlineDate.setHours(0, 0, 0, 0);
+            const deadlineDate = new Date(deadlineStr);
+            deadlineDate.setHours(0, 0, 0, 0);
 
-        const differenceInTime = deadlineDate.getTime() - today.getTime();
-        const differenceInDays = Math.ceil(differenceInTime / (1000 * 3600 * 24));
+            const differenceInTime = deadlineDate.getTime() - today.getTime();
+            const differenceInDays = Math.ceil(differenceInTime / (1000 * 3600 * 24));
 
-        return differenceInDays;
+            return differenceInDays;
+        } catch (error) {
+            console.error("Error calculating remaining days:", error);
+            return null;
+        }
     };
 
-    // Updated to use proper navigation
+    // Navigation
     const toggleSection = (section: 'projects' | 'technologies' | 'roles') => {
         if (section === 'projects') {
             navigate('/project-manager/project-cruds');
@@ -712,11 +750,12 @@ const ProjectCRUD = () => {
             {/* Header */}
             <div className="bg-white rounded-2xl shadow-sm mb-4 md:mb-6">
                 <div className="p-4 md:p-6">
-                    <div className="flex items-center gap-2 md:gap-4">
-                        <button
+                    <div className="flex items-center gap-2 md:gap-4">                        <button
                             onClick={() => navigate('/project-manager/dashboard')}
                             className="p-2 hover:bg-pale-purple rounded-full transition-all duration-300"
-                        >
+                           title="Go back to dashboard" 
+                            aria-label="Go back to dashboard"
+                        > 
                             <ArrowLeft size={20} className="text-[#BF4BF6]" />
                         </button>
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-2 md:gap-4">
@@ -838,14 +877,13 @@ const ProjectCRUD = () => {
                                     <ChevronDown size={16} className="ml-2" />
                                 </button>
 
-                                {isStatusDropdownOpen && createPortal(
+                                {isStatusDropdownOpen && (
                                     <div className="fixed inset-0 z-[9999]" onClick={() => setIsStatusDropdownOpen(false)}>
                                         <div
-                                            className="absolute bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden animate-modalEnter w-full max-w-[200px] sm:w-auto"
-                                            style={{
-                                                top: document.querySelector('[data-status-dropdown]')?.getBoundingClientRect().bottom + window.scrollY + 5 || '0px',
-                                                left: document.querySelector('[data-status-dropdown]')?.getBoundingClientRect().left + window.scrollX || '0px',
-                                                width: document.querySelector('[data-status-dropdown]')?.offsetWidth || '200px'
+                                            className="absolute bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden animate-modalEnter w-full max-w-[200px] sm:w-auto"                                            style={{
+                                                top: `${document.querySelector('[data-status-dropdown]') ? document.querySelector('[data-status-dropdown]')!.getBoundingClientRect().bottom + window.scrollY + 5 : 0}px`,
+                                                left: `${document.querySelector('[data-status-dropdown]') ? document.querySelector('[data-status-dropdown]')!.getBoundingClientRect().left + window.scrollX : 0}px`,
+                                                width: `${document.querySelector('[data-status-dropdown]') ? (document.querySelector('[data-status-dropdown]') as HTMLElement).offsetWidth : 200}px`
                                             }}
                                             onClick={(e) => e.stopPropagation()}
                                         >
@@ -862,8 +900,7 @@ const ProjectCRUD = () => {
                                                 </button>
                                             ))}
                                         </div>
-                                    </div>,
-                                    document.body
+                                    </div>
                                 )}
                             </div>
 
@@ -966,11 +1003,20 @@ const ProjectCRUD = () => {
                                                     {formatDate(project.deadline)}
                                                     {project.deadline && (
                                                         <div>
-                                                            {calculateRemainingDays(project.deadline) !== null && (
-                                                                <span className={`text-xs font-medium ${calculateRemainingDays(project.deadline) < 0 ? 'text-red-500' : calculateRemainingDays(project.deadline) <= 7 ? 'text-orange-500' : 'text-green-600'}`}>
-                                                                    {calculateRemainingDays(project.deadline) < 0 ? `${Math.abs(calculateRemainingDays(project.deadline))} days overdue` : calculateRemainingDays(project.deadline) === 0 ? 'Due today' : `${calculateRemainingDays(project.deadline)} days left`}
-                                                                </span>
-                                                            )}
+                                                            {(() => {
+                                                                const remainingDays = calculateRemainingDays(project.deadline);
+                                                                if (remainingDays === null) return null;
+                                                                
+                                                                return (
+                                                                    <span className={`text-xs font-medium ${remainingDays < 0 ? 'text-red-500' : remainingDays <= 7 ? 'text-orange-500' : 'text-green-600'}`}>
+                                                                        {remainingDays < 0 
+                                                                            ? `${Math.abs(remainingDays)} days overdue` 
+                                                                            : remainingDays === 0 
+                                                                                ? 'Due today' 
+                                                                                : `${remainingDays} days left`}
+                                                                    </span>
+                                                                );
+                                                            })()}
                                                         </div>
                                                     )}
                                                 </td>
@@ -990,11 +1036,18 @@ const ProjectCRUD = () => {
                                                 <td className="px-2 sm:px-4 py-3 text-indigo text-sm hidden lg:table-cell">
                                                     {project.requiredRoles && project.requiredRoles.length > 0 ? (
                                                         <div className="flex flex-wrap gap-1">
-                                                            {project.requiredRoles.map((role, idx) => (
-                                                                <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
-                                                                    <span className="font-bold mr-1">{role.count}×</span> {role.roleName || "Role"}
-                                                                </span>
-                                                            ))}
+                                                            {project.requiredRoles.map((role, idx) => {
+                                                                // Find the role name by comparing IDs as strings to avoid type mismatches
+                                                                const roleName = role.roleName || 
+                                                                    projectRoles.find(r => String(r.id) === String(role.roleId))?.name || 
+                                                                    `Role ${role.roleId}`;
+                                                                
+                                                                return (
+                                                                    <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                                                                        <span className="font-bold mr-1">{role.count}×</span> {roleName}
+                                                                    </span>
+                                                                );
+                                                            })}
                                                         </div>
                                                     ) : (
                                                         <span className="text-indigo text-xs">No roles</span>
@@ -1233,5 +1286,3 @@ const ProjectCRUD = () => {
 };
 
 export default ProjectCRUD;
-
-                            

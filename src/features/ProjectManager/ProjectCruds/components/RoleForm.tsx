@@ -37,8 +37,10 @@ const RoleForm: React.FC<RoleFormProps> = ({
                         {isEditing ? 'Edit Role' : 'Add New Role'}
                     </h2>
                     <button
+                        type="button"
                         onClick={onClose}
-                        className="text-indigo hover:text-[#BF4BF6] transition-all-300"
+                        className="text-indigo hover:text-[#BF4BF6] transition-all duration-300"
+                        aria-label="Close"
                     >
                         <X size={24} />
                     </button>
@@ -61,6 +63,7 @@ const RoleForm: React.FC<RoleFormProps> = ({
                             onChange={(e) => onInputChange(e.target.value)}
                             className={`w-full px-4 py-2 rounded-lg border ${formErrors.name ? 'border-red-500' : 'border-gray-200'}
                                        focus-ring focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] transition-all duration-200`}
+                            placeholder="Enter role name"
                             required
                         />
                         {formErrors.name && (
@@ -71,12 +74,14 @@ const RoleForm: React.FC<RoleFormProps> = ({
 
                 <div className="mt-6 flex justify-end gap-4">
                     <button
+                        type="button"
                         onClick={onClose}
-                        className="px-4 py-2 text-indigo hover:text-[#BF4BF6] transition-all-300"
+                        className="px-4 py-2 text-indigo hover:text-[#BF4BF6] transition-all duration-300"
                     >
                         Cancel
                     </button>
                     <button
+                        type="button"
                         onClick={onSubmit}
                         className="px-6 py-2 bg-gradient-primary text-white rounded-full
                                  hover:bg-pale-purple transition-all duration-300 flex items-center gap-2 shadow-soft"
