@@ -1,3 +1,4 @@
+//src\features\Admin\ManageTech\data\technologyData.ts
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import TechnologyService from '../../../../api/services/AdminDashboard/TechnologyService';

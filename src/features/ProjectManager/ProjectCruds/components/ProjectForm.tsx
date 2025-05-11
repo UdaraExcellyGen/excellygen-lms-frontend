@@ -1,4 +1,4 @@
-// ProjectCruds/components/ProjectForm.tsx - Modified Roles Section
+// ProjectCruds/components/ProjectForm.tsx - Fixed Role Selection
 import React, { useEffect, useRef } from 'react';
 import { X, Save, PlusCircle, MinusCircle } from 'lucide-react';
 import { EmployeeTechnology, ProjectRole } from '../data/types';
@@ -38,7 +38,6 @@ interface ProjectFormProps {
     removeTechnology: (techName: string) => void;
 }
 
-// This is a version of the ProjectForm component with the updated role assignment section
 const ProjectForm: React.FC<ProjectFormProps> = ({
     isOpen,
     isEditing,
@@ -61,31 +60,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 }) => {
     const nameInputRef = useRef<HTMLInputElement>(null);
     const initialFocusRef = useRef(false);
-    
-    // Array of refs for the role select elements
-    const roleSelectRefs = useRef<(HTMLSelectElement | null)[]>([]);
-    
-    // Update ref array when the number of roles changes
-    useEffect(() => {
-        roleSelectRefs.current = roleSelectRefs.current.slice(0, formData.assignedRoles.length);
-    }, [formData.assignedRoles.length]);
-    
-    // Effect to set the selected option for each role select
-    useEffect(() => {
-        formData.assignedRoles.forEach((roleAssignment, index) => {
-            const selectElement = roleSelectRefs.current[index];
-            if (selectElement && roleAssignment.roleId) {
-                // Find the matching option and select it
-                const optionToSelect = Array.from(selectElement.options).find(
-                    option => option.value === String(roleAssignment.roleId)
-                );
-                
-                if (optionToSelect) {
-                    selectElement.value = String(roleAssignment.roleId);
-                }
-            }
-        });
-    }, [formData.assignedRoles]);
     
     // Handle escape key to close modal
     useEffect(() => {
@@ -296,7 +270,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                         </div>
                     </div>
 
-                    {/* UPDATED ROLES SECTION - Using direct DOM manipulation via refs */}
+                    {/* UPDATED ROLES SECTION - Using controlled component approach */}
                     <div>
                         <label className="block text-sm font-medium text-russian-violet mb-2">
                             Assigned Roles
@@ -318,8 +292,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                                         <div className="flex-grow">
                                             <label className="block text-sm text-russian-violet mb-1">Role</label>
                                             <select
-                                                ref={el => roleSelectRefs.current[index] = el}
-                                                defaultValue="" // Use defaultValue instead of value for uncontrolled component
+                                                value={roleAssignment.roleId}
                                                 onChange={(e) => onRoleChange(e, index)}
                                                 className="w-full px-4 py-2 rounded-lg border border-gray-200 focus-ring focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] transition-all duration-200"
                                             >
@@ -328,8 +301,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                                                     <option 
                                                         key={role.id} 
                                                         value={role.id}
-                                                        // Pre-select the option if it matches the current roleId
-                                                        selected={String(role.id) === String(roleAssignment.roleId)}
                                                     >
                                                         {role.name}
                                                     </option>

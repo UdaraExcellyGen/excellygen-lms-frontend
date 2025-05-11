@@ -1,3 +1,5 @@
+// Path: src/api/apiClient.ts
+
 import axios, { AxiosError, AxiosResponse } from 'axios';
 
 // Create an axios instance with default config
@@ -32,13 +34,20 @@ const processQueue = (error: any = null, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Request interceptor to add authorization header
+// Request interceptor to add authorization header and active role
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
+    
+    // Add active role header
+    const currentRole = localStorage.getItem('current_role');
+    if (currentRole) {
+      config.headers['X-Active-Role'] = currentRole.toLowerCase();
+    }
+    
     return config;
   },
   (error) => {
@@ -122,6 +131,11 @@ apiClient.interceptors.response.use(
           // Update the authorization header for the original request
           originalRequest.headers['Authorization'] = `Bearer ${response.data.accessToken}`;
           
+          // Also set the X-Active-Role header
+          if (response.data.currentRole) {
+            originalRequest.headers['X-Active-Role'] = response.data.currentRole.toLowerCase();
+          }
+          
           // Process any queued requests with the new token
           processQueue(null, response.data.accessToken);
           
@@ -151,16 +165,19 @@ apiClient.interceptors.response.use(
     if (error.response) {
       switch (error.response.status) {
         case 403:
-          console.error('Forbidden access:', error.response.data.message || 'You do not have permission to access this resource');
+          console.error('Forbidden access:', error.response.data?.message || 'You do not have permission to access this resource');
           break;
         case 404:
-          console.error('Resource not found:', error.response.data.message || 'The requested resource was not found');
+          console.error('Resource not found:', error.response.data?.message || 'The requested resource was not found');
+          break;
+        case 405:
+          console.error('Method not allowed:', error.response.data?.message || 'The requested method is not allowed for this resource');
           break;
         case 500:
-          console.error('Server error:', error.response.data.message || 'An unexpected error occurred on the server');
+          console.error('Server error:', error.response.data?.message || 'An unexpected error occurred on the server');
           break;
         default:
-          console.error(`Error (${error.response.status}):`, error.response.data.message || error.message);
+          console.error(`Error (${error.response.status}):`, error.response.data?.message || error.message);
       }
     } else if (error.request) {
       // The request was made but no response was received
