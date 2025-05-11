@@ -51,11 +51,21 @@ const UserForm: React.FC<UserFormProps> = ({
     return '';
   };
 
+  // Enhanced phone validation with international format support
   const validatePhone = (phone: string): string => {
     if (!phone) return ''; // Phone is optional
+    
+    // Remove any non-digit characters for validation
     const digitsOnly = phone.replace(/\D/g, '');
-    if (digitsOnly.length < 10) return 'Phone number must be at least 10 digits';
-    if (digitsOnly.length > 15) return 'Phone number cannot exceed 15 digits';
+    
+    // Check for valid international format or proper digit length
+    const isValidInternational = /^\+[0-9]{10,15}$/.test(phone);
+    const hasValidDigitLength = digitsOnly.length >= 10 && digitsOnly.length <= 15;
+    
+    if (!isValidInternational && !hasValidDigitLength) {
+      return 'Please enter a valid phone number (e.g., +1234567890)';
+    }
+    
     return '';
   };
 
@@ -196,13 +206,14 @@ const UserForm: React.FC<UserFormProps> = ({
               )}
             </div>
             
+            {/* Enhanced Phone Input Field */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none h-[42px]">
                 <Phone size={16} className="text-gray-500" />
               </div>
               <input
                 type="tel"
-                placeholder="Phone (optional)"
+                placeholder="Phone (e.g., +1234567890)"
                 value={newUser.phone}
                 onChange={(e) => handleFieldChange('phone', e.target.value)}
                 className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none 
@@ -216,6 +227,9 @@ const UserForm: React.FC<UserFormProps> = ({
                   {validationErrors.phone}
                 </div>
               )}
+              <div className="mt-1 text-gray-500 text-xs pl-3">
+                Use international format with country code (e.g., +1 for US)
+              </div>
             </div>
             
             {/* Department Dropdown */}

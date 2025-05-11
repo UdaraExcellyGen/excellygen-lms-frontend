@@ -40,6 +40,12 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
+export interface SendTempPasswordEmailRequest {
+  userId: string;
+  email: string;
+  tempPassword: string;
+}
+
 // Login
 export const login = async (data: LoginRequest): Promise<AuthResponse> => {
   const response = await apiClient.post('/auth/login', data);
@@ -109,4 +115,9 @@ export const validateToken = async (token: string): Promise<boolean> => {
     params: { token }
   });
   return response.data.isValid;
+};
+
+// Send temporary password by email
+export const sendTemporaryPasswordEmail = async (data: SendTempPasswordEmailRequest): Promise<void> => {
+  await apiClient.post('/auth/send-temp-password', data);
 };

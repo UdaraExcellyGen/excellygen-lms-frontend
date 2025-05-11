@@ -50,6 +50,7 @@ export const useUsers = () => {
   // Temporary password states
   const [showTempPasswordModal, setShowTempPasswordModal] = useState(false);
   const [tempPasswordData, setTempPasswordData] = useState<{
+    userId: string; // Add userId field
     userName: string;
     userEmail: string;
     tempPassword: string;
@@ -315,11 +316,13 @@ export const useUsers = () => {
           // Check if a temporary password was returned
           if (updatedUser.temporaryPassword) {
             setTempPasswordData({
+              userId: updatedUser.id,  // Include the user ID
               userName: updatedUser.name,
               userEmail: updatedUser.email,
               tempPassword: updatedUser.temporaryPassword
             });
             setShowTempPasswordModal(true);
+
           } else {
             toast.success('User updated successfully');
           }
@@ -372,6 +375,7 @@ export const useUsers = () => {
           // Check if a temporary password was returned
           if (createdUser.temporaryPassword) {
             setTempPasswordData({
+              userId: createdUser.id,  // Include the user ID
               userName: createdUser.name,
               userEmail: createdUser.email,
               tempPassword: createdUser.temporaryPassword
