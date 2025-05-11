@@ -257,6 +257,7 @@ const ManageUser: React.FC = () => {
           userName={tempPasswordData.userName}
           userEmail={tempPasswordData.userEmail}
           tempPassword={tempPasswordData.tempPassword}
+          userId={tempPasswordData.userId} // Pass userId to the dialog
         />
       )}
     </div>
