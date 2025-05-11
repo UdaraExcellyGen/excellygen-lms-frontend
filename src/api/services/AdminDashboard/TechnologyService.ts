@@ -1,3 +1,4 @@
+//src\api\services\AdminDashboard\TechnologyService.ts
 import apiClient from "../../apiClient";// Changed from 'api' to 'apiClient'
 
 export interface Technology {

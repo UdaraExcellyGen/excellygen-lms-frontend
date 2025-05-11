@@ -1,3 +1,4 @@
+//src\features\Admin\ManageTech\components\TechCard.tsx
 import React from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { Technology } from '../types/technology.types';

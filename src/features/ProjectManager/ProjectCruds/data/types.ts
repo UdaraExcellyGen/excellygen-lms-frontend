@@ -1,5 +1,24 @@
 // Path: src/features/ProjectManager/ProjectCruds/data/types.ts
 
+export interface Technology {
+    id: string;
+    name: string;
+    status: string;
+    createdAt: string;
+    updatedAt: string | null;
+}
+
+export interface TechFormValues {
+    name: string;
+}
+
+export type FilterStatus = 'all' | 'active' | 'inactive';
+
+export interface TechFilters {
+    searchTerm: string;
+    filterStatus: FilterStatus;
+}
+
 export interface Project {
     id: number | string;
     name: string;
@@ -20,6 +39,9 @@ export interface Project {
 export interface EmployeeTechnology {
     id: number | string;
     name: string;
+    status: string;
+    creatorType: string; // 'admin' or 'project_manager'
+    creatorId: string;
 }
 
 export interface ProjectRole {
@@ -67,5 +89,13 @@ export interface CreateRoleRequest {
 }
 
 export interface UpdateRoleRequest {
+    name: string;
+}
+
+export interface CreateTechnologyDto {
+    name: string;
+}
+
+export interface UpdateTechnologyDto {
     name: string;
 }
