@@ -42,10 +42,28 @@ apiClient.interceptors.request.use(
       config.headers['Authorization'] = `Bearer ${token}`;
     }
     
-    // Add active role header
+    // Add active role header - IMPROVED to ensure role is correctly set
     const currentRole = localStorage.getItem('current_role');
     if (currentRole) {
-      config.headers['X-Active-Role'] = currentRole.toLowerCase();
+      // Ensure we're using the exact role name expected by the server
+      // For the backend, the role must match one of the authorized roles exactly
+      // We're mapping the display name to the actual role name
+      const roleMap: {[key: string]: string} = {
+        'Admin': 'Admin',
+        'Project Manager': 'ProjectManager',
+        'ProjectManager': 'ProjectManager',
+        'Learner': 'Learner',
+        'Course Coordinator': 'CourseCoordinator',
+        'CourseCoordinator': 'CourseCoordinator'
+      };
+      
+      const normalizedRole = roleMap[currentRole] || currentRole;
+      config.headers['X-Active-Role'] = normalizedRole;
+      
+      // Add debug logging in development
+      if (import.meta.env.DEV) {
+        console.log(`Request with role: ${normalizedRole}`);
+      }
     }
     
     return config;
@@ -131,9 +149,19 @@ apiClient.interceptors.response.use(
           // Update the authorization header for the original request
           originalRequest.headers['Authorization'] = `Bearer ${response.data.accessToken}`;
           
-          // Also set the X-Active-Role header
+          // Also set the X-Active-Role header using our mapping logic
           if (response.data.currentRole) {
-            originalRequest.headers['X-Active-Role'] = response.data.currentRole.toLowerCase();
+            const roleMap: {[key: string]: string} = {
+              'Admin': 'Admin',
+              'Project Manager': 'ProjectManager',
+              'ProjectManager': 'ProjectManager',
+              'Learner': 'Learner',
+              'Course Coordinator': 'CourseCoordinator',
+              'CourseCoordinator': 'CourseCoordinator'
+            };
+            
+            const normalizedRole = roleMap[response.data.currentRole] || response.data.currentRole;
+            originalRequest.headers['X-Active-Role'] = normalizedRole;
           }
           
           // Process any queued requests with the new token
