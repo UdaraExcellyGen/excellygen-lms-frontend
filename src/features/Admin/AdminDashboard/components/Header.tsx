@@ -105,7 +105,15 @@ const Header: React.FC<HeaderProps> = ({
 
   // Process avatar URL (handle both absolute and relative paths)
   const getAvatarUrl = (avatarPath: string | null) => {
+    console.log("Processing avatar path:", avatarPath);
+    
     if (!avatarPath) return null;
+    
+    // For Firebase Storage URLs, return as is
+    if (avatarPath.includes('firebasestorage.googleapis.com')) {
+      console.log("Firebase Storage URL detected, using as is");
+      return avatarPath;
+    }
     
     // If the avatar path is already a full URL, return it as is
     if (avatarPath.startsWith('http') || avatarPath.startsWith('https')) {

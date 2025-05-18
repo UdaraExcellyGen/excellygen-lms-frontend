@@ -485,47 +485,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
   
-  const changePassword = async (currentPassword: string, newPassword: string) => {
-    setIsChangingPassword(true);
-    
-    try {
-      const userId = localStorage.getItem('userId');
-      if (!userId) {
-        throw new Error('User ID not found');
-      }
-      
-      await apiChangePassword({
-        userId,
-        currentPassword,
-        newPassword
-      });
-      
-      // Update the local storage flag
-      localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, 'false');
-      
-      // Update state
-      setState(prevState => ({
-        ...prevState,
-        requirePasswordChange: false
-      }));
-      
-      // Close modal
-      setShowPasswordChangeModal(false);
-      setIsChangingPassword(false);
-      
-      toast.success('Password changed successfully');
-      
-      // Navigate based on role after password change
-      if (state.currentRole) {
-        navigateByRole(state.currentRole);
-      }
-    } catch (error) {
-      console.error('Password change error:', error);
-      setIsChangingPassword(false);
-      toast.error('Failed to change password. Please check your current password and try again.');
-      throw error;
+// In changePassword method 
+const changePassword = async (currentPassword: string, newPassword: string) => {
+  setIsChangingPassword(true);
+  
+  try {
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      throw new Error('User ID not found');
     }
-  };
+    
+    await apiChangePassword({
+      userId,
+      currentPassword,
+      newPassword
+    });
+    
+    // Update the local storage flag
+    localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, 'false');
+    
+    // Update state
+    setState(prevState => ({
+      ...prevState,
+      requirePasswordChange: false
+    }));
+    
+    // Close modal
+    setShowPasswordChangeModal(false);
+    setIsChangingPassword(false);
+    
+    toast.success('Password changed successfully');
+    
+    // Navigate to role selection page after password change
+    navigateToRoleSelection();
+  } catch (error) {
+    console.error('Password change error:', error);
+    setIsChangingPassword(false);
+    toast.error('Failed to change password. Please check your current password and try again.');
+    throw error;
+  }
+};
 
   return (
     <AuthContext.Provider

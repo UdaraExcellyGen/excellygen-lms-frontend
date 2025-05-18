@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getDashboardStats, getDashboardNotifications } from '../../../api/services/AdminDashboard/dashboardService';
+import { getUserProfile } from '../../../api/services/LearnerProfile/userProfileService';
 import Header from './components/Header';
 import StatCard from './components/StatCard';
 import QuickActionsGrid from './components/QuickActionsGrid';
@@ -62,6 +63,34 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  // Helper function to fetch user profile and update avatar
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      console.log(`Fetching user profile for user ${userId} to get avatar...`);
+      const userProfile = await getUserProfile(userId);
+      
+      if (userProfile && userProfile.avatar) {
+        console.log(`Found avatar in profile: ${userProfile.avatar}`);
+        
+        // Update user in localStorage with avatar
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+          user.avatar = userProfile.avatar;
+          localStorage.setItem('user', JSON.stringify(user));
+          console.log("Updated user in localStorage with avatar URL");
+          return userProfile.avatar;
+        }
+      } else {
+        console.log("User profile doesn't contain an avatar URL");
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching user profile for avatar:', error);
+      return null;
+    }
+  };
+
   // Use a counter to avoid infinite loops
   const retryCountRef = useRef(0);
   const maxRetries = 5;
@@ -79,6 +108,11 @@ const AdminDashboard: React.FC = () => {
         // Get user data directly from localStorage if not available in context
         const userData = localStorage.getItem('user');
         const user = userData ? JSON.parse(userData) : null;
+        
+        // If we have user but no avatar, fetch the profile to get the avatar
+        if (user && user.id && (!user.avatar || user.avatar === undefined || user.avatar === null)) {
+          await fetchUserProfile(user.id);
+        }
         
         // If we still don't have user details and haven't exceeded max retries
         if (!userDetails && !user && retryCountRef.current < maxRetries) {

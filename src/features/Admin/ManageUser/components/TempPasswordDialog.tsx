@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Copy, CheckCircle, Mail } from 'lucide-react';
+import { X, Copy, CheckCircle, Mail, Eye, EyeOff } from 'lucide-react';
 import { sendTemporaryPasswordEmail } from '../../../../api/authApi';
 
 interface TempPasswordDialogProps {
@@ -23,6 +23,7 @@ const TempPasswordDialog: React.FC<TempPasswordDialogProps> = ({
   const [emailSent, setEmailSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [emailError, setEmailError] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // Initially hide the password
 
   if (!isOpen) return null;
 
@@ -30,6 +31,15 @@ const TempPasswordDialog: React.FC<TempPasswordDialogProps> = ({
     navigator.clipboard.writeText(tempPassword);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  // Create masked password (all characters as asterisks)
+  const getMaskedPassword = () => {
+    return '*'.repeat(tempPassword.length);
   };
 
   const handleSendEmail = async () => {
@@ -78,19 +88,34 @@ const TempPasswordDialog: React.FC<TempPasswordDialogProps> = ({
           </p>
           
           <div className="relative">
-            <div className="border border-gray-300 bg-gray-50 rounded-lg p-4 mb-6 pr-12 font-mono text-lg">
-              {tempPassword}
-              <button 
-                onClick={handleCopyPassword} 
-                className="absolute right-3 top-3 p-1 rounded-full hover:bg-gray-200"
-                title="Copy to clipboard"
-              >
-                {copied ? (
-                  <CheckCircle size={20} className="text-green-500" />
-                ) : (
-                  <Copy size={20} className="text-gray-500" />
-                )}
-              </button>
+            <div className="border border-gray-300 bg-gray-50 rounded-lg p-4 mb-6 pr-20 font-mono text-lg flex items-center">
+              <span className="flex-1 break-all">
+                {showPassword ? tempPassword : getMaskedPassword()}
+              </span>
+              <div className="absolute right-3 top-3 flex gap-1">
+                <button 
+                  onClick={togglePasswordVisibility} 
+                  className="p-1 rounded-full hover:bg-gray-200"
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} className="text-gray-500" />
+                  ) : (
+                    <Eye size={20} className="text-gray-500" />
+                  )}
+                </button>
+                <button 
+                  onClick={handleCopyPassword} 
+                  className="p-1 rounded-full hover:bg-gray-200"
+                  title="Copy to clipboard"
+                >
+                  {copied ? (
+                    <CheckCircle size={20} className="text-green-500" />
+                  ) : (
+                    <Copy size={20} className="text-gray-500" />
+                  )}
+                </button>
+              </div>
             </div>
             {copied && (
               <p className="text-green-600 text-sm -mt-4 mb-4">
