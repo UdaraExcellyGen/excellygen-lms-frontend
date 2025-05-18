@@ -25,19 +25,23 @@ export interface PagedResult<T> {
     hasNextPage: boolean;
 }
 
+// --------- Frontend Select Option Types ---------
+export interface CategorySelectOption { // <-- ENSURE THIS IS PRESENT
+    value: string; 
+    label: string; 
+}
+
 // --------- Thread Types ---------
 export interface ForumThreadDto {
     id: number; 
     title: string;
     content: string; 
-    category: string;
+    category: string; // This is the category title string
     imageUrl?: string; 
-    createdAt: string; // ISO 8601 date string
+    createdAt: string;
     author: AuthorDto | null;
     commentsCount: number;
     isCurrentUserAuthor: boolean;
-
-    // Frontend UI state for DiscussionForum.tsx component
     showComments?: boolean;
     isLoadingComments?: boolean;
 }
@@ -45,30 +49,30 @@ export interface ForumThreadDto {
 export interface CreateForumThreadDto {
     title: string;
     content: string;
-    category: string;
-    imageUrl?: string;
+    category: string; // Category title string
+    imageRelativePath?: string; // Changed from imageUrl to relative path
 }
 
 export interface UpdateForumThreadDto {
     title: string;
     content: string;
-    category: string;
-    imageUrl?: string;
+    category: string; // Category title string
+    imageRelativePath?: string; // Changed from imageUrl
+    removeCurrentImage?: boolean;
 }
 
-export interface ThreadFormData { // For Create/Edit Thread Modals in frontend
+export interface ThreadFormData {
     title: string;
     content: string;
-    category: string;
+    category: string; // Selected category title string
     image?: File | null;     
     imagePreview?: string;   
-    imageUrl?: string;       // Holds URL from server (either existing or after new upload for DTO)
-    currentRelativePath?: string; // Relative path from server, for deletion if image is changed/removed
+    imageUrl?: string; // Full URL from server (after upload or initial load)
+    currentRelativePath?: string; // Relative path of the image on the server
 }
 
-
-// --------- Comment Types ---------
-export interface ThreadCommentDto {
+// --------- Comment & Reply DTOs (as defined in modal_33) ---------
+export interface ThreadCommentDto { /* ... */ 
     id: number; 
     content: string;
     createdAt: string;
@@ -76,30 +80,17 @@ export interface ThreadCommentDto {
     threadId: number; 
     repliesCount: number;
     isCurrentUserAuthor: boolean;
-
-    // Frontend UI state for CommentSection.tsx component
     showReplies?: boolean;
     replies?: ThreadReplyDto[]; 
     isLoadingReplies?: boolean;
     isPostingReply?: boolean;
     replyError?: string | null;
 }
+export interface CreateThreadCommentDto { /* ... */ content: string; }
+export interface UpdateThreadCommentDto { /* ... */ content: string; }
+export interface CommentFormData { content: string; } 
 
-export interface CreateThreadCommentDto {
-    content: string;
-}
-
-export interface UpdateThreadCommentDto { 
-    content: string;
-}
-
-export interface CommentFormData { // For EditCommentModal
-    content: string;
-}
-
-
-// --------- Reply Types ---------
-export interface ThreadReplyDto {
+export interface ThreadReplyDto { /* ... */ 
     id: number; 
     content: string;
     createdAt: string;
@@ -107,16 +98,5 @@ export interface ThreadReplyDto {
     commentId: number; 
     isCurrentUserAuthor: boolean;
 }
-
-export interface CreateThreadReplyDto {
-    content: string;
-}
-
-export interface UpdateThreadReplyDto { 
-    content: string;
-}
-
-// ReplyFormData can be the same as CommentFormData if only content is editable
-// export interface ReplyFormData { 
-//     content: string;
-// }
+export interface CreateThreadReplyDto { /* ... */ content: string; }
+export interface UpdateThreadReplyDto { /* ... */ content: string; }
