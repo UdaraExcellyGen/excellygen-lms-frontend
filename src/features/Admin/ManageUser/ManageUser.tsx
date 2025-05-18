@@ -1,4 +1,3 @@
-// ManageUser.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, X, ArrowLeft, AlertCircle } from 'lucide-react';
@@ -9,12 +8,14 @@ import UserForm from './components/UserForm';
 import DeleteConfirmationModal from './components/DeleteConfirmationModal';
 import TempPasswordDialog from './components/TempPasswordDialog';
 import SkeletonLoader from './components/SkeletonLoader';
+import { useAuth } from '../../../contexts/AuthContext';
 import { User } from './types';
 
 const ManageUser: React.FC = () => {
   const navigate = useNavigate();
   const [showRoleFilter, setShowRoleFilter] = useState(false);
   const [showStatusFilter, setShowStatusFilter] = useState(false);
+  const { user: currentUser } = useAuth(); // Get current logged-in user
   
   const {
     users,
@@ -97,6 +98,10 @@ const ManageUser: React.FC = () => {
   };
 
   const handleDeleteUser = (id: string) => {
+    if (id === currentUser?.id) {
+      // Prevent deleting their own account
+      return;
+    }
     setUserToDelete(id);
     setShowDeleteModal(true);
   };
@@ -215,6 +220,7 @@ const ManageUser: React.FC = () => {
           <UserCard 
             key={user.id}
             user={user}
+            currentUserId={currentUser?.id}
             isUserLoading={isUserLoading}
             handleToggleStatus={handleToggleStatus}
             handleDeleteUser={handleDeleteUser}

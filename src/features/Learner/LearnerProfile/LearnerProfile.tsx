@@ -13,7 +13,12 @@ import ProjectsList from './components/ProjectsList';
 import CertificationsList from './components/CertificationsList';
 
 // Import services
-import { getUserProfile, updateUserProfile, uploadUserAvatar } from '../../../api/services/LearnerProfile/userProfileService';
+import { 
+  getUserProfile, 
+  updateUserProfile, 
+  uploadUserAvatar, 
+  deleteUserAvatar 
+} from '../../../api/services/LearnerProfile/userProfileService';
 import { getUserBadgeSummary } from '../../../api/services/LearnerProfile/userBadgeService';
 import { getUserTechnologies, addUserTechnology, removeUserTechnology, getAvailableTechnologies } from '../../../api/services/LearnerProfile/userTechnologyService';
 import { getUserProjects } from '../../../api/services/LearnerProfile/userProjectService';
@@ -417,25 +422,43 @@ const LearnerProfile = () => {
         };
       });
       
-      // ADD THIS CODE: Update user data in localStorage
-      try {
-        const userJson = localStorage.getItem('user');
-        if (userJson) {
-          const userData = JSON.parse(userJson);
-          userData.avatar = avatarUrl;
-          localStorage.setItem('user', JSON.stringify(userData));
-          console.log('Updated user avatar in localStorage:', avatarUrl);
-        }
-      } catch (e) {
-        console.error('Error updating user data in localStorage:', e);
-      }
-      
       toast.dismiss(toastId);
       toast.success('Avatar uploaded successfully');
     } catch (error) {
       console.error('Error uploading avatar:', error);
       toast.dismiss();
       toast.error('Failed to upload avatar');
+    }
+  }, [id, profileData]);
+
+  // New function to handle avatar deletion
+  const handleAvatarDelete = useCallback(async () => {
+    if (!profileData) return;
+    
+    try {
+      const userId = id || localStorage.getItem('userId') || '';
+      
+      // Show loading state
+      const toastId = toast.loading('Deleting avatar...');
+      
+      await deleteUserAvatar(userId);
+      
+      // Update profile data to remove avatar
+      setProfileData(prevData => {
+        if (!prevData) return prevData;
+        
+        return {
+          ...prevData,
+          avatar: null
+        };
+      });
+      
+      toast.dismiss(toastId);
+      toast.success('Avatar deleted successfully');
+    } catch (error) {
+      console.error('Error deleting avatar:', error);
+      toast.dismiss();
+      toast.error('Failed to delete avatar');
     }
   }, [id, profileData]);
 
@@ -504,6 +527,7 @@ const LearnerProfile = () => {
             handleCancel={handleCancel}
             isViewOnly={isViewOnly}
             onAvatarUpload={handleAvatarUpload}
+            onAvatarDelete={handleAvatarDelete}
             isSaving={isSaving}
           />
 

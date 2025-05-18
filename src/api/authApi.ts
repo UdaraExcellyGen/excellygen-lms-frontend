@@ -26,6 +26,7 @@ export interface AuthResponse {
   roles: string[];
   token: TokenResponse;
   requirePasswordChange: boolean;
+  avatar?: string;
 }
 
 export interface SelectRoleRequest {
@@ -49,6 +50,21 @@ export interface SendTempPasswordEmailRequest {
 // Login
 export const login = async (data: LoginRequest): Promise<AuthResponse> => {
   const response = await apiClient.post('/auth/login', data);
+  
+  
+  if (response.data) {
+    const userData = {
+      id: response.data.userId,
+      name: response.data.name,
+      email: response.data.email,
+      roles: response.data.roles,
+      avatar: response.data.avatar 
+    };
+    
+    localStorage.setItem('user', JSON.stringify(userData));
+    console.log('Stored user data with avatar:', userData);
+  }
+  
   return response.data;
 };
 
@@ -90,11 +106,36 @@ export const selectRole = async (role: string): Promise<TokenResponse> => {
     throw new Error('No user ID or access token available');
   }
   
+  // Save current user data including avatar before role selection
+  let avatarUrl = null;
+  let userData = null;
+  try {
+    const userJson = localStorage.getItem('user');
+    if (userJson) {
+      userData = JSON.parse(userJson);
+      avatarUrl = userData.avatar;
+      console.log('Preserved avatar URL before role selection:', avatarUrl);
+    }
+  } catch (e) {
+    console.error('Error retrieving avatar before role selection:', e);
+  }
+  
   const response = await apiClient.post('/auth/select-role', {
     userId,
     role,
     accessToken
   });
+  
+  // After role selection, restore avatar to user data
+  try {
+    if (userData && avatarUrl) {
+      userData.avatar = avatarUrl;
+      localStorage.setItem('user', JSON.stringify(userData));
+      console.log('Restored avatar URL after role selection:', avatarUrl);
+    }
+  } catch (e) {
+    console.error('Error preserving avatar after role selection:', e);
+  }
   
   return response.data;
 };

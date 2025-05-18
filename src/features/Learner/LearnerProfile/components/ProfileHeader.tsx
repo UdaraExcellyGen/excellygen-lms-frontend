@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Camera, Edit2, FileText, Save, X } from 'lucide-react';
+import { Camera, Edit2, FileText, Save, X, Trash } from 'lucide-react';
 import { ProfileData } from '../types';
 
 interface ProfileHeaderProps {
@@ -11,6 +11,7 @@ interface ProfileHeaderProps {
   handleCancel: () => void;
   isViewOnly?: boolean;
   onAvatarUpload?: (file: File) => void;
+  onAvatarDelete?: () => void;  // Add this prop
   isSaving?: boolean;
 }
 
@@ -23,6 +24,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   handleCancel,
   isViewOnly = false,
   onAvatarUpload,
+  onAvatarDelete,  // Add this prop
   isSaving = false
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -59,12 +61,26 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 accept="image/*"
                 className="hidden"
               />
-              <button 
-                className="absolute bottom-2 right-2 p-2 bg-white rounded-lg shadow-lg"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Camera className="h-4 w-4 text-[#52007C]" />
-              </button>
+              <div className="absolute bottom-2 right-2 flex gap-2">
+                <button 
+                  className="p-2 bg-white rounded-lg shadow-lg"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Upload new avatar"
+                >
+                  <Camera className="h-4 w-4 text-[#52007C]" />
+                </button>
+                
+                {/* Add Delete Avatar button if avatar exists */}
+                {profileData.avatar && onAvatarDelete && (
+                  <button 
+                    className="p-2 bg-white rounded-lg shadow-lg"
+                    onClick={onAvatarDelete}
+                    title="Remove avatar"
+                  >
+                    <Trash className="h-4 w-4 text-red-500" />
+                  </button>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -84,7 +100,12 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             <p className="text-lg text-[#52007C]">{profileData.role || profileData.jobRole || 'Job Role'}</p>
           )}
           
-          {/* Removed the user ID display line */}
+          {/* User ID with better placement and styling */}
+          {!isEditing && (
+            <div className="text-xs text-gray-500 mt-1">
+              <span className="font-medium">ID:</span> {profileData.id}
+            </div>
+          )}
         </div>
       </div>
       <div className="space-x-2 sm:space-x-3 flex flex-wrap justify-center gap-2 sm:gap-0">

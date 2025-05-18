@@ -1,4 +1,4 @@
-// Path: src/api/apiClient.ts
+// src/api/apiClient.ts
 
 import axios, { AxiosError, AxiosResponse } from 'axios';
 
