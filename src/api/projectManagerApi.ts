@@ -15,7 +15,7 @@ import {
     UpdateTechnologyDto
 } from '../features/ProjectManager/ProjectCruds/data/types';
 
-// Project CRUD operations
+// Project CRUD operations remain unchanged
 export const getAllProjects = async (status?: string): Promise<Project[]> => {
     try {
         const url = status ? `/project-manager/projects?status=${status}` : '/project-manager/projects';
@@ -96,7 +96,7 @@ export const deleteProject = async (id: string): Promise<void> => {
     }
 };
 
-// Role CRUD operations
+// Role CRUD operations remain unchanged
 export const getAllRoles = async (): Promise<Role[]> => {
     try {
         const response = await apiClient.get('/project-manager/roles');
@@ -136,11 +136,11 @@ export const deleteRole = async (id: string): Promise<void> => {
     }
 };
 
-// Technology operations - Updated to use tech-list instead of technologies
+// Technology operations - UPDATED to remove [PM] prefix
 export const getProjectTechnologies = async (): Promise<EmployeeTechnology[]> => {
     try {
-        // Updated to use the new tech-list endpoint
-        const response = await apiClient.get('/project-manager/tech-list');
+        // Use the project manager endpoint to get technologies
+        const response = await apiClient.get('/project-manager/technologies');
         console.log('Technology response:', response.data);
         return response.data;
     } catch (error) {
@@ -149,12 +149,33 @@ export const getProjectTechnologies = async (): Promise<EmployeeTechnology[]> =>
     }
 };
 
-// Technology CRUD operations using Project Manager routes
+// UPDATED: No longer adding [PM] prefix
 export const createTechnology = async (createTechnologyDto: CreateTechnologyDto): Promise<EmployeeTechnology> => {
     try {
-        // We're setting creatorType to 'project_manager' in the controller
-        // based on the user's role claim, so we don't need to explicitly set it here
-        const response = await apiClient.post('/project-manager/technologies', createTechnologyDto);
+        // No longer adding a prefix to the name
+        const techName = createTechnologyDto.name.trim();
+        
+        // Create a modified DTO with the clean name
+        const modifiedDto = {
+            ...createTechnologyDto,
+            name: techName
+        };
+        
+        // Log what we're doing
+        console.log(`Creating technology: ${techName}`);
+        
+        // Add a custom header to indicate the creator type is project_manager
+        // This replaces the visual [PM] prefix with proper metadata
+        const headers = {
+            'X-Creator-Type': 'project_manager'
+        };
+        
+        // Use standard endpoint with custom header
+        const response = await apiClient.post('/Technologies', modifiedDto, { headers });
+        
+        // Add a small delay to ensure updates are reflected
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         return response.data;
     } catch (error) {
         console.error('Error creating technology:', error);
@@ -164,8 +185,16 @@ export const createTechnology = async (createTechnologyDto: CreateTechnologyDto)
 
 export const updateTechnology = async (id: string, updateTechnologyDto: UpdateTechnologyDto): Promise<EmployeeTechnology> => {
     try {
-        // Continue using the Admin Technologies controller for updates
-        const response = await apiClient.put(`/Technologies/${id}`, updateTechnologyDto);
+        // Use standard endpoint with headers
+        const headers = {
+            'X-Creator-Type': 'project_manager'
+        };
+        
+        const response = await apiClient.put(`/Technologies/${id}`, updateTechnologyDto, { headers });
+        
+        // Add a small delay to ensure updates are reflected
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         return response.data;
     } catch (error) {
         console.error(`Error updating technology ${id}:`, error);
@@ -175,8 +204,15 @@ export const updateTechnology = async (id: string, updateTechnologyDto: UpdateTe
 
 export const deleteTechnology = async (id: string): Promise<void> => {
     try {
-        // Continue using the Admin Technologies controller for deletions
-        await apiClient.delete(`/Technologies/${id}`);
+        // Use standard endpoint with headers
+        const headers = {
+            'X-Creator-Type': 'project_manager'
+        };
+        
+        await apiClient.delete(`/Technologies/${id}`, { headers });
+        
+        // Add a small delay to ensure updates are reflected
+        await new Promise(resolve => setTimeout(resolve, 500));
     } catch (error) {
         console.error(`Error deleting technology ${id}:`, error);
         throw handleApiError(error);

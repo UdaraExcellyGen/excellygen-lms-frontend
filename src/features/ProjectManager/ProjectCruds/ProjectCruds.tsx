@@ -82,6 +82,27 @@ const calculateRemainingDays = (deadlineStr: string | null | undefined): number 
     }
 };
 
+const renderCreatedBy = (technology: EmployeeTechnology) => {
+  // Check creator type directly instead of name prefix
+  const isPMCreated = technology.creatorType === 'project_manager';
+  
+  return (
+    <>
+      {isPMCreated ? (
+        <span className="inline-flex items-center">
+          <span className="inline-block w-2 h-2 rounded-full bg-purple-500 mr-2"></span>
+          Project Manager
+        </span>
+      ) : (
+        <span className="inline-flex items-center">
+          <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+          Admin
+        </span>
+      )}
+    </>
+  );
+};
+
 const ProjectCRUD: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -668,7 +689,7 @@ const ProjectCRUD: React.FC = () => {
         setProjectIdToDelete(null);
     };
 
-    // Technology Management Functions
+    // Technology Management Functions - UPDATED to not use [PM] prefix
     const handleCreateTechnology = async () => {
         setError((prev) => ({ ...prev, form: null }));
         if (!technologyFormData.name.trim()) {
@@ -678,7 +699,9 @@ const ProjectCRUD: React.FC = () => {
         
         setIsLoading((prev) => ({ ...prev, technologies: true }));
         try {
-            const newTechnology = await createTechnology({ name: technologyFormData.name.trim() });
+            // No longer adding [PM] prefix
+            const techName = technologyFormData.name.trim();
+            const newTechnology = await createTechnology({ name: techName });
             
             // Add the new technology to both local lists
             setEmployeeTechnologies([...employeeTechnologies, newTechnology]);
@@ -714,8 +737,8 @@ const ProjectCRUD: React.FC = () => {
         try {
             const technology = employeeTechnologies.find(tech => tech.id === editingTechnologyId);
             
-            // Check if it's admin-created
-            if (technology?.creatorType === 'admin') {
+            // Check if it's admin-created using creatorType
+            if (technology && technology.creatorType !== 'project_manager') {
                 setError((prev) => ({ ...prev, form: "Admin-created technologies cannot be modified" }));
                 toast.error("Admin-created technologies cannot be modified");
                 setIsLoading((prev) => ({ ...prev, technologies: false }));
@@ -730,9 +753,11 @@ const ProjectCRUD: React.FC = () => {
                 return;
             }
             
+            // No PM prefix
+            const techName = technologyFormData.name.trim();
             const updatedTechnology = await updateTechnology(
                 editingTechnologyId.toString(), 
-                { name: technologyFormData.name.trim() }
+                { name: techName }
             );
             
             // Update both local lists with the updated technology
@@ -764,8 +789,8 @@ const ProjectCRUD: React.FC = () => {
     const handleDeleteTechnologyConfirmation = (id: number | string) => {
         const technology = employeeTechnologies.find((tech) => tech.id === id);
         if (technology) {
-            // Check if technology is admin-created or inactive
-            if (technology.creatorType === 'admin') {
+            // Check if technology is admin-created using creatorType
+            if (technology.creatorType !== 'project_manager') {
                 toast.error("Admin-created technologies cannot be deleted");
                 return;
             }
@@ -787,8 +812,8 @@ const ProjectCRUD: React.FC = () => {
         try {
             const technology = employeeTechnologies.find(tech => tech.id === technologyIdToDelete);
             
-            // Final check before deletion
-            if (technology?.creatorType === 'admin') {
+            // Final check before deletion using creatorType
+            if (technology && technology.creatorType !== 'project_manager') {
                 setError((prev) => ({ ...prev, technologies: "Admin-created technologies cannot be deleted" }));
                 toast.error("Admin-created technologies cannot be deleted");
                 setShowTechnologyDeleteConfirmation(false);
@@ -1066,7 +1091,7 @@ const ProjectCRUD: React.FC = () => {
         const technology = employeeTechnologies.find((tech) => tech.id === id);
         if (technology) {
             // Check if technology is admin-created or inactive
-            if (technology.creatorType === 'admin') {
+            if (technology.creatorType !== 'project_manager') {
                 toast.error("Admin-created technologies cannot be edited");
                 return;
             }
@@ -1076,6 +1101,7 @@ const ProjectCRUD: React.FC = () => {
                 return;
             }
             
+            // Use the name directly, no need to remove prefix
             setTechnologyFormData({ name: technology.name });
             setEditingTechnologyId(id);
             setIsTechnologyFormOpen(true);
@@ -1197,6 +1223,7 @@ const ProjectCRUD: React.FC = () => {
 
     const filteredTechnologies = employeeTechnologies.filter((tech) => {
         const searchLower = searchTerm.toLowerCase();
+        // Search in the name without needing to handle any prefix
         const matchesSearch = tech.name.toLowerCase().includes(searchLower);
         const matchesStatus = techStatusFilter === 'all' || tech.status === techStatusFilter;
         return matchesSearch && matchesStatus;
@@ -1609,7 +1636,9 @@ const ProjectCRUD: React.FC = () => {
                                             key={technology.id}
                                             className="border-b border-gray-200 hover:bg-[#F6E6FF]/50 transition-all duration-300 card-hover"
                                         >
-                                            <td className="px-4 py-3 text-indigo font-medium text-sm">{technology.name}</td>
+                                            <td className="px-4 py-3 text-indigo font-medium text-sm">
+                                                {technology.name}
+                                            </td>
                                             <td className="px-4 py-3">
                                                 <span className={`px-2 py-1 rounded-full text-xs ${
                                                     technology.status === 'active' 
@@ -1620,27 +1649,21 @@ const ProjectCRUD: React.FC = () => {
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-indigo text-sm">
-                                                {technology.creatorType === 'admin' ? (
-                                                    <span className="flex items-center text-gray-600">
-                                                        <Lock size={12} className="mr-1" /> Admin
-                                                    </span>
-                                                ) : (
-                                                    'Project Manager'
-                                                )}
+                                                {renderCreatedBy(technology)}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex gap-2">
                                                     <button
                                                         onClick={() => startEditTechnology(technology.id)}
                                                         className={`p-2 rounded-full hover:bg-pale-purple text-indigo hover:text-[#BF4BF6] transition-all-300 ${
-                                                            technology.creatorType === 'admin' || technology.status !== 'active' 
+                                                            technology.creatorType !== 'project_manager' || technology.status !== 'active' 
                                                                 ? 'opacity-50 cursor-not-allowed' 
                                                                 : ''
                                                         }`}
-                                                        disabled={technology.creatorType === 'admin' || technology.status !== 'active'}
+                                                        disabled={technology.creatorType !== 'project_manager' || technology.status !== 'active'}
                                                         aria-label="Edit technology"
                                                         title={
-                                                            technology.creatorType === 'admin' 
+                                                            technology.creatorType !== 'project_manager'
                                                                 ? "Admin-created technologies cannot be edited" 
                                                                 : technology.status !== 'active'
                                                                 ? "Inactive technologies cannot be edited"
@@ -1652,14 +1675,14 @@ const ProjectCRUD: React.FC = () => {
                                                     <button
                                                         onClick={() => handleDeleteTechnologyConfirmation(technology.id)}
                                                         className={`p-2 rounded-full hover:bg-pale-purple text-indigo hover:text-red-500 transition-all-300 ${
-                                                            technology.creatorType === 'admin' || technology.status !== 'active'
+                                                            technology.creatorType !== 'project_manager' || technology.status !== 'active'
                                                                 ? 'opacity-50 cursor-not-allowed' 
                                                                 : ''
                                                         }`}
-                                                        disabled={technology.creatorType === 'admin' || technology.status !== 'active'}
+                                                        disabled={technology.creatorType !== 'project_manager' || technology.status !== 'active'}
                                                         aria-label="Delete technology"
                                                         title={
-                                                            technology.creatorType === 'admin' 
+                                                            technology.creatorType !== 'project_manager'
                                                                 ? "Admin-created technologies cannot be deleted" 
                                                                 : technology.status !== 'active'
                                                                 ? "Inactive technologies cannot be deleted"
