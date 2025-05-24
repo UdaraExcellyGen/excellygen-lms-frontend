@@ -110,49 +110,88 @@ const DiscussionForum: React.FC = () => {
     }, [debouncedSearchQuery, selectedCategoryFilterOption?.value, showMyThreads]);
 
 
-    const handleCreateThread = async (formDataFromModal: ThreadFormData) => { 
-        setIsActionLoading(true);
-        try {
-            const createDto: CreateForumThreadDto = {
-                title: formDataFromModal.title, content: formDataFromModal.content, 
-                category: formDataFromModal.category, 
-                imageRelativePath: formDataFromModal.currentRelativePath 
-            };
-            await forumApi.createThread(createDto); 
-            toast.success('Thread created successfully!'); 
-            setIsCreateModalOpen(false);
-            setSearchInput(''); 
-            setSelectedCategoryFilterOption({ value: 'all', label: 'All Categories' }); 
-            setShowMyThreads(false); 
-            if (currentPage !== 1) setCurrentPage(1); else fetchThreads(1);
-        } catch (err: any) { 
-            toast.error(`Create thread failed: ${forumApi.isAxiosError(err) && err.response?.data?.message ? err.response.data.message : err.message}`); 
-        } 
-        finally { setIsActionLoading(false); }
-    };
+// Update this function in your DiscussionForum.tsx
+
+// Updated handleCreateThread method for DiscussionForum.tsx
+// This method should match the backend DTO property names
+
+const handleCreateThread = async (formDataFromModal: ThreadFormData) => { 
+    setIsActionLoading(true);
+    try {
+        console.log('Creating thread with data:', formDataFromModal);
+        
+        // Create DTO that matches backend property names exactly
+        const createDto: CreateForumThreadDto = {
+            title: formDataFromModal.title, 
+            content: formDataFromModal.content, 
+            category: formDataFromModal.category, 
+            // Use imageUrl property to match the backend
+            imageUrl: formDataFromModal.imageUrl
+        };
+        
+        console.log('Sending to API:', createDto);
+        
+        await forumApi.createThread(createDto); 
+        toast.success('Thread created successfully!'); 
+        setIsCreateModalOpen(false);
+        setSearchInput(''); 
+        setSelectedCategoryFilterOption({ value: 'all', label: 'All Categories' }); 
+        setShowMyThreads(false); 
+        if (currentPage !== 1) setCurrentPage(1); else fetchThreads(1);
+    } catch (err: any) { 
+        console.error('Thread creation error:', err);
+        toast.error(`Create thread failed: ${forumApi.isAxiosError(err) && err.response?.data?.message ? err.response.data.message : err.message}`); 
+    } 
+    finally { setIsActionLoading(false); }
+};
     
     const handleEditClick = (thread: ForumThreadDto) => { 
         setThreadToEdit(thread); setIsEditModalOpen(true);
     };
 
-    const handleUpdateThread = async (formDataFromModal: ThreadFormData) => { 
-        if (!threadToEdit) return; setIsActionLoading(true);
-        try {
-            const updateDto: UpdateForumThreadDto = {
-                title: formDataFromModal.title, content: formDataFromModal.content, 
-                category: formDataFromModal.category,
-                imageRelativePath: formDataFromModal.currentRelativePath,
-                removeCurrentImage: !formDataFromModal.imageUrl && !!threadToEdit.imageUrl
-            };
-            const updatedThread = await forumApi.updateThread(threadToEdit.id, updateDto);
-            toast.success('Thread updated successfully!');
-            setThreads(prev => prev.map(t => t.id === updatedThread.id ? { ...t, ...updatedThread, showComments: t.showComments } : t));
-            setIsEditModalOpen(false); setThreadToEdit(null);
-        } catch (err: any) { 
-            toast.error(`Update thread failed: ${forumApi.isAxiosError(err) && err.response?.data?.message ? err.response.data.message : err.message}`); 
-        } 
-        finally { setIsActionLoading(false); }
-    };
+// Update this method in your DiscussionForum.tsx component
+// This ensures the imageUrl is correctly passed to the backend
+
+const handleUpdateThread = async (formDataFromModal: ThreadFormData) => { 
+    if (!threadToEdit) return; 
+    setIsActionLoading(true);
+    
+    try {
+        // Log received form data
+        console.log('Updating thread with data:', formDataFromModal);
+        
+        const updateDto: UpdateForumThreadDto = {
+            title: formDataFromModal.title, 
+            content: formDataFromModal.content, 
+            category: formDataFromModal.category,
+            // Use imageUrl property to match the backend
+            imageUrl: formDataFromModal.imageUrl,
+            // Add a flag to indicate if the image should be removed
+            removeCurrentImage: !formDataFromModal.imageUrl && !!threadToEdit.imageUrl
+        };
+        
+        console.log('Sending to API:', updateDto);
+        
+        const updatedThread = await forumApi.updateThread(threadToEdit.id, updateDto);
+        toast.success('Thread updated successfully!');
+        
+        // Update the thread in the state
+        setThreads(prev => prev.map(t => 
+            t.id === updatedThread.id 
+                ? { ...t, ...updatedThread, showComments: t.showComments } 
+                : t
+        ));
+        
+        setIsEditModalOpen(false); 
+        setThreadToEdit(null);
+    } catch (err: any) { 
+        console.error('Thread update error:', err);
+        toast.error(`Update thread failed: ${forumApi.isAxiosError(err) && err.response?.data?.message ? err.response.data.message : err.message}`); 
+    } 
+    finally { 
+        setIsActionLoading(false); 
+    }
+};
 
     const handleDeleteClick = (thread: ForumThreadDto) => { setThreadToDelete(thread); setIsDeleteDialogOpen(true); };
     const handleDeleteConfirm = async () => { 
@@ -184,7 +223,96 @@ const DiscussionForum: React.FC = () => {
             : undefined
     } : undefined;
 
-    const selectFilterStyles: StylesConfig<CategorySelectOption, false> = { /* ... (from modal_44) ... */ };
+    const selectFilterStyles: StylesConfig<CategorySelectOption, false> = {
+        control: (provided, state) => ({
+            ...provided,
+            backgroundColor: 'rgba(253, 246, 255, 0.7)',
+            border: state.isFocused 
+              ? '2px solid #BF4BF6' 
+              : '1px solid rgba(208, 160, 230, 0.5)',
+            boxShadow: state.isFocused ? '0 0 0 1px #BF4BF6' : 'none',
+            borderRadius: '0.5rem',
+            padding: '0.15rem 0.25rem',
+            fontSize: '0.875rem',
+            fontFamily: '"Nunito", sans-serif',
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              borderColor: '#BF4BF6',
+            },
+            minHeight: '42px',
+        }),
+        placeholder: (provided) => ({
+            ...provided,
+            color: 'rgba(82, 0, 124, 0.7)',
+            fontSize: '0.875rem',
+        }),
+        option: (provided, state) => ({
+            ...provided,
+            backgroundColor: state.isSelected 
+              ? '#7A00B8' 
+              : state.isFocused 
+                ? 'rgba(191, 75, 246, 0.1)' 
+                : 'white',
+            color: state.isSelected ? 'white' : '#1B0A3F',
+            fontSize: '0.875rem',
+            fontFamily: '"Nunito", sans-serif',
+            cursor: 'pointer',
+            '&:active': {
+              backgroundColor: '#7A00B8',
+            },
+        }),
+        menu: (provided) => ({
+            ...provided,
+            backgroundColor: 'white',
+            borderRadius: '0.5rem',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+            zIndex: 50,
+        }),
+        menuList: (provided) => ({
+            ...provided,
+            padding: '0.25rem',
+        }),
+        singleValue: (provided) => ({
+            ...provided,
+            color: '#1B0A3F',
+            fontSize: '0.875rem',
+            fontFamily: '"Nunito", sans-serif',
+        }),
+        dropdownIndicator: (provided, state) => ({
+            ...provided,
+            color: state.isFocused ? '#7A00B8' : 'rgba(82, 0, 124, 0.7)',
+            '&:hover': {
+              color: '#7A00B8',
+            },
+            padding: '0 8px',
+        }),
+        indicatorSeparator: (provided) => ({
+            ...provided,
+            backgroundColor: 'rgba(208, 160, 230, 0.5)',
+        }),
+        clearIndicator: (provided, state) => ({
+            ...provided,
+            color: state.isFocused ? '#7A00B8' : 'rgba(82, 0, 124, 0.7)',
+            '&:hover': {
+              color: '#7A00B8',
+            },
+        }),
+        valueContainer: (provided) => ({
+            ...provided,
+            padding: '2px 8px',
+        }),
+        input: (provided) => ({
+            ...provided,
+            color: '#1B0A3F',
+            fontFamily: '"Nunito", sans-serif',
+        }),
+        noOptionsMessage: (provided) => ({
+            ...provided,
+            color: 'rgba(82, 0, 124, 0.7)',
+            fontFamily: '"Nunito", sans-serif',
+            fontSize: '0.875rem',
+        }),
+    };
 
     // --- JSX ---
     return (

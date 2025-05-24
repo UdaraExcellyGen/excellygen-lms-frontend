@@ -2,17 +2,17 @@
 import React, { useState, useRef, useEffect, useCallback, FormEvent } from 'react';
 import { X, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import Select, { SingleValue, StylesConfig } from 'react-select';
-import { ThreadFormData, CategorySelectOption } from '../types/dto'; // Adjust path to your dto.ts
-import { uploadForumImage, deleteUploadedFile, isAxiosError as isFileAxiosError } from '../../../../api/fileApi'; // Adjust path
+import { ThreadFormData, CategorySelectOption } from '../types/dto';
+import { uploadForumImage, deleteUploadedFile, isAxiosError as isFileAxiosError } from '../../../../api/fileApi';
 import { toast } from 'react-hot-toast';
-import { useAuth } from '../../../../contexts/AuthContext'; // Adjust path
-import { refreshToken as attemptTokenRefresh } from '../../../../api/authApi'; // Adjust path
+import { useAuth } from '../../../../contexts/AuthContext';
+import { refreshToken as attemptTokenRefresh } from '../../../../api/authApi';
 
 interface EditThreadModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: ThreadFormData) => Promise<void>; // Parent handles main submit logic
-    initialData: ThreadFormData | null; // Nullable for safety, though parent should ensure it's set when isOpen is true
+    onSubmit: (data: ThreadFormData) => Promise<void>;
+    initialData: ThreadFormData | null;
     availableCategories: string[];
 }
 
@@ -92,8 +92,6 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
         // Parent DiscussionForum calls onClose, which sets its isEditModalOpen to false.
         // The useEffect above will then handle resetting this modal's internal state
         // when it's next opened with new initialData.
-        // No image cleanup needed on just "Cancel" unless a *new* image was already uploaded in this session and not submitted.
-        // That edge case makes logic complex; for now, closing just discards local changes.
         onClose();
     };
 
@@ -144,7 +142,7 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
                     }
                 }
                 // Upload the new image
-                const uploadData = await callFileApiWithRetry<{imageUrl: string; relativePath: string;} | null>(
+                const uploadData = await callFileApiWithRetry<{imageUrl: string; relativePath: string | null;} | null>(
                     () => uploadForumImage(imageFile)
                 );
                 setIsProcessingImage(false);
@@ -152,8 +150,10 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
                     setIsSubmittingForm(false); 
                     return; // Stop the submission
                 }
+                
+                console.log("EditModal: New image uploaded successfully:", uploadData);
                 finalImageUrlForParent = uploadData.imageUrl;
-                finalRelativePathForParent = uploadData.relativePath;
+                finalRelativePathForParent = uploadData.relativePath || uploadData.imageUrl;
             } 
             // Scenario 2: No new file, but preview is cleared (imagePreview is undefined) AND there WAS an image originally (initialData.currentRelativePath)
             // This means the user clicked 'X' to remove the existing image.
@@ -177,14 +177,13 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
                 currentRelativePath: finalRelativePathForParent 
             };
             
+            console.log("EditModal: Submitting thread with data:", formDataToSubmit);
             await onSubmit(formDataToSubmit); // Parent component handles the API call to update the thread
-                                             // and should call onClose on success.
         } catch (err: any) {
             // This catch block will primarily handle errors from the parent onSubmit,
             // or from delete/upload calls if callFileApiWithRetry re-threw them (non-401 errors)
             console.error("EditThreadModal handleSubmit error:", err);
             toast.error(isFileAxiosError(err) ? (err.response?.data?.message || err.message) : err.message || "Failed to update thread.");
-            // More complex rollback logic could be added here if needed (e.g., if new image uploaded but thread update fails)
         } finally {
              setIsSubmittingForm(false); 
              setIsProcessingImage(false); // Ensure all processing flags are reset
@@ -193,13 +192,42 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
 
     if (!isOpen || !initialData) return null; // Important to check initialData before rendering
     const isFormBusy = isProcessingImage || isSubmittingForm;
-    const selectStyles: StylesConfig<CategorySelectOption, false> = { /* ... (Copy styles from CreateThreadModal if they are shared, ensure zIndex for menuPortal) ... */ 
-        control: (base, state) => ({ ...base, fontFamily: 'Nunito, sans-serif', backgroundColor: state.isDisabled ? '#f3f4f6' :'#F6E6FFBF', borderColor: state.isFocused ? '#BF4BF6' : '#BF4BF633', boxShadow: state.isFocused ? '0 0 0 1px #BF4BF6' : 'none', borderRadius: '0.5rem', minHeight: '42px'}),
-        menu: (base) => ({ ...base, fontFamily: 'Nunito, sans-serif', zIndex: 1055 }), // High z-index needed within modal context
-        menuPortal: base => ({ ...base, zIndex: 99999 }), // If you portal the menu to document.body
-        singleValue: (base) => ({...base, color: '#1B0A3F'}),
-        placeholder: (base) => ({...base, color: '#52007C99'}),
-        option: (base, state) => ({...base, backgroundColor: state.isSelected ? '#BF4BF6' : state.isFocused ? '#F0D9FF' : 'white', color: state.isSelected? 'white': '#1B0A3F', ':active': { backgroundColor: '#D0A0E6' }})
+    
+    const selectStyles: StylesConfig<CategorySelectOption, false> = {
+        control: (base, state) => ({ 
+            ...base, 
+            fontFamily: 'Nunito, sans-serif', 
+            backgroundColor: state.isDisabled ? '#f3f4f6' :'#F6E6FFBF', 
+            borderColor: state.isFocused ? '#BF4BF6' : '#BF4BF633', 
+            boxShadow: state.isFocused ? '0 0 0 1px #BF4BF6' : 'none', 
+            borderRadius: '0.5rem', 
+            minHeight: '42px'
+        }),
+        menu: (base) => ({ 
+            ...base, 
+            fontFamily: 'Nunito, sans-serif', 
+            zIndex: 1055 
+        }),
+        menuPortal: base => ({ 
+            ...base, 
+            zIndex: 99999 
+        }),
+        singleValue: (base) => ({
+            ...base, 
+            color: '#1B0A3F'
+        }),
+        placeholder: (base) => ({
+            ...base, 
+            color: '#52007C99'
+        }),
+        option: (base, state) => ({
+            ...base, 
+            backgroundColor: state.isSelected ? '#BF4BF6' : state.isFocused ? '#F0D9FF' : 'white', 
+            color: state.isSelected? 'white': '#1B0A3F', 
+            ':active': { 
+                backgroundColor: '#D0A0E6' 
+            }
+        })
     };
     
     return (
@@ -207,8 +235,11 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
             <div className="bg-white/95 w-full max-w-2xl rounded-xl border border-purple-300/50 p-6 shadow-xl relative">
                 {/* Loading Overlay */}
                 {isFormBusy && (
-                    <div className="absolute inset-0 bg-white/70 backdrop-blur-xs z-20 flex items-center justify-center rounded-xl">
+                    <div className="absolute inset-0 bg-white/70 backdrop-blur-xs z-20 flex flex-col items-center justify-center rounded-xl">
                         <RefreshCw className="h-8 w-8 animate-spin text-purple-600" />
+                        <p className="text-sm text-purple-700 mt-2">
+                            {isProcessingImage ? "Processing image..." : (isSubmittingForm ? "Updating thread..." : "Processing...")}
+                        </p>
                     </div>
                 )}
                 <div className="flex justify-between items-center mb-6">
@@ -253,13 +284,25 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
                             )}
                             {isProcessingImage && <RefreshCw className="h-5 w-5 animate-spin text-purple-500" />}
                         </div>
-                        {imagePreview && (<div className="mt-2.5"><img src={imagePreview} alt="Preview" className="max-h-32 rounded-md object-cover border border-purple-200" /></div>)}
-                         {!imagePreview && <p className="text-xs text-gray-500 mt-1 italic">No image will be set for this thread.</p>}
+                        {imagePreview && (
+                            <div className="mt-2.5">
+                                <img 
+                                    src={imagePreview} 
+                                    alt="Preview" 
+                                    className="max-h-32 rounded-md object-cover border border-purple-200" 
+                                    onError={(e) => {
+                                        console.error(`Failed to load image: ${imagePreview}`);
+                                        e.currentTarget.style.display = 'none';
+                                    }}
+                                />
+                            </div>
+                        )}
+                        {!imagePreview && <p className="text-xs text-gray-500 mt-1 italic">No image will be set for this thread.</p>}
                     </div>
                     <div className="flex justify-end gap-3 pt-4 border-t border-purple-200/30 mt-6">
                         <button type="button" onClick={handleModalClose} disabled={isFormBusy} className="px-4 py-2 text-sm bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium transition-colors">Cancel</button>
                         <button type="submit" disabled={isFormBusy || !selectedCategoryOption?.value } className="px-6 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold disabled:opacity-60 min-w-[120px]"> 
-                             {isSubmittingForm ? (isProcessingImage ? <RefreshCw className="h-5 w-5 animate-spin inline"/> : <RefreshCw className="h-5 w-5 animate-spin inline"/> ) : 'Save Changes'}
+                             {isSubmittingForm ? <RefreshCw className="h-5 w-5 animate-spin inline"/> : 'Save Changes'}
                         </button>
                     </div>
                 </form>

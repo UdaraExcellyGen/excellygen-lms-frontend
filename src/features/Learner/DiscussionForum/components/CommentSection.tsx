@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useCallback, FormEvent } from 'react';
 import { RefreshCw, Send, MessageCircle, AlertCircle, Edit2, Trash2 } from 'lucide-react';
 import * as forumApi from '../../../../api/forumApi'; // Adjust path to your forumApi.ts
-// Removed: import { refreshToken as attemptTokenRefresh } from '../../../api/authApi'; (Global apiClient handles this)
 import { 
     ThreadCommentDto, ThreadReplyDto, CreateThreadCommentDto, UpdateThreadCommentDto,
     CreateThreadReplyDto, UpdateThreadReplyDto 
@@ -10,9 +9,6 @@ import {
 import { useAuth } from '../../../../contexts/AuthContext'; // Adjust path
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow, parseISO } from 'date-fns';
-// DeleteItemDialog should be imported if it's a separate component:
-// import DeleteItemDialog from './DeleteItemDialog'; 
-
 
 // ----- Helper Modal Components (Can be moved to separate files) -----
 interface EditItemModalProps {
@@ -32,6 +28,7 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
     title,
     isSubmitting: parentIsSubmitting = false // Default to false
 }) => {
+    // ... EditItemModal implementation (unchanged)
     const [content, setContent] = useState(initialContent);
     const [isProcessing, setIsProcessing] = useState(false); // Local for this modal's submit button
 
@@ -85,13 +82,15 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
     );
 };
 
-interface DeleteItemDialogProps { /* ... (as in modal_33 or your generic one) ... */
+interface DeleteItemDialogProps {
     isOpen: boolean; onClose: () => void; onConfirm: () => Promise<void>; 
     itemName: string; itemContentPreview?: string; customMessage?: string;
- }
-const DeleteItemDialog: React.FC<DeleteItemDialogProps> = ({ /* ... (from modal_33) ... */ 
+}
+
+const DeleteItemDialog: React.FC<DeleteItemDialogProps> = ({ 
     isOpen, onClose, onConfirm, itemName, itemContentPreview, customMessage
 }) => {
+    // ... DeleteItemDialog implementation (unchanged)
     const [isDeleting, setIsDeleting] = useState(false);
     const handleConfirmClick = async () => {
         setIsDeleting(true);
@@ -100,7 +99,7 @@ const DeleteItemDialog: React.FC<DeleteItemDialogProps> = ({ /* ... (from modal_
         finally { setIsDeleting(false); }
     };
     if(!isOpen) return null;
-    return ( /* ... (JSX from modal_33/40) ... */ 
+    return (
         <div className="fixed inset-0 bg-[#1B0A3F]/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
             <div className="bg-white w-full max-w-md rounded-xl border border-red-400/50 p-6 shadow-xl">
                 <div className="flex items-center mb-3"><AlertCircle className="h-6 w-6 text-red-500 mr-3 flex-shrink-0" /><h3 className="text-xl font-unbounded text-red-700">Delete {itemName}</h3></div>
@@ -147,7 +146,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
         if (!threadId) return;
         setIsLoadingComments(true); setErrorComments(null);
         try {
-            const fetchedData = await forumApi.getCommentsForThread(threadId); // Direct call
+            // FIXED: Changed from getCommentsForThread to getComments
+            const fetchedData = await forumApi.getComments(threadId);
             setComments(fetchedData.map(c => ({ ...c, showReplies: false, replies: [], isLoadingReplies: false, isPostingReply: false, replyError: null })));
         } catch (err: any) { 
             const msg = forumApi.isAxiosError(err) ? err.response?.data?.message || err.message : err.message || "Could not load comments.";
@@ -162,7 +162,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
         if (!newCommentText.trim()) return toast.error("Comment cannot be empty."); 
         setIsPostingComment(true);
         try {
-            const newCommentData = await forumApi.createCommentOnThread(threadId, { content: newCommentText });
+            // FIXED: Changed from createCommentOnThread to createComment
+            const newCommentData = await forumApi.createComment(threadId, { content: newCommentText });
             setComments(prev => [{ ...newCommentData, showReplies: false, replies: [], isLoadingReplies: false, isPostingReply: false, replyError: null }, ...prev]);
             setNewCommentText(''); toast.success("Comment posted!");
         } catch (err: any) { toast.error(`Post comment failed: ${forumApi.isAxiosError(err) ? err.response?.data?.message || err.message : err.message}`); } 
@@ -172,7 +173,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
     const fetchRepliesForComment = async (commentId: number) => { 
         setComments(prev => prev.map(c => c.id === commentId ? { ...c, isLoadingReplies: true, replyError: null } : c));
         try {
-            const fetchedData = await forumApi.getRepliesForComment(commentId);
+            // FIXED: Changed from getRepliesForComment to getReplies
+            const fetchedData = await forumApi.getReplies(commentId);
             setComments(prev => prev.map(c => c.id === commentId ? { ...c, replies: fetchedData, isLoadingReplies: false } : c));
         } catch (err: any) {
             toast.error(`Load replies failed: ${forumApi.isAxiosError(err) ? err.response?.data?.message || err.message : err.message}`);
@@ -194,7 +196,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
         if (!newReplyText.trim()) return toast.error("Reply cannot be empty."); 
         setComments(prev => prev.map(c => c.id === commentId ? { ...c, isPostingReply: true } : c));
         try {
-            const newReplyData = await forumApi.createReplyToComment(commentId, { content: newReplyText });
+            // FIXED: Changed from createReplyToComment to createReply
+            const newReplyData = await forumApi.createReply(commentId, { content: newReplyText });
             setComments(prev => prev.map(c => c.id === commentId ? { ...c, replies: [...c.replies, newReplyData], isPostingReply: false, repliesCount: (c.repliesCount || 0) + 1 } : c));
             setNewReplyText(''); setReplyingToCommentId(null); toast.success("Reply posted!");
         } catch (err: any) { toast.error(`Post reply failed: ${forumApi.isAxiosError(err) ? err.response?.data?.message || err.message : err.message}`);} 

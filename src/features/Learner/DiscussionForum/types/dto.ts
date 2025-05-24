@@ -26,7 +26,7 @@ export interface PagedResult<T> {
 }
 
 // --------- Frontend Select Option Types ---------
-export interface CategorySelectOption { // <-- ENSURE THIS IS PRESENT
+export interface CategorySelectOption {
     value: string; 
     label: string; 
 }
@@ -36,43 +36,44 @@ export interface ForumThreadDto {
     id: number; 
     title: string;
     content: string; 
-    category: string; // This is the category title string
-    imageUrl?: string; 
+    category: string; 
+    imageUrl: string | null; // Matches backend nullable string
     createdAt: string;
+    updatedAt?: string; // Add optional updatedAt for frontend display
     author: AuthorDto | null;
     commentsCount: number;
     isCurrentUserAuthor: boolean;
-    showComments?: boolean;
-    isLoadingComments?: boolean;
+    showComments?: boolean; // Frontend-only state
+    isLoadingComments?: boolean; // Frontend-only state
 }
 
 export interface CreateForumThreadDto {
     title: string;
     content: string;
-    category: string; // Category title string
-    imageRelativePath?: string; // Changed from imageUrl to relative path
+    category: string;
+    imageUrl?: string | null; // Matches backend property name
 }
 
 export interface UpdateForumThreadDto {
     title: string;
     content: string;
-    category: string; // Category title string
-    imageRelativePath?: string; // Changed from imageUrl
+    category: string;
+    imageUrl?: string | null; // Matches backend property name
     removeCurrentImage?: boolean;
 }
 
 export interface ThreadFormData {
     title: string;
     content: string;
-    category: string; // Selected category title string
+    category: string;
     image?: File | null;     
     imagePreview?: string;   
-    imageUrl?: string; // Full URL from server (after upload or initial load)
-    currentRelativePath?: string; // Relative path of the image on the server
+    imageUrl?: string | null; // For displaying uploaded image
+    currentRelativePath?: string | null; // For backward compatibility
 }
 
-// --------- Comment & Reply DTOs (as defined in modal_33) ---------
-export interface ThreadCommentDto { /* ... */ 
+// --------- Comment & Reply DTOs ---------
+export interface ThreadCommentDto {
     id: number; 
     content: string;
     createdAt: string;
@@ -80,17 +81,26 @@ export interface ThreadCommentDto { /* ... */
     threadId: number; 
     repliesCount: number;
     isCurrentUserAuthor: boolean;
-    showReplies?: boolean;
-    replies?: ThreadReplyDto[]; 
-    isLoadingReplies?: boolean;
-    isPostingReply?: boolean;
-    replyError?: string | null;
+    showReplies?: boolean; // Frontend-only state
+    replies?: ThreadReplyDto[]; // Frontend-only state 
+    isLoadingReplies?: boolean; // Frontend-only state
+    isPostingReply?: boolean; // Frontend-only state
+    replyError?: string | null; // Frontend-only state
 }
-export interface CreateThreadCommentDto { /* ... */ content: string; }
-export interface UpdateThreadCommentDto { /* ... */ content: string; }
-export interface CommentFormData { content: string; } 
 
-export interface ThreadReplyDto { /* ... */ 
+export interface CreateThreadCommentDto { 
+    content: string; 
+}
+
+export interface UpdateThreadCommentDto { 
+    content: string; 
+}
+
+export interface CommentFormData { 
+    content: string; 
+} 
+
+export interface ThreadReplyDto { 
     id: number; 
     content: string;
     createdAt: string;
@@ -98,5 +108,11 @@ export interface ThreadReplyDto { /* ... */
     commentId: number; 
     isCurrentUserAuthor: boolean;
 }
-export interface CreateThreadReplyDto { /* ... */ content: string; }
-export interface UpdateThreadReplyDto { /* ... */ content: string; }
+
+export interface CreateThreadReplyDto { 
+    content: string; 
+}
+
+export interface UpdateThreadReplyDto { 
+    content: string; 
+}
