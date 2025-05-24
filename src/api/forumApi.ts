@@ -1,65 +1,155 @@
-import apiClient from './apiClient'; // <--- USE THE GLOBAL apiClient FROM YOUR modal_44
-import {
-    ForumQueryParams, PagedResult, ForumThreadDto, CreateForumThreadDto, UpdateForumThreadDto,
-    ThreadCommentDto, CreateThreadCommentDto, UpdateThreadCommentDto,
-    ThreadReplyDto, CreateThreadReplyDto, UpdateThreadReplyDto
-} from '../features/Learner/DiscussionForum/types/dto'; // Adjust path as per your project
-import { AxiosError } from 'axios';
+// src/api/forumApi.ts
+import axios, { AxiosError } from 'axios';
+import apiClient from './apiClient';
+import { 
+  CreateForumThreadDto, 
+  UpdateForumThreadDto, 
+  ForumThreadDto, 
+  ForumQueryParams, 
+  PagedResult,
+  ThreadCommentDto,
+  CreateThreadCommentDto,
+  UpdateThreadCommentDto,
+  ThreadReplyDto,
+  CreateThreadReplyDto,
+  UpdateThreadReplyDto
+} from '../pages/DiscussionForum/types/dto';
 
-const BASE_URL = '/forum'; // This will be appended to apiClient's baseURL (e.g., /api/forum)
-
-// --- Thread API Functions ---
-export const getThreads = async (params: ForumQueryParams): Promise<PagedResult<ForumThreadDto>> => {
-    const queryParams = new URLSearchParams();
-    if (params.PageNumber) queryParams.append('PageNumber', params.PageNumber.toString());
-    if (params.PageSize) queryParams.append('PageSize', params.PageSize.toString());
-    if (params.SearchTerm) queryParams.append('SearchTerm', params.SearchTerm);
-    if (params.Category && params.Category !== 'all') queryParams.append('Category', params.Category);
-    if (params.MyThreads) queryParams.append('MyThreads', 'true');
-    
-    const response = await apiClient.get<PagedResult<ForumThreadDto>>(`${BASE_URL}/threads`, { params: queryParams });
-    return response.data;
+// Export isAxiosError helper
+export const isAxiosError = (error: any): error is AxiosError => {
+  return error.isAxiosError === true;
 };
 
-export const getThreadById = async (threadId: number): Promise<ForumThreadDto> => 
-    (await apiClient.get<ForumThreadDto>(`${BASE_URL}/threads/${threadId}`)).data;
+/**
+ * Get threads with optional filtering
+ * @param params Query parameters for filtering and pagination
+ * @returns Promise with paged result of threads
+ */
+export const getThreads = async (params: ForumQueryParams): Promise<PagedResult<ForumThreadDto>> => {
+  // Remove the /api prefix since apiClient.baseURL already includes it
+  const response = await apiClient.get('/forum/threads', { params });
+  return response.data;
+};
 
-export const createThread = async (data: CreateForumThreadDto): Promise<ForumThreadDto> =>
-    (await apiClient.post<ForumThreadDto>(`${BASE_URL}/threads`, data)).data;
+/**
+ * Get a single thread by ID
+ * @param id Thread ID
+ * @returns Promise with the thread details
+ */
+export const getThread = async (id: number | string): Promise<ForumThreadDto> => {
+  const response = await apiClient.get(`/forum/threads/${id}`);
+  return response.data;
+};
 
-export const updateThread = async (threadId: number, data: UpdateForumThreadDto): Promise<ForumThreadDto> =>
-    (await apiClient.put<ForumThreadDto>(`${BASE_URL}/threads/${threadId}`, data)).data;
+/**
+ * Creates a new forum thread
+ * @param createDto Data to create the thread
+ * @returns Promise with the created thread
+ */
+export const createThread = async (createDto: CreateForumThreadDto): Promise<ForumThreadDto> => {
+  console.log('Creating thread with data:', createDto);
+  const response = await apiClient.post('/forum/threads', createDto);
+  return response.data;
+};
 
-export const deleteThread = async (threadId: number): Promise<void> =>
-    await apiClient.delete(`${BASE_URL}/threads/${threadId}`);
+/**
+ * Updates an existing forum thread
+ * @param id Thread ID
+ * @param updateDto Data to update the thread
+ * @returns Promise with the updated thread
+ */
+export const updateThread = async (id: number | string, updateDto: UpdateForumThreadDto): Promise<ForumThreadDto> => {
+  const response = await apiClient.put(`/forum/threads/${id}`, updateDto);
+  return response.data;
+};
 
-// --- Comment API Functions ---
-export const getCommentsForThread = async (threadId: number): Promise<ThreadCommentDto[]> =>
-    (await apiClient.get<ThreadCommentDto[]>(`${BASE_URL}/threads/${threadId}/comments`)).data;
+/**
+ * Deletes a thread
+ * @param id Thread ID
+ * @returns Promise with deletion result
+ */
+export const deleteThread = async (id: number | string): Promise<void> => {
+  await apiClient.delete(`/forum/threads/${id}`);
+};
 
-export const createCommentOnThread = async (threadId: number, data: CreateThreadCommentDto): Promise<ThreadCommentDto> =>
-    (await apiClient.post<ThreadCommentDto>(`${BASE_URL}/threads/${threadId}/comments`, data)).data;
+/**
+ * Get comments for a thread
+ * @param threadId Thread ID
+ * @returns Promise with list of comments
+ */
+export const getComments = async (threadId: number | string): Promise<ThreadCommentDto[]> => {
+  const response = await apiClient.get(`/forum/threads/${threadId}/comments`);
+  return response.data;
+};
 
-export const updateComment = async (commentId: number, data: UpdateThreadCommentDto): Promise<ThreadCommentDto> =>
-    (await apiClient.put<ThreadCommentDto>(`${BASE_URL}/comments/${commentId}`, data)).data;
+/**
+ * Creates a new comment on a thread
+ * @param threadId Thread ID
+ * @param createDto Comment data
+ * @returns Promise with the created comment
+ */
+export const createComment = async (threadId: number | string, createDto: CreateThreadCommentDto): Promise<ThreadCommentDto> => {
+  const response = await apiClient.post(`/forum/threads/${threadId}/comments`, createDto);
+  return response.data;
+};
 
-export const deleteComment = async (commentId: number): Promise<void> =>
-    await apiClient.delete(`${BASE_URL}/comments/${commentId}`);
+/**
+ * Updates an existing comment
+ * @param commentId Comment ID
+ * @param updateDto Updated comment data
+ * @returns Promise with updated comment
+ */
+export const updateComment = async (commentId: number | string, updateDto: UpdateThreadCommentDto): Promise<ThreadCommentDto> => {
+  const response = await apiClient.put(`/forum/comments/${commentId}`, updateDto);
+  return response.data;
+};
 
-// --- Reply API Functions ---
-export const getRepliesForComment = async (commentId: number): Promise<ThreadReplyDto[]> =>
-    (await apiClient.get<ThreadReplyDto[]>(`${BASE_URL}/comments/${commentId}/replies`)).data;
+/**
+ * Deletes a comment
+ * @param commentId Comment ID
+ * @returns Promise with deletion result
+ */
+export const deleteComment = async (commentId: number | string): Promise<void> => {
+  await apiClient.delete(`/forum/comments/${commentId}`);
+};
 
-export const createReplyToComment = async (commentId: number, data: CreateThreadReplyDto): Promise<ThreadReplyDto> =>
-    (await apiClient.post<ThreadReplyDto>(`${BASE_URL}/comments/${commentId}/replies`, data)).data;
+/**
+ * Get replies for a comment
+ * @param commentId Comment ID
+ * @returns Promise with list of replies
+ */
+export const getReplies = async (commentId: number | string): Promise<ThreadReplyDto[]> => {
+  const response = await apiClient.get(`/forum/comments/${commentId}/replies`);
+  return response.data;
+};
 
-export const updateReply = async (replyId: number, data: UpdateThreadReplyDto): Promise<ThreadReplyDto> =>
-    (await apiClient.put<ThreadReplyDto>(`${BASE_URL}/replies/${replyId}`, data)).data;
+/**
+ * Creates a new reply on a comment
+ * @param commentId Comment ID
+ * @param createDto Reply data
+ * @returns Promise with the created reply
+ */
+export const createReply = async (commentId: number | string, createDto: CreateThreadReplyDto): Promise<ThreadReplyDto> => {
+  const response = await apiClient.post(`/forum/comments/${commentId}/replies`, createDto);
+  return response.data;
+};
 
-export const deleteReply = async (replyId: number): Promise<void> =>
-    await apiClient.delete(`${BASE_URL}/replies/${replyId}`);
+/**
+ * Updates an existing reply
+ * @param replyId Reply ID
+ * @param updateDto Updated reply data
+ * @returns Promise with updated reply
+ */
+export const updateReply = async (replyId: number | string, updateDto: UpdateThreadReplyDto): Promise<ThreadReplyDto> => {
+  const response = await apiClient.put(`/forum/replies/${replyId}`, updateDto);
+  return response.data;
+};
 
-// Helper to check if an error is an AxiosError
-export function isAxiosError(error: any): error is AxiosError {
-  return error.isAxiosError === true;
-}
+/**
+ * Deletes a reply
+ * @param replyId Reply ID
+ * @returns Promise with deletion result
+ */
+export const deleteReply = async (replyId: number | string): Promise<void> => {
+  await apiClient.delete(`/forum/replies/${replyId}`);
+};

@@ -1,12 +1,12 @@
 // src/pages/DiscussionForum/components/CreateThreadModal.tsx
 import React, { useState, useRef, useEffect, useCallback, FormEvent } from 'react';
 import { X, Image as ImageIcon, RefreshCw } from 'lucide-react';
-import Select, { SingleValue, StylesConfig } from 'react-select'; // Ensure StylesConfig is imported
-import { ThreadFormData, CategorySelectOption } from '../types/dto'; // Adjust path
-import { uploadForumImage, deleteUploadedFile, isAxiosError as isFileAxiosError } from '../../../../api/fileApi'; // Adjust path
+import Select, { SingleValue, StylesConfig } from 'react-select';
+import { ThreadFormData, CategorySelectOption } from '../types/dto';
+import { uploadForumImage, deleteUploadedFile, isAxiosError as isFileAxiosError } from '../../../../api/fileApi';
 import { toast } from 'react-hot-toast';
-import { useAuth } from '../../../../contexts/AuthContext'; // Adjust path
-import { refreshToken as attemptTokenRefresh } from '../../../../api/authApi'; // Adjust path
+import { useAuth } from '../../../../contexts/AuthContext';
+import { refreshToken as attemptTokenRefresh } from '../../../../api/authApi';
 
 interface CreateThreadModalProps {
     isOpen: boolean;
@@ -41,30 +41,30 @@ const CreateThreadModal: React.FC<CreateThreadModalProps> = ({
         availableCategories.map(catTitle => ({ value: catTitle, label: catTitle })),
     [availableCategories]);
 
-    // Styles copied from EditThreadModal.tsx
+    // Styles
     const selectStyles: StylesConfig<CategorySelectOption, false> = {
         control: (base, state) => ({
             ...base,
             fontFamily: 'Nunito, sans-serif',
-            backgroundColor: state.isDisabled ? '#f3f4f6' : '#F6E6FFBF', // Approximation for bg-purple-50/60
-            borderColor: state.isFocused ? '#BF4BF6' : '#BF4BF633', // Approximation for purple-500 focus and purple-300/50
+            backgroundColor: state.isDisabled ? '#f3f4f6' : '#F6E6FFBF',
+            borderColor: state.isFocused ? '#BF4BF6' : '#BF4BF633',
             boxShadow: state.isFocused ? '0 0 0 1px #BF4BF6' : 'none',
-            borderRadius: '0.5rem', // Corresponds to rounded-lg
-            minHeight: '42px', // Adjust to match visual styling if needed
+            borderRadius: '0.5rem',
+            minHeight: '42px',
         }),
         menu: (base) => ({
             ...base,
             fontFamily: 'Nunito, sans-serif',
-            zIndex: 1055 // Ensure dropdown is above other modal content
+            zIndex: 1055
         }),
-        menuPortal: base => ({ ...base, zIndex: 99999 }), // For document.body portal
+        menuPortal: base => ({ ...base, zIndex: 99999 }),
         singleValue: (base) => ({
             ...base,
-            color: '#1B0A3F' // Dark purple for selected text
+            color: '#1B0A3F'
         }),
         placeholder: (base) => ({
             ...base,
-            color: '#52007C99' // Lighter purple for placeholder
+            color: '#52007C99'
         }),
         option: (base, state) => ({
             ...base,
@@ -162,23 +162,42 @@ const CreateThreadModal: React.FC<CreateThreadModalProps> = ({
         if (imageFile && !sessionUploadedImageUrl) {
             setIsProcessingImage(true);
             try {
-                const uploadData = await callFileApiWithRetry<{imageUrl: string; relativePath: string;} | null>(() => uploadForumImage(imageFile));
-                if (!uploadData) { setIsProcessingImage(false); setIsSubmittingForm(false); return; }
-                finalImageUrlForParent = uploadData.imageUrl; finalRelativePathForParent = uploadData.relativePath;
-                setSessionUploadedImageUrl(finalImageUrlForParent); setSessionUploadedRelativePath(finalRelativePathForParent);
+                const uploadData = await callFileApiWithRetry<{imageUrl: string; relativePath: string | null;} | null>(() => uploadForumImage(imageFile));
+                if (!uploadData) { 
+                    setIsProcessingImage(false); 
+                    setIsSubmittingForm(false); 
+                    return; 
+                }
+                
+                console.log('Upload successful, response data:', uploadData);
+                
+                finalImageUrlForParent = uploadData.imageUrl;
+                finalRelativePathForParent = uploadData.relativePath;
+                
+                setSessionUploadedImageUrl(finalImageUrlForParent);
+                setSessionUploadedRelativePath(finalRelativePathForParent);
             } catch (err: any) {
                 setIsProcessingImage(false); setIsSubmittingForm(false);
-                toast.error(isFileAxiosError(err) && err.response?.data?.message ? err.response.data.message : "Image upload failed."); return;
+                toast.error(isFileAxiosError(err) && err.response?.data?.message ? err.response.data.message : "Image upload failed."); 
+                return;
             }
             setIsProcessingImage(false);
         }
 
         const formDataToSubmit: ThreadFormData = {
-            title, content, category: selectedCategoryOption.value,
-            image: null, imageUrl: finalImageUrlForParent, currentRelativePath: finalRelativePathForParent
+            title, 
+            content, 
+            category: selectedCategoryOption.value,
+            image: null, 
+            imageUrl: finalImageUrlForParent, 
+            currentRelativePath: finalRelativePathForParent
         };
 
-        try { await onSubmit(formDataToSubmit); }
+        console.log('Submitting thread with data:', formDataToSubmit);
+
+        try { 
+            await onSubmit(formDataToSubmit); 
+        }
         catch (submitError: any) {
             console.error("CreateModal: Parent onSubmit failed:", submitError);
             if (imageFile && finalRelativePathForParent && finalRelativePathForParent === sessionUploadedRelativePath) {
@@ -230,7 +249,7 @@ const CreateThreadModal: React.FC<CreateThreadModalProps> = ({
                                 options={categoryOptionsForSelect}
                                 isDisabled={isFormBusy || availableCategories.length === 0}
                                 placeholder="Select or type to search..."
-                                isClearable={true} styles={selectStyles} menuPlacement="auto" // Applied styles here
+                                isClearable={true} styles={selectStyles} menuPlacement="auto"
                                 menuPortalTarget={document.body}
                             />
                             {availableCategories.length === 0 && !isFormBusy && <p className="text-xs text-red-500 mt-1">No categories found.</p>}
