@@ -1,3 +1,5 @@
+// Path: src/features/ProjectManager/Employee-assign/components/ProjectDetailsPopup.tsx
+
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { FaTimesCircle, FaLaptopCode } from 'react-icons/fa';
@@ -27,7 +29,7 @@ const ProjectDetailsPopup: React.FC<ProjectDetailsPopupProps> = ({ project, onCl
                         <strong>Status:</strong> {project.status}
                     </p>
                     <p className="text-sm text-[#7A00B8] dark:text-white">
-                        <strong>Deadline:</strong> {project.deadline}
+                        <strong>Deadline:</strong> {new Date(project.deadline).toLocaleDateString()}
                     </p>
                     <p className="text-sm text-[#7A00B8] dark:text-white">
                         <strong>Description:</strong> {project.description}
@@ -39,12 +41,12 @@ const ProjectDetailsPopup: React.FC<ProjectDetailsPopupProps> = ({ project, onCl
                         <div className="flex flex-wrap gap-2">
                             {project.requiredSkills.map((skill) => (
                                 <span
-                                    key={skill}
+                                    key={skill.id}
                                     className="px-3 py-1 text-xs rounded-full bg-white
                                     text-[#52007C] dark:text-[#D68BF9] flex items-center gap-1"
                                 >
                                     <FaLaptopCode className="w-3 h-3" />
-                                    {skill}
+                                    {skill.name}
                                 </span>
                             ))}
                         </div>
@@ -53,9 +55,9 @@ const ProjectDetailsPopup: React.FC<ProjectDetailsPopupProps> = ({ project, onCl
                         <h5 className="text-sm font-semibold text-[#52007C] dark:text-[#D68BF9] mb-2">
                             Required Roles
                         </h5>
-                        {project.initialRequiredRoles.map((roleItem, index) => (
+                        {project.requiredRoles.map((roleItem, index) => (
                             <p key={index} className="text-sm text-[#7A00B8] dark:text-white">
-                                {roleItem.role}: {roleItem.count}
+                                {roleItem.roleName}: {roleItem.count}
                             </p>
                         ))}
                     </div>
@@ -64,20 +66,20 @@ const ProjectDetailsPopup: React.FC<ProjectDetailsPopupProps> = ({ project, onCl
                             Assigned Team Members
                         </h5>
                         {/* Group assignments by employee for easier reading */}
-                        {Object.entries(project.assignedEmployees.reduce((acc, assignment) => {
+                        {Object.entries(project.employeeAssignments.reduce((acc, assignment) => {
                             const employeeId = assignment.employeeId;
                             if (!acc[employeeId]) {
                                 acc[employeeId] = [];
                             }
                             acc[employeeId].push(assignment);
                             return acc;
-                        }, {} as Record<number, typeof project.assignedEmployees>)).map(([employeeId, assignments]) => {
-                            const employee = employees.find(e => e.id === Number(employeeId));
+                        }, {} as Record<string, typeof project.employeeAssignments>)).map(([employeeId, assignments]) => {
+                            const employee = employees.find(e => e.id === employeeId);
                             if (!employee) return null;
                             
                             // Calculate total allocation for this employee in this project
                             const totalAllocation = assignments.reduce((sum, assignment) => 
-                                sum + (assignment.workloadPercentage || 100), 0);
+                                sum + assignment.workloadPercentage, 0);
                             
                             return (
                                 <div key={employeeId} className="mb-2">
@@ -87,7 +89,7 @@ const ProjectDetailsPopup: React.FC<ProjectDetailsPopupProps> = ({ project, onCl
                                     <ul className="pl-6 list-disc">
                                         {assignments.map((assignment, index) => (
                                             <li key={index} className="text-xs text-[#7A00B8] dark:text-[#D68BF9]">
-                                                {assignment.role}: {assignment.workloadPercentage || 100}% allocation
+                                                {assignment.role}: {assignment.workloadPercentage}% allocation
                                             </li>
                                         ))}
                                     </ul>

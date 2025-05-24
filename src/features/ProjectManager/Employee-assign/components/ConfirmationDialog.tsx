@@ -1,3 +1,5 @@
+// Path: src/features/ProjectManager/Employee-assign/components/ConfirmationDialog.tsx
+
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Project, Employee } from '../types/types';
@@ -5,14 +7,12 @@ import { Project, Employee } from '../types/types';
 interface ConfirmationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (employeeAssignments: Record<number, { role: string, workloadPercentage: number }>) => void;
-  selectedEmployees: number[];
+  onConfirm: (employeeAssignments: Record<string, { role: string, workloadPercentage: number }>) => void;
+  selectedEmployees: string[];
   selectedProject: Project | null;
   employees: Employee[];
   projectRoles: string[];
   assignmentError: string;
-  getEmployeeAvailableWorkload: (employeeId: number) => number;
-  calculateEmployeeCurrentWorkload: (employeeId: number) => number;
 }
 
 const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
@@ -23,27 +23,26 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   selectedProject,
   employees,
   projectRoles,
-  assignmentError,
-  getEmployeeAvailableWorkload,
-  calculateEmployeeCurrentWorkload
+  assignmentError
 }) => {
   if (!isOpen) return null;
 
-  const selectedEmployeeData = selectedEmployees.map(empId => employees.find(emp => emp.id === empId)).filter(Boolean);
-  const [employeeAssignments, setEmployeeAssignments] = useState<Record<number, { role: string, workloadPercentage: number }>>({});
+  const selectedEmployeeData = selectedEmployees.map(empId => employees.find(emp => emp.id === empId)).filter(Boolean) as Employee[];
+  const [employeeAssignments, setEmployeeAssignments] = useState<Record<string, { role: string, workloadPercentage: number }>>({});
   const [isConfirmDisabled, setIsConfirmDisabled] = useState(true);
 
   useEffect(() => {
-      const initialAssignments = {} as Record<number, { role: string, workloadPercentage: number }>;
+      const initialAssignments = {} as Record<string, { role: string, workloadPercentage: number }>;
       selectedEmployees.forEach(empId => {
-          const availableWorkload = getEmployeeAvailableWorkload(empId);
+          const employee = employees.find(e => e.id === empId);
+          const availableWorkload = employee ? employee.availableWorkloadPercentage : 100;
           initialAssignments[empId] = { 
               role: "", 
               workloadPercentage: Math.min(100, availableWorkload) 
           };
       });
       setEmployeeAssignments(initialAssignments);
-  }, [isOpen, selectedEmployees, getEmployeeAvailableWorkload]);
+  }, [isOpen, selectedEmployees, employees]);
 
   useEffect(() => {
       const allRolesSelected = selectedEmployees.every(empId => 
@@ -54,7 +53,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
       setIsConfirmDisabled(!allRolesSelected);
   }, [employeeAssignments, selectedEmployees]);
 
-  const handleRoleChange = (employeeId: number, role: string) => {
+  const handleRoleChange = (employeeId: string, role: string) => {
       setEmployeeAssignments(prev => ({
           ...prev,
           [employeeId]: { 
@@ -64,7 +63,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
       }));
   };
   
-  const handleWorkloadChange = (employeeId: number, percentage: number) => {
+  const handleWorkloadChange = (employeeId: string, percentage: number) => {
       setEmployeeAssignments(prev => ({
           ...prev,
           [employeeId]: { 
@@ -101,13 +100,13 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                       </thead>
                       <tbody>
                           {selectedEmployeeData.map(employee => (
-                              <tr key={employee?.id} className="border-b border-[#F6E6FF] dark:border-[#7A00B8]">
-                                  <td className="px-4 py-2 text-sm text-[#52007C] dark:text-white">{employee?.name}</td>
-                                  <td className="px-4 py-2 text-sm text-[#52007C] dark:text-white">{employee?.id}</td>
+                              <tr key={employee.id} className="border-b border-[#F6E6FF] dark:border-[#7A00B8]">
+                                  <td className="px-4 py-2 text-sm text-[#52007C] dark:text-white">{employee.name}</td>
+                                  <td className="px-4 py-2 text-sm text-[#52007C] dark:text-white">{employee.id}</td>
                                   <td className="px-4 py-2">
                                       <select
-                                          value={employee ? employeeAssignments[employee.id]?.role || "" : ""}
-                                          onChange={(e) => employee && handleRoleChange(employee.id, e.target.value)}
+                                          value={employeeAssignments[employee.id]?.role || ""}
+                                          onChange={(e) => handleRoleChange(employee.id, e.target.value)}
                                           className="w-full px-2 py-1 rounded-lg border border-[#F6E6FF] dark:border-[#7A00B8] bg-white dark:bg-[#1B0A3F] text-[#52007C] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] text-sm"
                                           required
                                       >
@@ -118,24 +117,24 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                                       </select>
                                   </td>
                                   <td className="px-4 py-2">
-                                                                              <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-2">
                                           <input
                                               type="number"
                                               min="1"
-                                              max={employee ? getEmployeeAvailableWorkload(employee.id) : 100}
-                                              value={employee ? employeeAssignments[employee.id]?.workloadPercentage || 0 : 0}
-                                              onChange={(e) => employee && handleWorkloadChange(employee.id, parseInt(e.target.value) || 0)}
+                                              max={employee.availableWorkloadPercentage}
+                                              value={employeeAssignments[employee.id]?.workloadPercentage || 0}
+                                              onChange={(e) => handleWorkloadChange(employee.id, parseInt(e.target.value) || 0)}
                                               className={`w-20 px-2 py-1 rounded-lg border border-[#F6E6FF] dark:border-[#7A00B8] 
                                                 bg-white dark:bg-[#1B0A3F] text-[#52007C] dark:text-white 
                                                 focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] text-sm`}
                                               required
-                                              disabled={employee && getEmployeeAvailableWorkload(employee.id) <= 0}
+                                              disabled={employee.availableWorkloadPercentage <= 0}
                                           />
                                           <span className="text-sm text-[#52007C] dark:text-white">%</span>
                                           
-                                          {employee && getEmployeeAvailableWorkload(employee.id) > 0 ? (
+                                          {employee.availableWorkloadPercentage > 0 ? (
                                             <span className="text-xs px-2 py-1 bg-green-50 text-green-600 rounded-full">
-                                              Available: {getEmployeeAvailableWorkload(employee.id)}%
+                                              Available: {employee.availableWorkloadPercentage}%
                                             </span>
                                           ) : (
                                             <span className="text-xs px-2 py-1 bg-red-50 text-red-500 rounded-full">

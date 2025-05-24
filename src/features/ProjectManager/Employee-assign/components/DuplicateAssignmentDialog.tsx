@@ -1,3 +1,5 @@
+// Path: src/features/ProjectManager/Employee-assign/components/DuplicateAssignmentDialog.tsx
+
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Project, Employee } from '../types/types';

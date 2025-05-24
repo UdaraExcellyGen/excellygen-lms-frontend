@@ -1,3 +1,5 @@
+// Path: src/features/ProjectManager/Employee-assign/components/ProjectCard.tsx
+
 import React from 'react';
 import { FaProjectDiagram, FaChevronUp, FaChevronDown, FaUserCircle, FaTrashAlt, FaLaptopCode } from 'react-icons/fa';
 import { Project, Employee } from '../types/types';
@@ -8,8 +10,8 @@ interface ProjectCardProps {
   isExpanded: boolean;
   employees: Employee[];
   handleProjectSelect: (project: Project) => void;
-  toggleProjectExpansion: (projectId: number) => void;
-  triggerRemoveConfirmation: (projectId: number, employeeId: number, employeeName: string, projectName: string) => void;
+  toggleProjectExpansion: (projectId: string) => void;
+  triggerRemoveConfirmation: (projectId: string, employeeId: string, employeeName: string, projectName: string) => void;
 }
 
 const ProjectCard: React.FC<ProjectCardProps> = ({ 
@@ -22,7 +24,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   triggerRemoveConfirmation
 }) => {
   const getRoleCount = (roleName: string) => {
-    return project.assignedEmployees.filter(assignment => assignment.role === roleName).length;
+    return project.employeeAssignments.filter(assignment => assignment.role === roleName).length;
   };
 
   return (
@@ -69,7 +71,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                   {project.status === "Active" ? "Active" : "Completed"}
                 </span>
                 <span>•</span>
-                <span>{project.deadline}</span>
+                <span>{new Date(project.deadline).toLocaleDateString()}</span>
               </div>
               <p className="text-sm text-[#7A00B8] dark:text-[#D68BF9] mt-1">
                 {project.shortDescription}
@@ -100,7 +102,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-semibold text-[#52007C] dark:text-white">
-                    {project.deadline}
+                    {new Date(project.deadline).toLocaleDateString()}
                   </span>
                 </div>
               </div>
@@ -112,11 +114,11 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 <div className="flex flex-wrap gap-2">
                   {project.requiredSkills.map((skill) => (
                     <span
-                      key={skill}
+                      key={skill.id}
                       className="px-3 py-1 text-xs rounded-md bg-purple-100 text-purple-800 border border-purple-300 flex items-center gap-2 group"
                     >
                       <FaLaptopCode className="w-3 h-3" />
-                      <span>{skill}</span>
+                      <span>{skill.name}</span>
                     </span>
                   ))}
                 </div>
@@ -128,16 +130,16 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 Required Roles
               </h5>
               <div className="space-y-2 p-4 rounded-lg bg-[#F6E6FF]">
-                {project.initialRequiredRoles.map((roleItem, index) => {
-                  const assignedCount = getRoleCount(roleItem.role);
+                {project.requiredRoles.map((roleItem, index) => {
+                  const assignedCount = getRoleCount(roleItem.roleName);
                   const remainingCount = Math.max(0, roleItem.count - assignedCount);
                   return (
                     <div key={index} className="flex justify-between text-sm">
                       <span className="text-[#7A00B8] dark:text-[#D68BF9]">
-                        {roleItem.role}:
+                        {roleItem.roleName}:
                       </span>
                       <span className="font-medium text-[#52007C] dark:text-white">
-                        Needed: {remainingCount} (Initial: {project.initialRequiredRoles[index].count})
+                        Needed: {remainingCount} (Total: {roleItem.count})
                       </span>
                     </div>
                   );
@@ -147,30 +149,30 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
 
             <div>
               <h5 className="text-sm font-semibold text-[#52007C] dark:text-[#D68BF9] mb-3">
-                Team Members ({project.assignedEmployees.length})
+                Team Members ({project.employeeAssignments.length})
               </h5>
               
-              {project.assignedEmployees.length > 0 && (
+              {project.employeeAssignments.length > 0 && (
                 <div className="mb-4 p-4 rounded-lg bg-[#F6E6FF]">
                   <h6 className="text-sm font-semibold text-[#52007C] dark:text-[#D68BF9] mb-2">
                     Workload Distribution
                   </h6>
                   <div className="space-y-3">
                     {/* Group assignments by employee */}
-                    {Object.entries(project.assignedEmployees.reduce((acc, assignment) => {
+                    {Object.entries(project.employeeAssignments.reduce((acc, assignment) => {
                       const employeeId = assignment.employeeId;
                       if (!acc[employeeId]) {
                         acc[employeeId] = [];
                       }
                       acc[employeeId].push(assignment);
                       return acc;
-                    }, {} as Record<number, typeof project.assignedEmployees>)).map(([employeeId, assignments]) => {
-                      const employee = employees.find(e => e.id === Number(employeeId));
+                    }, {} as Record<string, typeof project.employeeAssignments>)).map(([employeeId, assignments]) => {
+                      const employee = employees.find(e => e.id === employeeId);
                       if (!employee) return null;
                       
                       // Calculate total allocation for this employee in this project
                       const totalAllocation = assignments.reduce((sum, assignment) => 
-                        sum + (assignment.workloadPercentage || 100), 0);
+                        sum + assignment.workloadPercentage, 0);
                       
                       return (
                         <div key={`workload-${employeeId}`} className="space-y-1">
@@ -187,7 +189,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                           <div className="pl-2 flex flex-wrap gap-2 mt-1">
                             {assignments.map((assignment, index) => (
                               <div key={index} className="text-xs px-2 py-1 bg-white rounded-full">
-                                {assignment.role}: {assignment.workloadPercentage || 100}%
+                                {assignment.role}: {assignment.workloadPercentage}%
                               </div>
                             ))}
                           </div>
@@ -200,7 +202,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
               
               <div className="grid grid-cols-2 gap-2 p-4 rounded-lg bg-[#F6E6FF]">
                 {/* Show each assignment separately */}
-                {project.assignedEmployees.map((assignment) => {
+                {project.employeeAssignments.map((assignment) => {
                   const employee = employees.find((e) => e.id === assignment.employeeId);
                   return employee ? (
                     <div
@@ -213,10 +215,10 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                         </div>
                         <div>
                           <span className="text-sm font-medium text-[#52007C] dark:text-white">
-                            {employee.name}
+                            {assignment.employeeName}
                           </span>
                           <p className="text-xs text-[#7A00B8] dark:text-[#D68BF9]">
-                            {assignment.role} • {assignment.workloadPercentage || 100}% allocation
+                            {assignment.role} • {assignment.workloadPercentage}% allocation
                           </p>
                           <span className="text-xs text-[#7A00B8] dark:text-[#D68BF9]">(ID: {employee.id})</span>
                         </div>
@@ -224,7 +226,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          triggerRemoveConfirmation(project.id, assignment.employeeId, employee.name, project.name);
+                          triggerRemoveConfirmation(project.id, assignment.employeeId, assignment.employeeName, project.name);
                         }}
                         className="px-2 py-1 hover:bg-[#F6E6FF] dark:hover:bg-[#1B0A3F]
                           rounded transition-colors text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-500"

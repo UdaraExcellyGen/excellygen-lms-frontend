@@ -1,3 +1,5 @@
+// Path: src/features/ProjectManager/Employee-assign/components/EmployeeCard.tsx
+
 import React from 'react';
 import { FaUserCircle, FaBriefcase, FaCertificate, FaGraduationCap, FaProjectDiagram, FaRegFileCode, FaLaptopCode } from 'react-icons/fa';
 import { Employee, Project } from '../types/types';
@@ -6,9 +8,9 @@ interface EmployeeCardProps {
   employee: Employee;
   isSelected: boolean;
   projects: Project[];
-  handleEmployeeSelect: (id: number) => void;
+  handleEmployeeSelect: (id: string) => void;
   handleOpenProjectDetails: (project: Project) => void;
-  calculateWorkload: (employeeId: number) => number;
+  isDisabled: boolean;
 }
 
 const EmployeeCard: React.FC<EmployeeCardProps> = ({ 
@@ -17,7 +19,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
   projects,
   handleEmployeeSelect,
   handleOpenProjectDetails,
-  calculateWorkload
+  isDisabled
 }) => {
   const assignedProjectsDetails = employee.activeProjects
     .map(projectName => projects.find(project => project.name === projectName))
@@ -25,12 +27,12 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
 
   return (
     <div
-      onClick={() => handleEmployeeSelect(employee.id)}
+      onClick={() => !isDisabled && handleEmployeeSelect(employee.id)}
       className={`group rounded-xl transition-all cursor-pointer hover:shadow-lg bg-white
         ${isSelected
           ? 'border-2 border-[#F6E6FF] overflow-hidden'
           : 'p-6 border-2 border-[#F6E6FF] dark:border-[#7A00B8] hover:border-[#D68BF9]'
-        }`}
+        } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       {isSelected && (
         <div className="bg-[#BF4BF6] p-2 text-white text-xs font-bold text-center">
@@ -61,13 +63,13 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
             {/* Workload progress bar */}
             <div className="flex items-center gap-2 mt-1">
               <div className="flex items-center gap-1 px-2 py-0.5 bg-[#F6E6FF] rounded-full">
-                <span className="text-xs text-[#52007C] font-medium">Workload: {calculateWorkload(employee.id)}%</span>
+                <span className="text-xs text-[#52007C] font-medium">Workload: {employee.currentWorkloadPercentage}%</span>
               </div>
-              {calculateWorkload(employee.id) >= 100 ? (
+              {employee.currentWorkloadPercentage >= 100 ? (
                 <span className="text-xs text-red-600 font-medium px-2 py-0.5 bg-red-50 rounded-full">Fully allocated</span>
               ) : (
                 <span className="text-xs text-green-600 font-medium px-2 py-0.5 bg-green-50 rounded-full">
-                  {100 - calculateWorkload(employee.id)}% available
+                  {employee.availableWorkloadPercentage}% available
                 </span>
               )}
             </div>
@@ -75,8 +77,8 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
             {/* Show progress bar for workload */}
             <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mt-2">
               <div 
-                className={`h-full ${calculateWorkload(employee.id) >= 100 ? 'bg-red-500' : 'bg-gradient-to-r from-purple-700 to-purple-400'}`}
-                style={{ width: `${Math.min(calculateWorkload(employee.id), 100)}%` }}
+                className={`h-full ${employee.currentWorkloadPercentage >= 100 ? 'bg-red-500' : 'bg-gradient-to-r from-purple-700 to-purple-400'}`}
+                style={{ width: `${Math.min(employee.currentWorkloadPercentage, 100)}%` }}
               />
             </div>
           </div>
@@ -97,11 +99,11 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
         <div className="w-1/2">
           <h6 className="text-sm font-semibold text-[#7A00B8] dark:text-[#D68BF9] mb-2 flex items-center gap-2">
             <FaCertificate className="w-4 h-4" />
-            Certifications & Courses
+            Current Assignments
           </h6>
-          {employee.coursesCompleted.length > 0 ? (
+          {employee.currentAssignments.length > 0 ? (
             <div className="grid grid-cols-1 gap-2">
-              {employee.coursesCompleted.map((course, index) => (
+              {employee.currentAssignments.map((assignment, index) => (
                 <div
                   key={index}
                   className="p-2 rounded-lg bg-white
@@ -109,14 +111,14 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <FaGraduationCap className="w-4 h-4 text-[#BF4BF6] dark:text-[#D68BF9]" />
-                    {course}
+                    {assignment.projectName} - {assignment.role} ({assignment.workloadPercentage}%)
                   </div>
                 </div>
               ))}
             </div>
           ) : (
             <p className="text-sm italic text-[#7A00B8] dark:text-[#D68BF9]">
-              No certifications yet
+              No current assignments
             </p>
           )}
         </div>
@@ -124,7 +126,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
         <div className="w-1/2">
           <h6 className="text-sm font-semibold text-[#7A00B8] dark:text-[#D68BF9] mb-2 flex items-center gap-2">
             <FaProjectDiagram className="w-4 h-4" />
-            Assigned Projects
+            Active Projects
           </h6>
           {assignedProjectsDetails.length > 0 ? (
             <div className="grid grid-cols-1 gap-2">

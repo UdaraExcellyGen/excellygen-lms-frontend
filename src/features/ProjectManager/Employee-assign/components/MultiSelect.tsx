@@ -1,3 +1,5 @@
+// Path: src/features/ProjectManager/Employee-assign/components/MultiSelect.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { FaChevronDown } from 'react-icons/fa';
@@ -32,8 +34,8 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ value, onChange, options, dar
             updateDropdownPosition();
             window.addEventListener('resize', updateDropdownPosition);
             window.addEventListener('scroll', updateDropdownPosition);
-            const handleClickOutside = (event) => {
-                if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
+            const handleClickOutside = (event: any) => {
+                if (dropdownRef.current && !(dropdownRef.current as any).contains(event.target) &&
                     buttonRef.current && !buttonRef.current.contains(event.target)) {
                     setIsOpen(false);
                 }
@@ -51,14 +53,14 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ value, onChange, options, dar
         setIsOpen(!isOpen);
     };
 
-    const handleSkillToggle = (skill) => {
+    const handleSkillToggle = (skill: string) => {
         const newValue = value.includes(skill)
             ? value.filter(s => s !== skill)
             : [...value, skill];
         onChange(newValue);
     };
 
-    const clearSelection = (e) => {
+    const clearSelection = (e: React.MouseEvent) => {
         e.stopPropagation();
         onChange([]);
     };
@@ -93,14 +95,6 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ value, onChange, options, dar
                         paddingRight: '1rem',
                         scrollbarWidth: 'thin',
                         scrollbarColor: darkMode ? '#7A00B8 #34137C' : '#D68BF9 #F6E6FF',
-                        '--webkit-scrollbar': '8px',
-                        '--webkit-scrollbar-track-background': darkMode ? '#34137C' : '#F6E6FF',
-                        '--webkit-scrollbar-track-border-radius': '10px',
-                        '--webkit-scrollbar-thumb-background': darkMode ? '#7A00B8' : '#D68BF9',
-                        '--webkit-scrollbar-thumb-border-radius': '10px',
-                        '--webkit-scrollbar-thumb-border': '2px solid transparent',
-                        '--webkit-scrollbar-thumb-background-clip': 'content-box',
-                        '--webkit-scrollbar-thumb-hover-background': darkMode ? '#BF4BF6' : '#BF4BF6',
                     }}
                     className="bg-white dark:bg-[#34137C] rounded-lg shadow-lg
                   border border-[#F6E6FF] dark:border-[#7A00B8]"

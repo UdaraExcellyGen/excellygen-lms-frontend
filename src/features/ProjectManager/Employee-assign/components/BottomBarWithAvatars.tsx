@@ -1,8 +1,10 @@
+// Path: src/features/ProjectManager/Employee-assign/components/BottomBarWithAvatars.tsx
+
 import React from 'react';
 import { Project, Employee } from '../types/types';
 
 interface BottomBarWithAvatarsProps {
-  selectedEmployees: number[];
+  selectedEmployees: string[];
   selectedProject: Project | null;
   employees: Employee[];
   handleAssignEmployees: () => void;
