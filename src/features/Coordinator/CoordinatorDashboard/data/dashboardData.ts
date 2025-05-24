@@ -16,7 +16,7 @@ export const getQuickActions = (navigate: (path: string) => void): QuickAction[]
     text: 'Create New Course', 
     color: 'bg-[#03045e]',
     hoverColor: 'hover:scale-105',
-    onClick: () => navigate('/coordinator/course-details')
+    onClick: () => navigate('/coordinator/course-details/${createdCourse.id}')
   },
   { 
     text: 'View Students', 

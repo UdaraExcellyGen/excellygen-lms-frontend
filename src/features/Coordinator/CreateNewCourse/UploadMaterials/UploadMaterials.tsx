@@ -1,8 +1,12 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+// features/Coordinator/CreateNewCourse/UploadMaterials/UploadMaterials.tsx
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
+
 import { useCourseContext } from '../../contexts/CourseContext';
-import { Subtopic, MaterialFile } from './types/index'; // Import interfaces from types/index.ts
+import { SubtopicFE, ExistingMaterialFile, CourseDocumentDto, LessonDto, UpdateLessonPayload } from '../../../../types/course.types'; // Adjust path
+import { getCourseById, addLesson, updateLesson, deleteLesson, uploadDocument, deleteDocument } from '../../../../api/services/Course/courseService'; // Adjust path
+
 import Header from './components/Header';
 import ProgressBar from './components/ProgressBar';
 import SubtopicItem from './components/SubtopicItem';
@@ -10,356 +14,407 @@ import BottomNavigation from './components/BottomNavigation';
 
 const UploadMaterials: React.FC = () => {
     const navigate = useNavigate();
-    const { courseData, updateCourseMaterials } = useCourseContext();
+    const { courseId: courseIdParam } = useParams<{ courseId: string }>();
+    const {
+        courseData,
+        setLessonsState,
+        setLessonsLoaded,
+        addLessonToState,
+        updateLessonInState,
+        removeLessonFromState,
+        addDocumentToLessonState,
+        removeDocumentFromLessonState,
+        setCreatedCourseId // Ensure this is destructured from useCourseContext
+    } = useCourseContext();
 
-    const [subtopics, setSubtopics] = useState<Subtopic[]>(courseData.materials);
-    const [materialsSaved, setMaterialsSaved] = useState<boolean>(false);
-    const [pendingUploadFiles, setPendingUploadFiles] = useState<Record<string, File[]>>({});
-    const [subtopicErrorMessages, setSubtopicErrorMessages] = useState<Record<string, string>>({});
-    const [expandedSubtopics, setExpandedSubtopics] = useState<Record<string, boolean>>({});
-    const [showUploadSections, setShowUploadSections] = useState<string | null>(null);
-    const [hasUploadedDocuments, setHasUploadedDocuments] = useState<string | null>(null);
-    const [showSavedMaterialsSection, setShowSavedMaterialsSection] = useState<boolean>(false);
+    const [isLoadingPage, setIsLoadingPage] = useState(true);
+    const [isSubmittingAction, setIsSubmittingAction] = useState(false);
+    const [pendingUploadFiles, setPendingUploadFiles] = useState<Record<number, File[]>>({});
+    const [subtopicErrorMessages, setSubtopicErrorMessages] = useState<Record<number, string>>({});
+    const [expandedSubtopics, setExpandedSubtopics] = useState<Record<number, boolean>>({});
+    const [showUploadSections, setShowUploadSections] = useState<number | null>(null);
+    const [isDraggingDocsPerLesson, setIsDraggingDocsPerLesson] = useState<Record<number, boolean>>({});
 
+    const courseId = courseIdParam ? parseInt(courseIdParam, 10) : null;
 
     useEffect(() => {
-        const updatedQuizData = sessionStorage.getItem('updatedQuizData');
-        if (updatedQuizData) {
-            try {
-                const { subtopicId, quizBankData } = JSON.parse(updatedQuizData);
-
-                setSubtopics(prevSubtopics => {
-                    return prevSubtopics.map(subtopic => {
-                        if (subtopic.id === subtopicId) {
-                            const quizMaterial: MaterialFile = {
-                                id: Math.random().toString(36).substr(2, 9),
-                                name: quizBankData.quizDetails.title || 'Unnamed Quiz',
-                                type: 'quiz',
-                                file: null,
-                                quizId: Math.random().toString(36).substr(2, 9)
-                            };
-
-                            const existingQuizIndex = subtopic.materials.findIndex(m => m.type === 'quiz');
-                            const updatedMaterials = [...subtopic.materials];
-
-                            if (existingQuizIndex >= 0) {
-                                updatedMaterials[existingQuizIndex] = {
-                                    ...updatedMaterials[existingQuizIndex],
-                                    name: quizBankData.quizDetails.title || 'Unnamed Quiz'
-                                };
-                            } else {
-                                updatedMaterials.push(quizMaterial);
-                            }
-
-                            return {
-                                ...subtopic,
-                                hasQuiz: true,
-                                quizBank: quizBankData,
-                                materials: updatedMaterials
-                            };
-                        }
-                        return subtopic;
-                    });
-                });
-                sessionStorage.removeItem('updatedQuizData');
-            } catch (error) {
-                console.error('Error parsing updated quiz data:', error);
+        let isMounted = true;
+        if (courseId) {
+            if (courseData.createdCourseId !== courseId) {
+                setCreatedCourseId(courseId); // Sync context with current URL's course ID
             }
+
+            // Load lessons if not loaded for *this* courseId, or if context just got synced to this ID
+            if (!courseData.lessonsLoaded || courseData.createdCourseId !== courseId) {
+                setIsLoadingPage(true);
+                const fetchCourseData = async () => {
+                    if (!isMounted) return;
+                    try {
+                        console.log(`UploadMaterials: Fetching data for course ID: ${courseId}`);
+                        const fetchedCourse = await getCourseById(courseId);
+                        if (isMounted) {
+                            const mappedLessons: SubtopicFE[] = fetchedCourse.lessons.map(l => ({
+                                id: l.id, lessonName: l.lessonName, lessonPoints: l.lessonPoints,
+                                courseId: l.courseId,
+                                documents: l.documents.map(d => ({
+                                    id: d.id, name: d.name, type: 'document', fileUrl: d.fileUrl,
+                                    documentType: d.documentType, fileSize: d.fileSize, lessonId: d.lessonId
+                                })),
+                                isEditing: false, originalName: l.lessonName, originalPoints: l.lessonPoints ?? 1
+                            }));
+                            setLessonsState(mappedLessons);
+                            setLessonsLoaded(true);
+                            const initialExpanded: Record<number, boolean> = {};
+                            mappedLessons.forEach(l => initialExpanded[l.id] = true);
+                            setExpandedSubtopics(initialExpanded);
+                            console.log("UploadMaterials: Initial lessons data loaded:", mappedLessons);
+                        }
+                    } catch (error) {
+                        if (isMounted) {
+                            console.error("UploadMaterials: Failed to fetch course data:", error);
+                            toast.error("Failed to load course materials. Please try again or navigate back.");
+                        }
+                    } finally {
+                        if (isMounted) setIsLoadingPage(false);
+                    }
+                };
+                fetchCourseData();
+            } else {
+                // Lessons for this course ID are already in context and marked as loaded
+                if (isMounted) setIsLoadingPage(false);
+                if (Object.keys(expandedSubtopics).length === 0 && courseData.lessons.length > 0) {
+                    const initialExpanded: Record<number, boolean> = {};
+                    courseData.lessons.forEach(l => initialExpanded[l.id] = true);
+                    setExpandedSubtopics(initialExpanded);
+                }
+            }
+        } else {
+            if (isMounted) {
+                console.error("UploadMaterials: No valid course ID found in URL.");
+                toast.error("No course specified. Redirecting...");
+                setIsLoadingPage(false);
+                navigate('/coordinator/dashboard');
+            }
+        }
+        return () => { isMounted = false; };
+    }, [courseId, courseData.createdCourseId, courseData.lessonsLoaded, setLessonsState, setLessonsLoaded, setCreatedCourseId, navigate]);
+
+
+    const toggleSubtopicExpand = useCallback((lessonId: number) => {
+        setExpandedSubtopics(prev => ({ ...prev, [lessonId]: !prev[lessonId] }));
+    }, []);
+
+    // Modified handleAddNewSubtopic function in UploadMaterials.tsx
+const handleAddNewSubtopic = useCallback(async () => {
+    if (!courseId) { toast.error("Course ID is missing to add a subtopic."); return; }
+    setIsSubmittingAction(true);
+    const loadingToast = toast.loading("Adding new subtopic...");
+    try {
+        const payload = { courseId, lessonName: "New Subtopic", lessonPoints: 1 };
+        const newLessonDto = await addLesson(payload);
+        const newSubtopic: SubtopicFE = {
+            id: newLessonDto.id, lessonName: newLessonDto.lessonName, lessonPoints: newLessonDto.lessonPoints,
+            courseId: newLessonDto.courseId, documents: [], isEditing: true, // Set isEditing to true
+            originalName: newLessonDto.lessonName, originalPoints: newLessonDto.lessonPoints,
+        };
+        addLessonToState(newSubtopic);
+        setExpandedSubtopics(prev => ({ ...prev, [newLessonDto.id]: true })); // Expand new subtopic
+        setShowUploadSections(null); // Close any open upload sections
+        toast.dismiss(loadingToast);
+        toast.success("Subtopic added successfully.");
+    } catch (error) {
+        console.error("Failed to add subtopic:", error);
+        toast.dismiss(loadingToast);
+        // Error message likely handled by apiClient interceptor
+    } finally {
+        setIsSubmittingAction(false);
+    }
+}, [courseId, addLessonToState]);
+
+    const handleSubtopicInputChangeInternal = useCallback((lessonId: number, field: 'lessonName' | 'lessonPoints', value: string) => {
+        setLessonsState(
+            courseData.lessons.map(l => {
+                if (l.id === lessonId) {
+                    if (field === 'lessonPoints') {
+                        // Keep as string for input, parse to number on save/blur
+                        return { ...l, lessonPoints: value === '' ? 0 : Number(value) }; // Store as number or 0 if empty string
+                    }
+                    return { ...l, [field]: value };
+                }
+                return l;
+            })
+        );
+    }, [courseData.lessons, setLessonsState]);
+
+    const handleToggleEditSubtopicInternal = useCallback((lessonId: number, startEditing: boolean) => {
+        setLessonsState(
+            courseData.lessons.map(l => {
+                if (l.id === lessonId) {
+                    if (startEditing) {
+                        return { ...l, isEditing: true, originalName: l.lessonName, originalPoints: l.lessonPoints };
+                    } else { // Cancel edit
+                        return { ...l, isEditing: false, lessonName: l.originalName ?? l.lessonName, lessonPoints: l.originalPoints ?? l.lessonPoints };
+                    }
+                }
+                return l;
+            })
+        );
+    }, [courseData.lessons, setLessonsState]);
+
+    const handleSaveChangesSubtopicInternal = useCallback(async (lessonId: number) => {
+        const subtopicToSave = courseData.lessons.find(l => l.id === lessonId);
+        if (!subtopicToSave || !subtopicToSave.isEditing) return;
+
+        const lessonName = subtopicToSave.lessonName.trim();
+        // Ensure lessonPoints is treated as a number; if it was stored as string from input, parse it
+        let lessonPoints = Number(subtopicToSave.lessonPoints);
+
+        if (!lessonName) {
+            toast.error("Subtopic name cannot be empty.");
+            return;
+        }
+        if (isNaN(lessonPoints) || lessonPoints < 1 || lessonPoints > 100) {
+            toast.error("Points must be a whole number between 1 and 100.");
+            // Optionally revert UI points to original or a valid default
+            setLessonsState(
+                courseData.lessons.map(l =>
+                    l.id === lessonId ? { ...l, lessonPoints: l.originalPoints ?? 1 } : l
+                )
+            );
+            return;
+        }
+
+        setIsSubmittingAction(true);
+        const loadingToast = toast.loading(`Saving changes for "${lessonName}"...`);
+        try {
+            const payload: UpdateLessonPayload = { lessonName, lessonPoints };
+            const updatedLessonDto = await updateLesson(lessonId, payload);
+            updateLessonInState({ // updateLessonInState is from context
+                ...subtopicToSave,
+                lessonName: updatedLessonDto.lessonName,
+                lessonPoints: updatedLessonDto.lessonPoints,
+                isEditing: false,
+                originalName: updatedLessonDto.lessonName, // Update original values
+                originalPoints: updatedLessonDto.lessonPoints,
+            });
+            toast.dismiss(loadingToast);
+            toast.success("Changes saved successfully.");
+        } catch (error) {
+            console.error("Failed to save subtopic changes:", error);
+            toast.dismiss(loadingToast);
+            // Revert UI changes on API error
+            setLessonsState(
+                courseData.lessons.map(l =>
+                    l.id === lessonId ? {
+                        ...l,
+                        isEditing: false, // Exit editing mode
+                        lessonName: l.originalName!, // Revert to original
+                        lessonPoints: l.originalPoints! // Revert to original
+                    } : l
+                )
+            );
+        } finally {
+            setIsSubmittingAction(false);
+        }
+    }, [courseData.lessons, updateLessonInState, setLessonsState]);
+
+    const handleRemoveSubtopicConfirmInternal = useCallback(async (lessonId: number, lessonName: string) => {
+        if (!window.confirm(`Are you sure you want to delete the subtopic "${lessonName}" and all its materials? This action cannot be undone.`)) return;
+        setIsSubmittingAction(true);
+        const loadingToast = toast.loading(`Deleting "${lessonName}"...`);
+        try {
+            await deleteLesson(lessonId);
+            removeLessonFromState(lessonId); // Update context state
+            toast.dismiss(loadingToast);
+            toast.success(`Subtopic "${lessonName}" deleted successfully.`);
+        } catch (error) {
+            console.error(`Failed to delete subtopic ${lessonId}:`, error);
+            toast.dismiss(loadingToast);
+        } finally {
+            setIsSubmittingAction(false);
+        }
+    }, [removeLessonFromState]);
+
+    const handleToggleUploadSection = useCallback((lessonId: number) => {
+        setShowUploadSections(prev => (prev === lessonId ? null : lessonId));
+        setSubtopicErrorMessages(prev => ({ ...prev, [lessonId]: '' }));
+    }, []);
+
+    const addFilesToPending = useCallback((files: File[], lessonId: number) => {
+        const validFiles: File[] = []; let errorMsg = '';
+        const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        const maxSizeMB = 5; const maxSizeByte = maxSizeMB * 1024 * 1024;
+
+        files.forEach(file => {
+            if (!allowedTypes.includes(file.type)) errorMsg += `Invalid file type: "${file.name}". Only PDF, DOC, DOCX allowed.\n`;
+            else if (file.size > maxSizeByte) errorMsg += `File too large: "${file.name}". Max size is ${maxSizeMB}MB.\n`;
+            else validFiles.push(file);
+        });
+        setSubtopicErrorMessages(prev => ({ ...prev, [lessonId]: errorMsg.trim() || '' }));
+        if (validFiles.length > 0) {
+            setPendingUploadFiles(prev => ({ ...prev, [lessonId]: [...(prev[lessonId] || []), ...validFiles] }));
         }
     }, []);
 
-    const toggleSubtopic = (subtopicId: string) => {
-        setExpandedSubtopics(prev => ({
-            ...prev,
-            [subtopicId]: !prev[subtopicId],
-        }));
-    };
-
-    const handleCreateQuizClickForSubtopic = (subtopicId: string) => {
-        navigate('/coordinator/quiz-creator', {
-            state: {
-                subtopicId,
-                fromUploadMaterials: true
-            }
-        });
-    };
-
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>, type: 'document' | 'video', subtopicIndex: number, subtopicId: string) => {
+    const handleFileDropInternal = useCallback((e: React.DragEvent<HTMLDivElement>, lessonId: number) => {
         e.preventDefault();
-        const droppedFiles = Array.from(e.dataTransfer.files);
-        let validFiles: File[] = [];
-        let invalidFiles: File[] = [];
+        setIsDraggingDocsPerLesson(prev => ({ ...prev, [lessonId]: false }));
+        addFilesToPending(Array.from(e.dataTransfer.files), lessonId);
+    }, [addFilesToPending]);
 
-        droppedFiles.forEach(file => {
-            const isValidFileType = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type);
-            if (isValidFileType) {
-                validFiles.push(file);
-            } else {
-                invalidFiles.push(file);
-                setSubtopicErrorMessages(prevErrors => ({
-                    ...prevErrors,
-                    [subtopicId]: `Invalid file type: "${file.name}". Only PDF and Word documents are allowed.`,
-                }));
-            }
-        });
-
-        if (validFiles.length > 0) {
-            setPendingUploadFiles(prev => ({
-                ...prev,
-                [subtopicId]: [...(prev[subtopicId] || []), ...validFiles]
-            }));
-            setSubtopicErrorMessages(prevErrors => {
-                const updatedErrors = { ...prevErrors };
-                delete updatedErrors[subtopicId];
-                return updatedErrors;
-            });
-        }
-    };
-
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'document' | 'video', subtopicIndex: number, subtopicId: string) => {
+    const handleFileSelectInternal = useCallback((e: React.ChangeEvent<HTMLInputElement>, lessonId: number) => {
         if (e.target.files) {
-            const files = Array.from(e.target.files);
-            setPendingUploadFiles(prev => ({
-                ...prev,
-                [subtopicId]: [...(prev[subtopicId] || []), ...files]
-            }));
-            e.target.value = '';
+            addFilesToPending(Array.from(e.target.files), lessonId);
+            e.target.value = ''; // Reset file input
         }
-    };
+    }, [addFilesToPending]);
 
-    const addSubtopicFiles = (files: File[], type: 'document' | 'video', subtopicIndex: number, subtopicId: string) => {
-        let isValidUpload = true;
-        setSubtopics(prevSubtopics => {
-            const updatedSubtopics = [...prevSubtopics];
-            const currentMaterials = updatedSubtopics[subtopicIndex].materials;
-            const validFiles = files.filter(file => {
-                const isValidFileType = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type);
-                if (!isValidFileType) {
-                    setSubtopicErrorMessages(prevErrors => ({
-                        ...prevErrors,
-                        [subtopicId]: `Invalid file type: "${file.name}". Only PDF and Word documents are allowed for ${subtopics[subtopicIndex].title}.`,
-                    }));
-                    isValidUpload = false;
-                    return false;
-                }
-                return true;
-            });
+    const handleRemovePendingFileInternal = useCallback((fileName: string, lessonId: number) => {
+        setPendingUploadFiles(prev => ({ ...prev, [lessonId]: (prev[lessonId] || []).filter(f => f.name !== fileName) }));
+    }, []);
 
-            if (!isValidUpload) {
-                return prevSubtopics;
+    const handleUploadPendingFilesActionInternal = useCallback(async (lessonId: number) => {
+        const filesToUpload = pendingUploadFiles[lessonId] || [];
+        if (filesToUpload.length === 0) { toast.error("No valid documents selected to upload."); return; }
+
+        setIsSubmittingAction(true);
+        const fileNamesForToast = filesToUpload.map(f => f.name).join(', ');
+        const loadingToastId = toast.loading(`Uploading ${filesToUpload.length} document(s): ${fileNamesForToast}...`);
+        let successCount = 0; let errorCount = 0;
+
+        for (const file of filesToUpload) {
+            try {
+                const docDto = await uploadDocument(lessonId, file);
+                const newDoc: ExistingMaterialFile = {
+                    id: docDto.id, name: docDto.name, type: 'document', fileUrl: docDto.fileUrl,
+                    documentType: docDto.documentType, fileSize: docDto.fileSize, lessonId: docDto.lessonId
+                };
+                addDocumentToLessonState(lessonId, newDoc);
+                successCount++;
+            } catch (err) {
+                errorCount++;
+                console.error(`Failed to upload ${file.name}:`, err);
+                toast.error(`Upload failed for ${file.name}.`);
+                // No need to re-throw if individual toasts are shown
             }
-
-            updatedSubtopics[subtopicIndex] = {
-                ...updatedSubtopics[subtopicIndex],
-                materials: [...currentMaterials, ...validFiles.map(file => ({
-                    id: Math.random().toString(36).substr(2, 9),
-                    name: file.name,
-                    type,
-                    file,
-                }))]
-            };
-            return updatedSubtopics;
-        });
-        if (isValidUpload) {
-            setMaterialsSaved(false);
-            setHasUploadedDocuments(subtopics[subtopicIndex].id);
-            setSubtopicErrorMessages(prevErrors => {
-                const updatedErrors = { ...prevErrors };
-                delete updatedErrors[subtopicId];
-                return updatedErrors;
-            });
+        }
+        toast.dismiss(loadingToastId);
+        if (successCount > 0) toast.success(`${successCount} document(s) uploaded successfully.`);
+        if (errorCount === 0) {
+            setPendingUploadFiles(prev => { const updated = { ...prev }; delete updated[lessonId]; return updated; });
+            setShowUploadSections(null); // Close upload section on full success
+            setSubtopicErrorMessages(prev => ({ ...prev, [lessonId]: '' }));
         } else {
-            setMaterialsSaved(false);
+            setSubtopicErrorMessages(prev => ({ ...prev, [lessonId]: `${errorCount} upload(s) failed. Please review and retry.` }));
         }
-    };
+        setIsSubmittingAction(false);
+    }, [pendingUploadFiles, addDocumentToLessonState]);
 
-    const removeMaterial = (id: string, subtopicIndex: number) => {
-        setSubtopics(prevSubtopics => {
-            const updatedSubtopics = [...prevSubtopics];
-            updatedSubtopics[subtopicIndex] = {
-                ...updatedSubtopics[subtopicIndex],
-                materials: updatedSubtopics[subtopicIndex].materials.filter(material => material.id !== id)
-            };
-            return updatedSubtopics;
-        });
-        setMaterialsSaved(false);
-        if (subtopics[subtopicIndex].materials.filter(material => material.id !== id).length === 0) {
-            setHasUploadedDocuments(null);
+    const handleRemoveExistingDocumentInternal = useCallback(async (lessonId: number, documentId: number, documentName: string) => {
+        if (!window.confirm(`Are you sure you want to delete the document "${documentName}"?`)) return;
+        setIsSubmittingAction(true);
+        const loadingToastId = toast.loading(`Deleting "${documentName}"...`);
+        try {
+            await deleteDocument(documentId);
+            removeDocumentFromLessonState(lessonId, documentId);
+            toast.dismiss(loadingToastId);
+            toast.success(`Document "${documentName}" deleted successfully.`);
+        } catch (error) {
+            console.error(`Failed to delete document ${documentId}:`, error);
+            toast.dismiss(loadingToastId);
+        } finally {
+            setIsSubmittingAction(false);
         }
-    };
+    }, [removeDocumentFromLessonState]);
 
-    const handleRemoveQuiz = (subtopicIndex: number) => {
-        setSubtopics(prevSubtopics => {
-            const updatedSubtopics = [...prevSubtopics];
-            updatedSubtopics[subtopicIndex] = {
-                ...updatedSubtopics[subtopicIndex],
-                hasQuiz: false,
-                quizBank: null,
-                materials: updatedSubtopics[subtopicIndex].materials.filter(material => material.type !== 'quiz')
-            };
-            return updatedSubtopics;
-        });
-    };
-
-    const handleEditQuiz = (subtopicId: string, subtopicIndex: number) => {
-        const subtopic = subtopics.find(s => s.id === subtopicId);
-        if (subtopic && subtopic.quizBank) {
-            navigate('/coordinator/quiz-creator', {
-                state: {
-                    subtopicId,
-                    quizDetails: subtopic.quizBank,
-                    fromUploadMaterials: true
-                }
-            });
-        }
-    };
-
-    const handleUploadDocumentClick = (subtopicId: string) => {
-        if (showUploadSections === subtopicId) {
-            setShowUploadSections(null);
+    const handleBackNavigation = useCallback(() => {
+        if (courseId) {
+            navigate(`/coordinator/course-details/${courseId}`); // Navigate to edit mode of basic details
         } else {
-            setShowUploadSections(subtopicId);
+            navigate('/coordinator/course-details'); // Fallback to new course form
         }
-        setShowSavedMaterialsSection(false);
-    };
+    }, [courseId, navigate]);
 
-    const handleAddVideoClick = (subtopicId: string) => {
-        navigate('/upload-video');
-    };
-
-    const handleSubtopicPointsChange = (e: React.ChangeEvent<HTMLInputElement>, subtopicIndex: number) => {
-        const value = parseInt(e.target.value, 10);
-        setSubtopics(prevSubtopics => {
-            const updatedSubtopics = [...prevSubtopics];
-            updatedSubtopics[subtopicIndex] = {
-                ...updatedSubtopics[subtopicIndex],
-                subtopicPoints: isNaN(value) ? 1 : Math.max(1, Math.min(100, value))
-            };
-            return updatedSubtopics;
-        });
-    };
-
-    const handleSubtopicTitleChange = (e: React.ChangeEvent<HTMLInputElement>, subtopicIndex: number) => {
-        setSubtopics(prevSubtopics => {
-            const updatedSubtopics = [...prevSubtopics];
-            updatedSubtopics[subtopicIndex] = {
-                ...updatedSubtopics[subtopicIndex],
-                title: e.target.value
-            };
-            return updatedSubtopics;
-        });
-    };
-
-    const addNewSubtopic = () => {
-        const newId = (subtopics.length + 1).toString();
-        setSubtopics(prevSubtopics => [...prevSubtopics, { id: newId, title: '', materials: [], hasQuiz: false, quizBank: null, subtopicPoints: 1 }]);
-    };
-
-    const handleRemoveSubtopic = (subtopicId: string) => {
-        setSubtopics(prevSubtopics => {
-            return prevSubtopics.filter(subtopic => subtopic.id !== subtopicId);
-        });
-    };
-
-    const handleSaveMaterials = () => {
-        updateCourseMaterials(subtopics);
-        setMaterialsSaved(true);
-        setShowSavedMaterialsSection(true);
-        setShowUploadSections(null);
-    };
-
-    const handleNext = () => {
-        if (!materialsSaved) {
-            handleSaveMaterials();
+    const handleNextNavigation = useCallback(() => {
+        // Check for pending uploads across ALL subtopics
+        const hasPendingUploads = Object.values(pendingUploadFiles).some(fileList => fileList && fileList.length > 0);
+        if (hasPendingUploads) {
+            toast.error("You have pending documents to upload or cancel for one or more subtopics.");
+            return;
         }
-        navigate('/coordinator/publish-Course');
-    };
-
-    const handleSaveDraft = () => {
-        alert("Course saved as draft!");
-    };
-
-    const handleUploadPendingFiles = (subtopicId: string, subtopicIndex: number) => {
-        const filesToUpload = pendingUploadFiles[subtopicId] || [];
-        if (filesToUpload.length > 0) {
-            addSubtopicFiles(filesToUpload, 'document', subtopicIndex, subtopicId);
-            setPendingUploadFiles(prev => {
-                const updatedPendingFiles = { ...prev };
-                delete updatedPendingFiles[subtopicId];
-                return updatedPendingFiles;
-            });
-            setShowUploadSections(null);
+        if (courseData.lessons.some(l => l.isEditing)) {
+            toast.error("Please save or cancel changes on all subtopics before proceeding.");
+            return;
+        }
+        if (courseData.lessons.length === 0) {
+            toast.error("Please add at least one subtopic with content before proceeding.");
+            return;
+        }
+        if (courseId) {
+            navigate(`/coordinator/publish-Course/${courseId}`);
         } else {
-            alert("No documents selected for upload.");
+            toast.error("Course ID is missing. Cannot proceed.");
         }
-    };
+    }, [courseId, navigate, pendingUploadFiles, courseData.lessons]);
 
-    const handleRemovePendingFile = (fileName: string, subtopicId: string) => {
-        setPendingUploadFiles(prev => {
-            const currentPendingFiles = prev[subtopicId] || [];
-            const updatedPendingFilesArray = currentPendingFiles.filter(file => file.name !== fileName);
-            return {
-                ...prev,
-                [subtopicId]: updatedPendingFilesArray
-            };
-        });
-    };
+    const handleSaveDraftAction = useCallback(() => { toast.error("Save as Draft feature is not implemented yet."); }, []);
+    const handleCreateQuizAction = useCallback((lessonId: number) => { toast.error(`Quiz creation for lesson ${lessonId} N/A.`); }, []);
+    const handleEditQuizAction = useCallback((lessonId: number) => { toast.error(`Quiz editing for lesson ${lessonId} N/A.`); }, []);
+    const handleRemoveQuizAction = useCallback((lessonId: number) => { toast.error(`Quiz removal for lesson ${lessonId} N/A.`); }, []);
+    const handleAddVideoAction = useCallback((lessonId: number) => { toast.error(`Video add for lesson ${lessonId} N/A.`); }, []);
+
+
+    if (isLoadingPage) {
+        return <div className="min-h-screen bg-[#52007C] p-6 flex justify-center items-center"><p className="text-white text-xl">Loading Course Materials...</p></div>;
+    }
+    if (!courseId) {
+        return <div className="min-h-screen bg-[#52007C] p-6 flex justify-center items-center"><p className="text-red-400 text-xl">Error: Invalid Course ID.</p></div>;
+    }
 
     return (
         <div className="min-h-screen bg-[#52007C] p-6">
-            <Header onSaveDraft={handleSaveDraft} navigateToCreateCourse={() => navigate('/coordinator/course-details')} />
-
+            <Header onSaveDraft={handleSaveDraftAction} navigateToCreateCourse={handleBackNavigation} />
             <ProgressBar stage={2} />
-
-            <div className="max-w-7xl mx-auto px-8 py-6">
-                <div className="bg-[#1B0A3F]/40 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg overflow-hidden hover:border-[#BF4BF6]/40 transition-all duration-300 mb-6">
+            <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
+                <div className="bg-[#1B0A3F]/40 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg overflow-hidden mb-6">
                     <div className="px-6 py-4 flex justify-between items-center">
-                        <h2 className="text-lg font-['Unbounded'] text-white">Course Materials</h2>
-                        <button
-                            onClick={addNewSubtopic}
-                            className="px-4 py-2 bg-[#BF4BF6] text-white rounded-lg font-['Nunito_Sans'] hover:bg-[#D68BF9] transition-colors text-sm">
-                            Add New Subtopic
-                        </button>
+                        <h2 className="text-lg font-['Unbounded'] text-white">Course Materials (Subtopics & Documents)</h2>
+                        <button onClick={handleAddNewSubtopic} disabled={isSubmittingAction} className="px-4 py-2 bg-[#BF4BF6] text-white rounded-lg font-['Nunito_Sans'] hover:bg-[#D68BF9] transition-colors text-sm disabled:opacity-50">Add New Subtopic</button>
                     </div>
-
                     <div className="px-6 py-4 space-y-4 border-t border-[#BF4BF6]/20">
-                        {subtopics.map((subtopic, subtopicIndex) => (
+                        {courseData.lessons.length === 0 && (<p className="text-center text-gray-400 py-4">No subtopics added yet. Click 'Add New Subtopic' to begin.</p>)}
+                        {courseData.lessons.map((subtopic) => (
                             <SubtopicItem
                                 key={subtopic.id}
                                 subtopic={subtopic}
-                                subtopicIndex={subtopicIndex}
-                                expanded={expandedSubtopics[subtopic.id]}
+                                expanded={!!expandedSubtopics[subtopic.id]}
                                 pendingFiles={pendingUploadFiles[subtopic.id] || []}
                                 errorMessage={subtopicErrorMessages[subtopic.id]}
                                 showUploadSection={showUploadSections === subtopic.id}
-                                toggleSubtopic={() => toggleSubtopic(subtopic.id)}
-                                handleRemoveSubtopic={() => handleRemoveSubtopic(subtopic.id)}
-                                handleSubtopicTitleChange={(e) => handleSubtopicTitleChange(e, subtopicIndex)}
-                                handleSubtopicPointsChange={(e) => handleSubtopicPointsChange(e, subtopicIndex)}
-                                removeMaterial={(materialId) => removeMaterial(materialId, subtopicIndex)}
-                                handleCreateQuizClick={() => handleCreateQuizClickForSubtopic(subtopic.id)}
-                                handleEditQuiz={() => handleEditQuiz(subtopic.id, subtopicIndex)}
-                                handleRemoveQuiz={() => handleRemoveQuiz(subtopicIndex)}
-                                handleUploadDocumentClick={() => handleUploadDocumentClick(subtopic.id)}
-                                handleAddVideoClick={() => handleAddVideoClick(subtopic.id)}
-                                handleDrop={(e, type) => handleDrop(e, type, subtopicIndex, subtopic.id)}
-                                handleFileSelect={(e, type) => handleFileSelect(e, type, subtopicIndex, subtopic.id)}
-                                handleUploadPendingFiles={() => handleUploadPendingFiles(subtopic.id, subtopicIndex)}
-                                handleRemovePendingFile={(fileName) => handleRemovePendingFile(fileName, subtopic.id)}
-                                setIsDraggingDocs={() => {}} // Dummy function as state is managed in parent for now - can be moved to SubtopicItem 
-                                isDraggingDocs={false} // Dummy value - state is managed in parent for now - can be moved to SubtopicItem 
+                                isSubmitting={isSubmittingAction}
+                                toggleSubtopic={() => toggleSubtopicExpand(subtopic.id)}
+                                handleRemoveSubtopic={() => handleRemoveSubtopicConfirmInternal(subtopic.id, subtopic.lessonName)}
+                                handleSubtopicInputChange={(field, value) => handleSubtopicInputChangeInternal(subtopic.id, field, value)}
+                                handleToggleEdit={() => handleToggleEditSubtopicInternal(subtopic.id, !subtopic.isEditing)}
+                                handleSaveChanges={() => handleSaveChangesSubtopicInternal(subtopic.id)}
+                                handleCancelEdit={() => handleToggleEditSubtopicInternal(subtopic.id, false)}
+                                removeMaterial={(docId, docName) => handleRemoveExistingDocumentInternal(subtopic.id, docId, docName)}
+                                handleUploadDocumentClick={() => handleToggleUploadSection(subtopic.id)}
+                                handleDrop={(e) => handleFileDropInternal(e, subtopic.id)}
+                                handleFileSelect={(e) => handleFileSelectInternal(e, subtopic.id)}
+                                handleUploadPendingFiles={() => handleUploadPendingFilesActionInternal(subtopic.id)}
+                                handleRemovePendingFile={(fileName) => handleRemovePendingFileInternal(fileName, subtopic.id)}
+                                setIsDraggingDocs={(isDragging) => setIsDraggingDocsPerLesson(prev => ({ ...prev, [subtopic.id]: isDragging }))}
+                                isDraggingDocs={!!isDraggingDocsPerLesson[subtopic.id]}
+                                handleAddVideoClick={() => handleAddVideoAction(subtopic.id)}
+                                handleCreateQuizClick={() => handleCreateQuizAction(subtopic.id)}
+                                handleEditQuiz={() => handleEditQuizAction(subtopic.id)}
+                                handleRemoveQuiz={() => handleRemoveQuizAction(subtopic.id)}
                             />
                         ))}
                     </div>
                 </div>
-
-
-                <BottomNavigation
-                    onBack={() => navigate('/coordinator/course-details')}
-                    onNext={handleNext}
-                    onSaveMaterials={handleSaveMaterials}
-                    materialsSaved={materialsSaved}
-                />
+                <BottomNavigation onBack={handleBackNavigation} onNext={handleNextNavigation} />
             </div>
         </div>
     );

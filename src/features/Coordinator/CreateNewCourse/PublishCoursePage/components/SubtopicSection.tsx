@@ -1,17 +1,17 @@
-// features/createNewCourse/components/SubtopicSection.tsx
+// features/Coordinator/CreateNewCourse/PublishCoursePage/components/SubtopicSection.tsx
 import React from 'react';
-import { QuizBank, Subtopic } from '../../../courseCoordinator/courses/CourseContext';
+// Import refined types
+import { SubtopicFE } from '../../../../../types/course.types'; // Adjust path
 import MaterialItem from './MaterialItem';
-import {
-    ChevronDown
-} from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 interface SubtopicSectionProps {
-    subtopic: Subtopic;
-    expandedSubtopics: Record<string, boolean>;
-    toggleSubtopic: (subtopicId: string) => void;
-    handleDeleteMaterial: (materialId: string) => void;
-    handleViewQuiz: (quizBank: QuizBank | undefined) => void;
+    subtopic: SubtopicFE; // Use SubtopicFE
+    expandedSubtopics: Record<number, boolean>; // Key is number (lessonId)
+    toggleSubtopic: (subtopicId: number) => void; // Use number
+     handleDeleteMaterial: (lessonId: number, documentId: number, documentName: string) => void;
+    // Quiz related props
+    // handleViewQuiz: (quizBank: QuizBank | undefined) => void;
 }
 
 const SubtopicSection: React.FC<SubtopicSectionProps> = ({
@@ -19,37 +19,40 @@ const SubtopicSection: React.FC<SubtopicSectionProps> = ({
     expandedSubtopics,
     toggleSubtopic,
     handleDeleteMaterial,
-    handleViewQuiz,
+    // handleViewQuiz,
 }) => {
     return (
-        <div className="mb-4">
-            <div className="bg-[#1B0A3F]/60 rounded-lg p-4 flex justify-between items-center">
-                <button
-                    onClick={() => toggleSubtopic(subtopic.id)}
-                    className="flex items-center gap-2 text-white hover:text-[#D68BF9] transition-colors w-full text-left"
-                >
-                    <h4 className="font-semibold font-unbounded">{subtopic.title}</h4>
+        <div className="mb-3 bg-[#1B0A3F]/50 rounded-lg p-0.5"> {/* Reduced padding */}
+            <button
+                onClick={() => toggleSubtopic(subtopic.id)}
+                className="w-full flex items-center justify-between p-3 text-white hover:bg-[#1B0A3F]/80 rounded-md transition-colors"
+                aria-expanded={expandedSubtopics[subtopic.id]}
+            >
+                <h4 className="font-semibold font-unbounded text-base">{subtopic.lessonName}</h4>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 bg-[#2D1B59] px-2 py-0.5 rounded-full">{subtopic.lessonPoints} pts</span>
                     <ChevronDown
-                        className={`w-4 h-4 transform transition-transform ${expandedSubtopics[subtopic.id] ? 'rotate-180' : ''}`}
+                        className={`w-5 h-5 transform transition-transform ${expandedSubtopics[subtopic.id] ? 'rotate-180' : ''}`}
                     />
-                </button>
-            </div>
+                </div>
+            </button>
 
             {expandedSubtopics[subtopic.id] && (
-                <div className="space-y-2 mt-2 pl-4">
-                    {subtopic.materials && subtopic.materials.length > 0 ? (
-                        subtopic.materials.map((material) => (
+                <div className="space-y-2 mt-2 px-3 pb-3"> {/* Add padding for content */}
+                    {subtopic.documents && subtopic.documents.length > 0 ? (
+                        subtopic.documents.map((material) => (
                             <MaterialItem
                                 key={material.id}
+                                lessonId={subtopic.id} // Pass lessonId
                                 material={material}
                                 handleDeleteMaterial={handleDeleteMaterial}
-                                handleViewQuiz={handleViewQuiz}
-                                subtopic={subtopic} // Pass subtopic for quiz context if needed in MaterialItem
+                                // handleViewQuiz={handleViewQuiz}
+                                // subtopic={subtopic}
                             />
                         ))
                     ) : (
-                        <div className="text-white p-4 font-nunito">
-                            No materials added to this subtopic yet.
+                        <div className="text-gray-400 p-3 text-sm font-nunito">
+                            No documents added to this subtopic yet.
                         </div>
                     )}
                 </div>
