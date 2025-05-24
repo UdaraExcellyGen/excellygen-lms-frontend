@@ -44,6 +44,7 @@ const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({
                             alt="Course thumbnail"
                             className="w-full h-60 object-cover rounded-lg"
                         />
+                        
                     ) : (
                         <div className="h-40 flex flex-col items-center justify-center">
                             <ImageIcon size={40} className="text-gray-400 mb-2" />

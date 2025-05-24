@@ -1,67 +1,68 @@
-// features/createNewCourse/components/MaterialItem.tsx
+// features/Coordinator/CreateNewCourse/PublishCoursePage/components/MaterialItem.tsx
 import React from 'react';
-import {  QuizBank, MaterialFile, Subtopic } from '../../../contexts/CourseContext';
-import {
-    PlayCircle,
-    FileText,
-    BookCheck,
-    X
-} from 'lucide-react';
+// Import refined types
+import { ExistingMaterialFile, SubtopicFE } from '../../../../../types/course.types'; // Adjust path
+import { PlayCircle, FileText, BookCheck, X } from 'lucide-react';
+
+// interface MaterialItemProps {
+//     lessonId: number; // Need lessonId to help identify which lesson this material belongs to
+//     material: ExistingMaterialFile; // Use ExistingMaterialFile
+//     handleDeleteMaterial: (lessonId: number, documentId: number, documentName: string) => void;
+//     // Quiz related props - keep if you implement quizzes
+//     // handleViewQuiz: (quizBank: QuizBank | undefined) => void;
+//     // subtopic?: SubtopicFE;
+// }
 interface MaterialItemProps {
-    material: MaterialFile;
-    handleDeleteMaterial: (materialId: string) => void;
-    handleViewQuiz: (quizBank: QuizBank | undefined) => void;
-    subtopic?: Subtopic; // Optional, for quiz context if needed
+    lessonId: number;
+    material: ExistingMaterialFile;
+    handleDeleteMaterial: (lessonId: number, documentId: number, documentName: string) => void;
 }
 
-const MaterialItem: React.FC<MaterialItemProps> = ({ material, handleDeleteMaterial, handleViewQuiz, subtopic }) => {
+const MaterialItem: React.FC<MaterialItemProps> = ({
+    lessonId,
+    material,
+    handleDeleteMaterial,
+    // handleViewQuiz,
+    // subtopic
+}) => {
     const renderMaterialIcon = () => {
-        switch (material.type) {
-            case 'document':
-                return <FileText className="w-5 h-5 mr-3 text-[#D68BF9]" />;
-            case 'video':
-                return <PlayCircle className="w-5 h-5 mr-3 text-[#D68BF9]" />;
-            case 'quiz':
-                return <BookCheck className="w-5 h-5 mr-3 text-[#D68BF9]" />;
+        // For now, only documents. Expand for video/quiz later.
+        switch (material.documentType) {
+            case 'PDF':
+                return <FileText className="w-5 h-5 mr-3 text-red-400 flex-shrink-0" />;
+            case 'Word':
+                return <FileText className="w-5 h-5 mr-3 text-blue-400 flex-shrink-0" />;
             default:
-                return <FileText className="w-5 h-5 mr-3 text-[#D68BF9]" />;
+                return <FileText className="w-5 h-5 mr-3 text-gray-400 flex-shrink-0" />;
         }
     };
 
-    const handleQuizClick = () => {
-        if (material.type === 'quiz' && subtopic?.quizBank) {
-            handleViewQuiz(subtopic.quizBank);
-        } else if (material.type === 'quiz') {
-            console.warn(`No quiz bank for material: ${material.name || 'Unnamed Quiz'}`);
-        }
-    };
-
+    // const handleQuizClick = () => { /* ... if quizzes implemented ... */ };
 
     return (
-        <div className="bg-[#1B0A3F]/60 rounded-lg p-4 flex items-center justify-between group hover:bg-[#1B0A3F]/80 transition-all duration-300">
-            <div className="flex items-center">
+        <div className="bg-[#1B0A3F]/60 rounded-lg p-3 flex items-center justify-between group hover:bg-[#1B0A3F]/80 transition-all duration-300">
+            <div className="flex items-center gap-2 overflow-hidden">
                 {renderMaterialIcon()}
-                {material.type === 'quiz' ? (
-                    <button
-                        onClick={handleQuizClick}
-                        className="text-white group-hover:text-[#D68BF9] transition-colors font-nunito text-left flex items-center gap-1"
-                        style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                        {material.name || "Unnamed Quiz"}
-                    </button>
-                ) : (
-                    <p className="text-white group-hover:text-[#D68BF9] transition-colors font-nunito">
-                        {material.name}
-                    </p>
-                )}
+                <a
+                    href={material.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-white group-hover:text-[#D68BF9] transition-colors font-nunito truncate"
+                    title={material.name}
+                >
+                    {material.name}
+                </a>
+                <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                    ({(material.fileSize / (1024 * 1024)).toFixed(2)} MB)
+                </span>
             </div>
             <div className="flex gap-2">
                 <button
-                    onClick={() => handleDeleteMaterial(material.id)}
-                    className="hover:text-red-500 transition-colors"
+                    onClick={() => handleDeleteMaterial(lessonId, material.id, material.name)}
+                    className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
                     aria-label={`Delete material ${material.name}`}
                 >
-                    <X className="w-4 h-4 text-gray-400 hover:text-red-500" />
+                    <X className="w-4 h-4" />
                 </button>
             </div>
         </div>

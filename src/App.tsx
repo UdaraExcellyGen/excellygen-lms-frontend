@@ -365,7 +365,7 @@ function App() {
             }
           />
           <Route 
-            path="upload-materials" 
+            path="upload-materials/:courseId"
             element={
               <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
                 {withCourseContext(UploadMaterials)}
@@ -373,7 +373,7 @@ function App() {
             } 
           />
           <Route 
-            path="publish-Course" 
+            path="publish-Course/:courseId" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
                 {withCourseContext(PublishCoursePage)}
@@ -389,7 +389,7 @@ function App() {
             } 
           />
           <Route 
-            path="course-details" 
+            path="course-details/:courseId?" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
                 {withCourseContext(CourseDetails)}
@@ -397,7 +397,7 @@ function App() {
             } 
           />
           <Route 
-            path="course-view" 
+            path="course-view/:courseId" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
                 <CoordinatorCourseOverview/>

@@ -1,160 +1,134 @@
-// CourseContext.tsx
-import React, { createContext, useState, ReactNode, useEffect } from 'react';
+// src/contexts/CourseContext.tsx
+import React, { createContext, useState, useContext, ReactNode, useCallback } from 'react';
+import {
+    BasicCourseDetailsState,
+    CourseContextState,
+    SubtopicFE,
+    ExistingMaterialFile
+} from '../../../types/course.types'; // Ensure path is correct
 
-// Export all interfaces
-export interface CourseDetails {
-    title: string;
-    category: string;
-    description: string;
-    estimatedTime: string;
-    thumbnail: File | null;
-    technologies: string[];
-}
+// --- Initial State ---
+const initialBasicDetails: BasicCourseDetailsState = {
+    title: '',
+    description: '',
+    estimatedTime: '',
+    categoryId: '',
+    technologies: [],
+    thumbnail: null,
+};
 
-export interface MaterialFile {
-    id: string;
-    name: string;
-    type: 'document' | 'video' | 'quiz';
-    file: File | null;
-    videoLink?: string;
-    quizId?: string;
-}
+const initialCourseState: CourseContextState = {
+    createdCourseId: null,
+    basicDetails: initialBasicDetails,
+    lessons: [],
+    lessonsLoaded: false,
+};
 
-export interface Subtopic {
-    id: string;
-    title: string;
-    materials: MaterialFile[];
-    hasQuiz: boolean;
-    quizBank?: QuizBank | null;
-    subtopicPoints: number;
-}
-
-export interface QuizDetails {
-    title: string;
-    bankSize: string;
-    quizSize: string;
-    duration: string;
-}
-
-export interface QuizBank {
-    quizDetails: QuizDetails;
-    questions: Question[];
-    name: string;
-    bankSize: number;
-    quizSize: number;
-    duration: number;
-}
-
-export interface Question {
-    questionText: string;
-    options: string[];
-    correctAnswerIndex: number | null;
-}
-
-// ** ADDED Course Interface here and exported it **
-export interface Course {
-    id?: string;
-    title?: string;
-    description?: string;
-    thumbnailUrl?: string;
-    deadline?: string;
-    coordinatorPoints?: number;
-    courseMaterials?: Subtopic[]; // You might not need courseMaterials here in the Course interface itself, depending on your backend structure.  Adjust if needed.
-}
-
-
-interface CourseContextType {
-    courseData: {
-        basicDetails: CourseDetails;
-        materials: Subtopic[];
-        // ... other course related data
-        course: Course; // Include Course in the courseData structure
-    };
-    setCourseData: React.Dispatch<React.SetStateAction<{
-        basicDetails: CourseDetails;
-        materials: Subtopic[];
-        course: Course;
-        // ... other course related data
-    }>>;
-    updateBasicCourseDetails: (details: CourseDetails) => void;
-    updateCourseMaterials: (materials: Subtopic[]) => void;
-    loadCourseDataFromLocalStorage: () => void;
-    saveCourseDataToLocalStorage: () => void;
-}
+// --- Context Type ---
+type CourseContextType = {
+    courseData: CourseContextState;
+    updateBasicCourseDetails: (details: BasicCourseDetailsState) => void;
+    setCreatedCourseId: (id: number | null) => void;
+    setLessonsState: (lessons: SubtopicFE[]) => void;
+    setLessonsLoaded: (loaded: boolean) => void;
+    addLessonToState: (lesson: SubtopicFE) => void;
+    updateLessonInState: (updatedLesson: SubtopicFE) => void;
+    removeLessonFromState: (lessonId: number) => void;
+    addDocumentToLessonState: (lessonId: number, document: ExistingMaterialFile) => void;
+    removeDocumentFromLessonState: (lessonId: number, documentId: number) => void;
+    resetCourseContext: () => void;
+};
 
 const CourseContext = createContext<CourseContextType | undefined>(undefined);
 
-interface CourseProviderProps {
-    children: ReactNode;
-}
+// --- Provider Component ---
+export const CourseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const [courseData, setCourseData] = useState<CourseContextState>(initialCourseState);
 
-export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
-    const [courseData, setCourseData] = useState<{
-        basicDetails: CourseDetails;
-        materials: Subtopic[];
-        course: Course; // Initialize course in courseData
-    }>({
-        basicDetails: {
-            title: 'My Awesome Course', // Example mock data
-            category: 'Web Development',
-            description: 'Learn web development from scratch.',
-            estimatedTime: '20',
-            thumbnail: null,
-            technologies: ['React.js', 'Node.js', 'Express.js']
-        },
-        materials: [
-            { id: '1', title: 'Introduction to Web Dev', materials: [], hasQuiz: false, quizBank: null, subtopicPoints: 1 },
-            { id: '2', title: 'HTML Basics', materials: [], hasQuiz: false, quizBank: null, subtopicPoints: 1 }
-        ],
-        course: { // Initialize Course data
-            title: 'Initial Course Title',
-            description: 'Initial Course Description',
-            thumbnailUrl: '/api/placeholder/400/200',
-            deadline: '7',
-            coordinatorPoints: 0,
-        }
-    });
+    const updateBasicCourseDetails = useCallback((details: BasicCourseDetailsState) => {
+        setCourseData(prev => ({
+            ...prev,
+            // Ensure we are creating a new object for basicDetails to trigger re-renders where it's a dependency
+            basicDetails: { ...details },
+        }));
+    }, []); // This function itself is stable
 
-    const updateBasicCourseDetails = (details: CourseDetails) => {
-        setCourseData(prevData => ({ ...prevData, basicDetails: details }));
-        // Optionally update course title from basic details if it makes sense for your app
-        setCourseData(prevData => ({ ...prevData, course: {...prevData.course, title: details.title, description: details.description, thumbnailUrl: details.thumbnail ? URL.createObjectURL(details.thumbnail) : '/api/placeholder/400/200', deadline: details.estimatedTime }}));
-    };
+    const setCreatedCourseId = useCallback((id: number | null) => {
+        setCourseData(prev => ({
+            ...prev,
+            createdCourseId: id,
+            // When a new course ID is set (or cleared), reset lessons and their loaded status
+            lessons: id === null ? [] : prev.createdCourseId === id ? prev.lessons : [], // Keep lessons if ID is same, else clear
+            lessonsLoaded: id === null ? false : prev.createdCourseId === id ? prev.lessonsLoaded : false,
+        }));
+    }, []); // Stable
 
-    const updateCourseMaterials = (materials: Subtopic[]) => {
-        setCourseData(prevData => ({ ...prevData, materials: materials }));
-    };
+    const setLessonsState = useCallback((lessons: SubtopicFE[]) => {
+        setCourseData(prev => ({ ...prev, lessons: lessons }));
+    }, []); // Stable
 
-    // ** Local Storage Functions **
-    const loadCourseDataFromLocalStorage = () => {
-        const storedData = localStorage.getItem('courseData');
-        if (storedData) {
-            setCourseData(JSON.parse(storedData));
-        }
-    };
+    const setLessonsLoaded = useCallback((loaded: boolean) => {
+        setCourseData(prev => ({ ...prev, lessonsLoaded: loaded }));
+    }, []); // Stable
 
-    const saveCourseDataToLocalStorage = () => {
-        localStorage.setItem('courseData', JSON.stringify(courseData));
-    };
+    const addLessonToState = useCallback((lesson: SubtopicFE) => {
+        setCourseData(prev => ({ ...prev, lessons: [...prev.lessons, lesson] }));
+    }, []); // Stable
 
-    // ** Load from Local Storage on Mount **
-    useEffect(() => {
-        loadCourseDataFromLocalStorage();
-    }, []);
+    const updateLessonInState = useCallback((updatedLesson: SubtopicFE) => {
+        setCourseData(prev => ({
+            ...prev,
+            lessons: prev.lessons.map(l => l.id === updatedLesson.id ? { ...updatedLesson } : l) // Ensure new object for updated lesson
+        }));
+    }, []); // Stable
 
-    // ** Save to Local Storage on courseData Change **
-    useEffect(() => {
-        saveCourseDataToLocalStorage();
-    }, [courseData]);
+    const removeLessonFromState = useCallback((lessonId: number) => {
+        setCourseData(prev => ({
+            ...prev,
+            lessons: prev.lessons.filter(l => l.id !== lessonId)
+        }));
+    }, []); // Stable
 
+    const addDocumentToLessonState = useCallback((lessonId: number, document: ExistingMaterialFile) => {
+        setCourseData(prev => ({
+            ...prev,
+            lessons: prev.lessons.map(l =>
+                l.id === lessonId
+                    ? { ...l, documents: [...l.documents, document] } // New documents array
+                    : l
+            )
+        }));
+    }, []); // Stable
 
+    const removeDocumentFromLessonState = useCallback((lessonId: number, documentId: number) => {
+        setCourseData(prev => ({
+            ...prev,
+            lessons: prev.lessons.map(l =>
+                l.id === lessonId
+                    ? { ...l, documents: l.documents.filter(d => d.id !== documentId) } // New documents array
+                    : l
+            )
+        }));
+    }, []); // Stable
+
+    const resetCourseContext = useCallback(() => {
+        console.log("Resetting Course Context to initial state"); // Add log for debugging
+        setCourseData(initialCourseState); // initialCourseState is defined outside and is stable
+    }, []); // Dependency on initialCourseState is implicit, but [] is fine as it's module-scoped constant
+
+    // Context Value
     const value: CourseContextType = {
         courseData,
-        setCourseData,
         updateBasicCourseDetails,
-        updateCourseMaterials,
-        loadCourseDataFromLocalStorage,
-        saveCourseDataToLocalStorage,
+        setCreatedCourseId,
+        setLessonsState,
+        setLessonsLoaded,
+        addLessonToState,
+        updateLessonInState,
+        removeLessonFromState,
+        addDocumentToLessonState,
+        removeDocumentFromLessonState,
+        resetCourseContext
     };
 
     return (
@@ -164,8 +138,9 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     );
 };
 
+// --- Hook to use the context ---
 export const useCourseContext = () => {
-    const context = React.useContext(CourseContext);
+    const context = useContext(CourseContext);
     if (!context) {
         throw new Error('useCourseContext must be used within a CourseProvider');
     }

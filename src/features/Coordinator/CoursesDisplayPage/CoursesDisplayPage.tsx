@@ -1,158 +1,197 @@
-// features/createNewCourse/CoursesDisplayPage/CoursesDisplayPage.tsx
-import React, { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, Trash2, Edit, Search } from 'lucide-react';
+// features/Coordinator/CoursesDisplayPage/CoursesDisplayPage.tsx
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { ArrowLeft, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+
 import { useCourseContext } from '../contexts/CourseContext';
-import { Course } from './types/Course';
+import { useAuth } from '../../../contexts/AuthContext';
+import { CourseDto, CategoryDto as GlobalCategoryDto, TechnologyDto as GlobalTechnologyDto } from '../../../types/course.types';
 import { GridCard } from './components/GridCard';
-import { mockCourses } from './data/mockCourses';
+import { getAllCourses, deleteCourse as apiDeleteCourse, getCourseCategories, getTechnologies } from '../../../api/services/Course/courseService';
 
 const CoursesDisplayPage: React.FC = () => {
     const navigate = useNavigate();
-    const { courseData } = useCourseContext();
-    const [courses, setCourses] = useState<Course[]>([]);
+    const { courseData: contextCourseData, resetCourseContext, setCreatedCourseId } = useCourseContext();
+    const { user } = useAuth();
+
+    const [allFetchedCourses, setAllFetchedCourses] = useState<CourseDto[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'draft' | 'published'>('all');
-    const [searchCategory, setSearchCategory] = useState('');
+    const [searchCategory, setSearchCategory] = useState(''); // Stores category ID for filtering
     const [searchQuery, setSearchQuery] = useState('');
-    const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [courseToDeleteId, setCourseToDeleteId] = useState<string | null>(null);
-    const currentCoordinator = 'Sehani Silva';
-    const [dropdownCategories, setDropdownCategories] = useState<string[]>([]);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [courseToDeleteId, setCourseToDeleteId] = useState<number | null>(null);
 
+    const [availableCategories, setAvailableCategories] = useState<GlobalCategoryDto[]>([]);
+    const [availableTechnologies, setAvailableTechnologies] = useState<GlobalTechnologyDto[]>([]);
+
+    // Fetch all courses, categories, and technologies on mount
     useEffect(() => {
-        setCourses(mockCourses);
-    }, []);
+        let isMounted = true;
+        setIsLoading(true);
+        Promise.all([
+            getAllCourses(),
+            getCourseCategories(),
+            getTechnologies()
+        ]).then(([fetchedCourses, fetchedCategories, fetchedTechnologies]) => {
+            if (isMounted) {
+                setAllFetchedCourses(fetchedCourses);
+                setAvailableCategories(fetchedCategories); // Already filtered by backend
+                setAvailableTechnologies(fetchedTechnologies);
+                console.log("Fetched courses:", fetchedCourses);
+                console.log("Fetched categories for filter:", fetchedCategories);
+                console.log("Fetched technologies for context merge:", fetchedTechnologies);
+            }
+        }).catch(error => {
+            if (isMounted) {
+                console.error("Failed to fetch initial page data:", error);
+                toast.error("Could not load course data or options.");
+            }
+        }).finally(() => {
+            if (isMounted) setIsLoading(false);
+        });
+        return () => { isMounted = false; };
+    }, []); // Empty dependency array for one-time fetch
 
+    // Effect to merge/update the list with a newly created/updated course from context
     useEffect(() => {
-        if (courseData && courseData.basicDetails && courseData.basicDetails.title) {
-            setCourses(currentCourses => {
-                let allCourses = [...currentCourses];
+        if (contextCourseData.createdCourseId && contextCourseData.basicDetails.title && user) {
+            const newCourseId = contextCourseData.createdCourseId;
+            const alreadyExistsInFetched = allFetchedCourses.some(c => c.id === newCourseId);
 
-                const existingCourseIndex = allCourses.findIndex(
-                    c => c.title === courseData.basicDetails.title
+            // Construct the new/updated course object for display
+            // It assumes new courses from context are 'Draft' until explicitly published
+            const basicDetails = contextCourseData.basicDetails;
+            const courseForDisplay: CourseDto = {
+                id: newCourseId,
+                title: basicDetails.title,
+                description: basicDetails.description,
+                estimatedTime: parseInt(basicDetails.estimatedTime, 10) || 0,
+                thumbnailUrl: basicDetails.thumbnail
+                    ? URL.createObjectURL(basicDetails.thumbnail)
+                    : undefined,
+                category: availableCategories.find(c => c.id === basicDetails.categoryId) || { id: basicDetails.categoryId, title: "Loading..." },
+                technologies: basicDetails.technologies.map(techId => {
+                    const foundTech = availableTechnologies.find(t => t.id === techId);
+                    return { id: techId, name: foundTech?.name || `Tech...` };
+                }),
+                creator: { id: user.id, name: user.name },
+                status: 'Draft', // Newly created/edited courses via context are initially drafts
+                createdAt: new Date().toISOString(), // Placeholder, backend value would be source of truth on fetch
+                lastUpdatedDate: new Date().toISOString(), // Placeholder
+                lessons: [], // No detailed lessons from basic details context
+                calculatedCoursePoints: 0,
+            };
+
+            if (!alreadyExistsInFetched) {
+                console.log("Adding new course from context to display list, ID:", newCourseId);
+                setAllFetchedCourses(prevCourses => [courseForDisplay, ...prevCourses]);
+            } else {
+                console.log("Updating existing course from context in display list, ID:", newCourseId);
+                setAllFetchedCourses(prevCourses =>
+                    prevCourses.map(c => c.id === newCourseId ? courseForDisplay : c)
                 );
-
-                const totalPoints = courseData.materials.reduce(
-                    (sum, subtopic) => sum + (subtopic.subtopicPoints || 0),
-                    0
-                );
-
-                const allMaterials = courseData.materials.flatMap(subtopic =>
-                    subtopic.materials || []
-                );
-
-                const newCourse: Course = {
-                    id: `course-${Date.now()}`,
-                    title: courseData.basicDetails.title,
-                    category: courseData.basicDetails.category,
-                    description: courseData.basicDetails.description,
-                    deadline: `${courseData.basicDetails.estimatedTime} days`,
-                    thumbnailUrl: courseData.basicDetails.thumbnail
-                        ? URL.createObjectURL(courseData.basicDetails.thumbnail)
-                        : null,
-                    coordinatorPoints: totalPoints.toString(),
-                    materials: allMaterials,
-                    quizDetails: null,
-                    questions: [],
-                    status: 'published',
-                    instructor: 'Sehani Silva',
-                    studentCount: 0,
-                };
-
-                if (existingCourseIndex >= 0) {
-                    allCourses[existingCourseIndex] = newCourse;
-                } else {
-                    allCourses = [newCourse, ...allCourses];
-                }
-
-                return allCourses;
-            });
+            }
+            // Reset context ID after processing to avoid re-adding/updating on subsequent renders
+            setCreatedCourseId(null);
         }
-    }, [courseData]);
-
-
-    const categories = useMemo(() => {
-        const coordinatorCourseCategories = courses
-            .filter(course => course.instructor === currentCoordinator)
-            .map(course => course.category);
-
-        const uniqueCategoriesSet = new Set(coordinatorCourseCategories);
-        return Array.from(uniqueCategoriesSet).sort();
-    }, [courses, currentCoordinator]);
-
+    }, [
+        contextCourseData.createdCourseId,
+        contextCourseData.basicDetails,
+        user,
+        allFetchedCourses, // Re-run if fetched courses change (e.g. after delete)
+        availableCategories,
+        availableTechnologies,
+        setCreatedCourseId
+    ]);
 
     const filteredCourses = useMemo(() => {
-        return courses.filter(course => {
-            const matchesCategory = searchCategory === '' ||
-                course.category.toLowerCase() === searchCategory.toLowerCase();
-            const matchesSearch = searchQuery === '' ||
-                course.title.toLowerCase().includes(searchQuery.toLowerCase());
+        return allFetchedCourses.filter(course => {
+            const matchesCategory = searchCategory === '' || course.category.id === searchCategory;
+            const matchesSearch = searchQuery === '' || course.title.toLowerCase().includes(searchQuery.toLowerCase());
+
+            if (!user?.id) return false;
 
             let matchesFilter = false;
+            // Assuming backend sends status as "Draft", "Published", "Archived" (PascalCase or exact strings)
+            // Your CourseDto type expects: status: 'Draft' | 'Published' | 'Archived';
+            const courseStatus = course.status;
+
             if (filter === 'all') {
-                matchesFilter = course.instructor === currentCoordinator ||
-                    course.category === 'Web Development';
+                matchesFilter = course.creator.id === user.id;
             } else if (filter === 'draft') {
-                matchesFilter = course.status === 'draft' &&
-                    course.instructor === currentCoordinator;
+                matchesFilter = courseStatus === 'Draft' && course.creator.id === user.id;
             } else if (filter === 'published') {
-                matchesFilter = course.status === 'published' &&
-                    course.instructor === currentCoordinator;
+                matchesFilter = courseStatus === 'Published' && course.creator.id === user.id;
             }
+            // Add 'Archived' filter if needed and if your 'filter' state can accommodate it
+            // else if (filter === 'archived') {
+            //     matchesFilter = courseStatus === 'Archived' && course.creator.id === user.id;
+            // }
 
             return matchesFilter && matchesCategory && matchesSearch;
         });
-    }, [courses, filter, searchCategory, searchQuery, currentCoordinator]);
+    }, [allFetchedCourses, filter, searchCategory, searchQuery, user?.id]);
 
-    const handleDeleteCourse = (id: string) => {
+    const handleDeleteCourseRequest = (id: number) => {
         setCourseToDeleteId(id);
-        setDeleteDialogOpen(true);
+        setIsDeleteDialogOpen(true);
     };
 
-    const confirmDeleteCourse = () => {
-        if (courseToDeleteId) {
-            const updatedCourses = courses.filter(course => course.id !== courseToDeleteId);
-            setCourses(updatedCourses);
-            alert(`Delete request sent for course ID: ${courseToDeleteId}. Admin approval is pending.`);
-            setDeleteDialogOpen(false);
+    const confirmDeleteCourse = async () => {
+        if (courseToDeleteId === null) return;
+        const courseTitle = allFetchedCourses.find(c => c.id === courseToDeleteId)?.title || "this course";
+        const toastId = toast.loading(`Deleting ${courseTitle}...`);
+        try {
+            await apiDeleteCourse(courseToDeleteId);
+            setAllFetchedCourses(prevCourses => prevCourses.filter(course => course.id !== courseToDeleteId));
+            toast.dismiss(toastId);
+            toast.success(`Course "${courseTitle}" deleted successfully.`);
+        } catch (error) {
+            toast.dismiss(toastId);
+            console.error("Failed to delete course:", error);
+        } finally {
+            setIsDeleteDialogOpen(false);
             setCourseToDeleteId(null);
         }
     };
 
     const cancelDeleteCourse = () => {
-        setDeleteDialogOpen(false);
+        setIsDeleteDialogOpen(false);
         setCourseToDeleteId(null);
     };
 
-
-    useEffect(() => {
-        setDropdownCategories(categories);
-    }, [categories]);
+    const handleAddNewCourse = () => {
+        resetCourseContext();
+        navigate('/coordinator/course-details');
+    };
 
     return (
         <div className="min-h-screen bg-[#52007C] p-4 sm:p-6 font-['Unbounded'] text-sm tablet:p-6">
             <div className="bg-white rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 flex justify-between items-center tablet:p-4">
-                <div className="flex items-center gap-3 sm:gap-4">
-                    <button className="text-white hover:text-gray-800"
+                 <div className="flex items-center gap-3 sm:gap-4">
+                    <button aria-label="Back to Dashboard" className="text-black hover:text-gray-800"
                         onClick={() => navigate('/coordinator/dashboard')}>
                         <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 text-[#52007C]" />
                     </button>
-                    <h1 className="text-lg sm:text-[24px] font-semibold text-[#000000] tablet:text-xl">Courses</h1>
+                    <h1 className="text-lg sm:text-[24px] font-semibold text-[#000000] tablet:text-xl">My Courses</h1>
                 </div>
                 <button className="bg-[#BF4BF6] hover:bg-[#D68BF9] text-white px-3 sm:px-4 py-1 sm:py-2 rounded-[40px] flex items-center gap-2 text-xs sm:text-sm tablet:px-3 tablet:py-1.5 tablet:text-xs"
-                    onClick={() => navigate('/coordinator/course-details')}>
+                    onClick={handleAddNewCourse}>
                     <span>+</span>
                     <span className="text-xs sm:text-sm hidden sm:block tablet:text-xs">Add New Course</span>
                 </button>
             </div>
 
+            {/* Filters */}
             <div className="mb-4 sm:mb-6 flex justify-between items-center flex-col sm:flex-row gap-y-2 sm:gap-y-0 tablet:flex-row tablet:gap-x-4 tablet:mb-5">
                 <div className="flex gap-2 sm:gap-4">
                     <button
                         className={`px-3 sm:px-4 py-2.5 rounded-[10px] text-xs sm:text-sm whitespace-nowrap ${filter === 'all' ? 'bg-[#BF4BF6] text-white' : 'bg-white text-violet-700'} tablet:px-3 tablet:py-2 tablet:text-xs`}
                         onClick={() => setFilter('all')}
                     >
-                        All Course
+                        All My Courses
                     </button>
                     <button
                         className={`px-3 sm:px-4 py-2.5 rounded-[10px] text-xs sm:text-sm whitespace-nowrap ${filter === 'draft' ? 'bg-[#BF4BF6] text-white' : 'bg-white text-violet-700'} tablet:px-3 tablet:py-2 tablet:text-xs`}
@@ -169,40 +208,43 @@ const CoursesDisplayPage: React.FC = () => {
                 </div>
 
                 <div className="relative w-full sm:w-auto tablet:w-[250px]">
-                    <select
+                     <select
                         className="p-1.5 sm:p-2 pl-2 sm:pl-3 rounded-xl border border-gray-200 appearance-none bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] focus:border-transparent text-xs sm:text-sm w-full sm:w-[300px] tablet:w-full tablet:text-xs"
                         value={searchCategory}
                         onChange={(e) => setSearchCategory(e.target.value)}
                     >
-                        <option value="">Select Category</option>
-                        {dropdownCategories.map(category => (
-                            <option key={category} value={category} className="text-xs sm:text-sm tablet:text-xs">{category}</option>
+                        <option value="">All Categories</option>
+                         {availableCategories.map(category => (
+                            <option key={category.id} value={category.id}>{category.title}</option>
                         ))}
                     </select>
                     <div className="absolute right-2 sm:right-3 top-0 h-full pointer-events-none flex items-center">
                         <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
                     </div>
-                </div>
+                 </div>
             </div>
 
             <div className="mb-4 sm:mb-6 relative tablet:mb-5">
-                <Search className="h-3 w-3 sm:h-4 sm:w-4 text-[#7A00B8] mr-2 absolute left-2 sm:left-3 top-2 sm:top-3" />
+                <Search className="h-3 w-3 sm:h-4 sm:w-4 text-[#7A00B8] mr-2 absolute left-2 sm:left-3 top-2/4 -translate-y-2/4" />
                 <input
                     type="text"
-                    placeholder="Search Courses..."
-                    className="w-full p-1.5 sm:p-2 pl-6 sm:pl-8 rounded-xl border border-gray-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] focus:border-transparent tablet:text-sm"
+                    placeholder="Search Courses by Title..."
+                    className="w-full p-1.5 sm:p-2 pl-7 sm:pl-9 rounded-xl border border-gray-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] focus:border-transparent tablet:text-sm"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
             </div>
 
-            {filteredCourses.length > 0 ? (
+            {isLoading ? (
+                <div className="text-center text-white py-10">Loading courses...</div>
+            ) : filteredCourses.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 tablet:grid-cols-2 tablet:gap-5">
                     {filteredCourses.map((course) => (
                         <GridCard
                             key={course.id}
                             course={course}
-                            onDeleteCourse={handleDeleteCourse}
+                            onDeleteCourse={handleDeleteCourseRequest}
+                            currentUserId={user?.id || ""}
                         />
                     ))}
                 </div>
@@ -217,24 +259,24 @@ const CoursesDisplayPage: React.FC = () => {
                             setSearchQuery('');
                         }}
                     >
-                        Clear Filters
+                        Clear All Filters
                     </button>
                 </div>
             )}
 
             {isDeleteDialogOpen && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center">
-                    <div className="bg-white rounded-xl p-6 sm:p-8 w-[400px] max-w-md tablet:p-5">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-20">
+                    <div className="bg-white rounded-xl p-6 sm:p-8 w-[90%] max-w-md tablet:p-5">
                         <div className="text-center">
                             <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4 tablet:text-lg">Confirm Delete</h3>
-                            <p className="text-gray-600 mb-4 sm:mb-6 text-sm tablet:text-sm">Are you sure you want to request deletion of this course?</p>
+                            <p className="text-gray-600 mb-4 sm:mb-6 text-sm tablet:text-sm">Are you sure you want to delete this course? This action cannot be undone.</p>
                         </div>
                         <div className="flex justify-center gap-3 sm:gap-4">
                             <button
                                 onClick={confirmDeleteCourse}
-                                className="bg-[#BF4BF6] hover:bg-[#D68BF9] text-white font-bold py-1.5 sm:py-2 px-3 sm:px-4 rounded-full transition-colors text-xs sm:text-sm tablet:px-3 tablet:py-1.5 tablet:text-xs"
+                                className="bg-red-500 hover:bg-red-600 text-white font-bold py-1.5 sm:py-2 px-3 sm:px-4 rounded-full transition-colors text-xs sm:text-sm tablet:px-3 tablet:py-1.5 tablet:text-xs"
                             >
-                                Yes, Request Delete
+                                Yes, Delete
                             </button>
                             <button
                                 onClick={cancelDeleteCourse}
