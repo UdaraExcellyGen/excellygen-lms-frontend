@@ -1,3 +1,5 @@
+// Path: src/features/ProjectManager/Employee-assign/Employee-assign.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -5,6 +7,7 @@ import {
     FaFileExport, FaUsers, FaClock, FaObjectGroup, FaChevronDown,
     FaUserSlash, FaHashtag, FaExclamationTriangle
 } from 'react-icons/fa';
+import { toast } from 'react-hot-toast';
 
 // Import components
 import MultiSelect from './components/MultiSelect';
@@ -16,30 +19,41 @@ import ConfirmationDialog from './components/ConfirmationDialog';
 import EmployeeCard from './components/EmployeeCard';
 import ProjectCard from './components/ProjectCard';
 
-// Import types and mock data
-import { Employee, Project } from './types/types';
-import { employeesData, projectsData, techSkillsList, projectRoles, courseSkillMap } from './data/mockData';
+// Import types and API services
+import { Employee, Project, EmployeeAssignment, EmployeeFilter } from './types/types';
+import { employeeApi, projectApi, assignmentApi, resourceApi } from '../../../api/services/ProjectManager/employeeAssignmentService';
 
 const EmployeeManagement: React.FC = () => {
     const [darkMode, setDarkMode] = useState(false);
-    const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
+    const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [projectStatusFilter, setProjectStatusFilter] = useState('All');
     const [searchTerm, setSearchTerm] = useState('');
     const [projectSearchTerm, setProjectSearchTerm] = useState('');
     const [skillFilter, setSkillFilter] = useState<string[]>([]);
-    const [expandedProjects, setExpandedProjects] = useState<number[]>([]);
-    const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+    const [expandedProjects, setExpandedProjects] = useState<string[]>([]);
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
     const statusDropdownRef = useRef<HTMLDivElement>(null);
     const [isSkillMatchActive, setIsSkillMatchActive] = useState(false);
-    const [isFullscreen, setIsFullscreen] = useState(false);
-    const dashboardRef = useRef<HTMLDivElement>(null);
     const [searchType, setSearchType] = useState('name');
     const [projectSearchType, setProjectSearchType] = useState('name');
     const navigate = useNavigate();
-    const [projects, setProjects] = useState<Project[]>(projectsData);
-    const [employees, setEmployees] = useState<Employee[]>(employeesData);
+    
+    // Data states
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [availableRoles, setAvailableRoles] = useState<string[]>([]);
+    const [availableSkills, setAvailableSkills] = useState<string[]>([]);
+    
+    // Loading states
+    const [isLoading, setIsLoading] = useState({
+        projects: false,
+        employees: false,
+        roles: false,
+        skills: false
+    });
+    
+    // Dialog states
     const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
     const [projectDetailsPopup, setProjectDetailsPopup] = useState({ isOpen: false, project: null as Project | null });
     const [isDuplicateAssignmentOpen, setIsDuplicateAssignmentOpen] = useState(false);
@@ -53,77 +67,22 @@ const EmployeeManagement: React.FC = () => {
 
     const multiSelectButtonRef = useRef<HTMLButtonElement>(null);
 
-    const calculateEmployeeCurrentWorkload = (employeeId: number): number => {
-        let totalWorkload = 0;
-
-        // Go through all projects to find assignments for this employee
-        projects.forEach(project => {
-            // Find all assignments for this employee in this project (could have multiple roles)
-            const employeeAssignments = project.assignedEmployees.filter(
-                a => a.employeeId === employeeId
-            );
-
-            // Sum all workload percentages for this employee in this project
-            employeeAssignments.forEach(assignment => {
-                totalWorkload += assignment.workloadPercentage || 100;
-            });
-        });
-
-        return totalWorkload;
-    };
-
-    const getEmployeeAvailableWorkload = (employeeId: number): number => {
-        const currentWorkload = calculateEmployeeCurrentWorkload(employeeId);
-        return Math.max(0, 100 - currentWorkload);
-    };
-
-    const getCategorizedProjects = () => {
-        let filteredProjects = projects;
-
-        filteredProjects = filteredProjects.filter(project => {
-            const searchLower = projectSearchTerm.toLowerCase();
-            if (projectSearchType === 'name') {
-                return project.name.toLowerCase().includes(searchLower);
-            } else if (projectSearchType === 'id') {
-                return String(project.id).includes(searchLower);
-            }
-            return true;
-        });
-
-        if (projectStatusFilter !== 'All') {
-            filteredProjects = filteredProjects.filter(project => project.status === projectStatusFilter);
-        }
-
-        return filteredProjects;
-    };
-
+    // Initialize data on component mount
     useEffect(() => {
-        const assignRandomSkills = () => {
-            const updatedEmployees = employees.map(employee => {
-                let employeeSkills = [...employee.skills]; // Copy existing skills
-                while (employeeSkills.length < 2) {
-                    const randomIndex = Math.floor(Math.random() * techSkillsList.length);
-                    const skill = techSkillsList[randomIndex];
-                    if (!employeeSkills.includes(skill)) {
-                        employeeSkills.push(skill);
-                    }
-                }
-                return { ...employee, skills: employeeSkills };
-            });
-            setEmployees(updatedEmployees);
-        };
-
-        assignRandomSkills();
+        loadInitialData();
     }, []);
 
+    // Load projects when status filter changes
     useEffect(() => {
-        const projectsWithInitialRoles = projects.map(project => ({
-            ...project,
-            initialRequiredRoles: project.requiredRoles.map(role => ({ ...role }))
-        }));
-        setProjects(projectsWithInitialRoles);
-    }, []);
+        loadProjects();
+    }, [projectStatusFilter]);
 
+    // Load employees when filters change
+    useEffect(() => {
+        loadEmployees();
+    }, [searchTerm, skillFilter, showEmployeesWithoutProjects, isSkillMatchActive, selectedProject]);
+
+    // Handle click outside for status dropdown
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
@@ -134,22 +93,7 @@ const EmployeeManagement: React.FC = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [statusDropdownRef]);
 
-    useEffect(() => {
-        const meta = document.createElement('meta');
-        meta.name = "viewport";
-        meta.content = "initial-scale=0.75";
-        document.getElementsByTagName('head')[0].appendChild(meta);
-
-        return () => {
-            const head = document.getElementsByTagName('head')[0];
-            const metaTag = head.querySelector('meta[name="viewport"][content="initial-scale=0.75"]');
-            if (metaTag) {
-                head.removeChild(metaTag);
-            }
-        };
-    }, []);
-
-    // Show warning message when no project is selected and user tries to select employee
+    // Show warning message when no project is selected
     useEffect(() => {
         if (showWarningMessage) {
             const timer = setTimeout(() => {
@@ -159,9 +103,109 @@ const EmployeeManagement: React.FC = () => {
         }
     }, [showWarningMessage]);
 
-    const handleEmployeeSelect = (employeeId: number) => {
+    // API Loading Functions
+    const loadInitialData = async () => {
+        try {
+            await Promise.all([
+                loadProjects(),
+                loadRoles(),
+                loadSkills()
+            ]);
+        } catch (error) {
+            console.error('Error loading initial data:', error);
+            toast.error('Failed to load initial data');
+        }
+    };
+
+    const loadProjects = async () => {
+        setIsLoading(prev => ({ ...prev, projects: true }));
+        try {
+            const statusFilter = projectStatusFilter !== 'All' ? projectStatusFilter : undefined;
+            const projectsData = await projectApi.getAllProjects(statusFilter);
+            
+            // Load assignments for each project
+            const projectsWithAssignments = await Promise.all(
+                projectsData.map(async (project) => {
+                    try {
+                        const assignments = await projectApi.getProjectAssignments(project.id);
+                        return { ...project, employeeAssignments: assignments };
+                    } catch (error) {
+                        console.error(`Error loading assignments for project ${project.id}:`, error);
+                        return { ...project, employeeAssignments: [] };
+                    }
+                })
+            );
+            
+            setProjects(projectsWithAssignments);
+        } catch (error) {
+            console.error('Error loading projects:', error);
+            toast.error('Failed to load projects');
+        } finally {
+            setIsLoading(prev => ({ ...prev, projects: false }));
+        }
+    };
+
+    const loadEmployees = async () => {
+        setIsLoading(prev => ({ ...prev, employees: true }));
+        try {
+            const filter: EmployeeFilter = {
+                searchTerm: searchTerm || undefined,
+                availableOnly: showEmployeesWithoutProjects || undefined,
+                skills: skillFilter.length > 0 ? skillFilter : undefined
+            };
+
+            let employeesData: Employee[];
+
+            if (isSkillMatchActive && selectedProject) {
+                // Get employees matching project skills
+                const projectSkills = selectedProject.requiredSkills.map(skill => skill.name);
+                if (projectSkills.length > 0) {
+                    employeesData = await employeeApi.getEmployeesBySkills(projectSkills);
+                } else {
+                    employeesData = await employeeApi.getAvailableEmployees(filter);
+                }
+            } else {
+                employeesData = await employeeApi.getAvailableEmployees(filter);
+            }
+
+            setEmployees(employeesData);
+        } catch (error) {
+            console.error('Error loading employees:', error);
+            toast.error('Failed to load employees');
+        } finally {
+            setIsLoading(prev => ({ ...prev, employees: false }));
+        }
+    };
+
+    const loadRoles = async () => {
+        setIsLoading(prev => ({ ...prev, roles: true }));
+        try {
+            const rolesData = await resourceApi.getAllRoles();
+            setAvailableRoles(rolesData.map((role: any) => role.name));
+        } catch (error) {
+            console.error('Error loading roles:', error);
+            toast.error('Failed to load roles');
+        } finally {
+            setIsLoading(prev => ({ ...prev, roles: false }));
+        }
+    };
+
+    const loadSkills = async () => {
+        setIsLoading(prev => ({ ...prev, skills: true }));
+        try {
+            const skillsData = await resourceApi.getAllTechnologies();
+            setAvailableSkills(skillsData.map((tech: any) => tech.name));
+        } catch (error) {
+            console.error('Error loading skills:', error);
+            toast.error('Failed to load skills');
+        } finally {
+            setIsLoading(prev => ({ ...prev, skills: false }));
+        }
+    };
+
+    // Event Handlers
+    const handleEmployeeSelect = (employeeId: string) => {
         if (!selectedProject) {
-            // Show the warning message
             setShowWarningMessage(true);
             return;
         }
@@ -177,15 +221,9 @@ const EmployeeManagement: React.FC = () => {
         setSelectedEmployees([]);
     };
 
-    const toggleProjectExpansion = (projectId: number) => {
+    const toggleProjectExpansion = (projectId: string) => {
         setExpandedProjects(prev =>
             prev.includes(projectId) ? prev.filter(id => id !== projectId) : [...prev, projectId]
-        );
-    };
-
-    const toggleCategoryExpansion = (category: string) => {
-        setExpandedCategories(prev =>
-            prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]
         );
     };
 
@@ -195,7 +233,7 @@ const EmployeeManagement: React.FC = () => {
         setAssignmentError('');
     };
 
-    const confirmAssignment = (employeeAssignments: Record<number, { role: string, workloadPercentage: number }>) => {
+    const confirmAssignment = async (employeeAssignments: Record<string, { role: string, workloadPercentage: number }>) => {
         if (!selectedProject || selectedEmployees.length === 0) return;
 
         const rolesNotSelected = selectedEmployees.filter(empId => !employeeAssignments[empId]?.role);
@@ -208,11 +246,10 @@ const EmployeeManagement: React.FC = () => {
             const assignment = employeeAssignments[empId];
             if (!assignment?.workloadPercentage || assignment.workloadPercentage <= 0) return true;
 
-            const currentWorkload = calculateEmployeeCurrentWorkload(empId);
+            const employee = employees.find(e => e.id === empId);
             const requestedWorkload = assignment.workloadPercentage;
 
-            // Check if the requested workload would exceed 100%
-            return currentWorkload + requestedWorkload > 100;
+            return employee && employee.currentWorkloadPercentage + requestedWorkload > 100;
         });
 
         if (invalidWorkloads.length > 0) {
@@ -227,79 +264,38 @@ const EmployeeManagement: React.FC = () => {
 
         setAssignmentError('');
 
-        let validAssignments = [];
-        let redundantEmployees: Employee[] = [];
+        try {
+            const assignments = selectedEmployees.map(empId => ({
+                employeeId: empId,
+                role: employeeAssignments[empId].role,
+                workloadPercentage: employeeAssignments[empId].workloadPercentage
+            }));
 
-        selectedEmployees.forEach(empId => {
-            const employee = employees.find(emp => emp.id === empId);
-            if (!employee) return;
+            await assignmentApi.bulkAssignEmployeesToProject({
+                projectId: selectedProject.id,
+                assignments
+            });
 
-            const { role, workloadPercentage } = employeeAssignments[empId];
-
-            const isRedundant = selectedProject.assignedEmployees.some(assignedEmp =>
-                assignedEmp.employeeId === employee.id && assignedEmp.role === role
-            );
-
-            if (isRedundant) {
-                redundantEmployees.push(employee);
+            toast.success('Employees assigned successfully!');
+            
+            // Refresh data
+            await Promise.all([loadProjects(), loadEmployees()]);
+            
+            setIsConfirmationOpen(false);
+            setSelectedEmployees([]);
+            setSelectedProject(null);
+            setIsSkillMatchActive(false);
+        } catch (error: any) {
+            console.error('Error assigning employees:', error);
+            if (error.response?.data?.message?.includes('already assigned')) {
+                const duplicateEmps = selectedEmployees.map(id => employees.find(e => e.id === id)).filter(Boolean) as Employee[];
+                setDuplicateEmployees(duplicateEmps);
+                setIsDuplicateAssignmentOpen(true);
             } else {
-                validAssignments.push({
-                    employeeId: empId,
-                    role: role,
-                    workloadPercentage: workloadPercentage
-                });
+                setAssignmentError(error.response?.data?.message || 'Error assigning employees');
+                toast.error('Failed to assign employees');
             }
-        });
-
-        if (redundantEmployees.length > 0) {
-            setDuplicateEmployees(redundantEmployees);
-            setIsDuplicateAssignmentOpen(true);
-            return;
         }
-
-        const updatedProjects = projects.map(proj => {
-            if (proj.id === selectedProject.id) {
-                const newAssignments = validAssignments.map(assignment => ({
-                    employeeId: assignment.employeeId,
-                    role: assignment.role,
-                    workloadPercentage: assignment.workloadPercentage
-                }));
-
-                let updatedRequiredRoles = proj.requiredRoles.map(roleItem => {
-                    let assignedInThisBatch = 0;
-                    newAssignments.forEach(assignment => {
-                        if (assignment.role === roleItem.role) {
-                            assignedInThisBatch++;
-                        }
-                    });
-                    return { ...roleItem, count: Math.max(0, roleItem.count - assignedInThisBatch) };
-                });
-
-                return {
-                    ...proj,
-                    assignedEmployees: [...proj.assignedEmployees, ...newAssignments],
-                    requiredRoles: updatedRequiredRoles
-                };
-            }
-            return proj;
-        });
-        setProjects(updatedProjects);
-
-        const updatedEmployees = employees.map(emp => {
-            if (selectedEmployees.includes(emp.id) && !redundantEmployees.includes(emp)) {
-                return {
-                    ...emp,
-                    activeProjects: [...emp.activeProjects, selectedProject.name]
-                };
-            }
-            return emp;
-        });
-        setEmployees(updatedEmployees);
-
-        setIsConfirmationOpen(false);
-        setSelectedEmployees([]);
-        setSelectedProject(null);
-        setIsSkillMatchActive(false);
     };
 
     const cancelAssignmentConfirmation = () => {
@@ -312,51 +308,26 @@ const EmployeeManagement: React.FC = () => {
         setDuplicateEmployees([]);
     };
 
-    const handleRemoveFromProject = (projectId: number, employeeIdToRemove: number) => {
-        setIsRemoveConfirmationOpen(false);
-        setEmployeeToRemove(null);
-        setProjectToRemoveFrom(null);
-
-        const updatedProjects = projects.map(proj => {
-            if (proj.id === projectId) {
-                const removedAssignment = proj.assignedEmployees.find(assignment => assignment.employeeId === employeeIdToRemove);
-
-                let updatedRequiredRoles = proj.requiredRoles.map(roleItem => {
-                    if (removedAssignment && removedAssignment.role === roleItem.role) {
-                        return { ...roleItem, count: roleItem.count + 1 };
-                    }
-                    return roleItem;
-                });
-
-                return {
-                    ...proj,
-                    assignedEmployees: proj.assignedEmployees.filter(assignment => assignment.employeeId !== employeeIdToRemove),
-                    requiredRoles: updatedRequiredRoles
-                };
-            }
-            return proj;
-        });
-        setProjects(updatedProjects);
-
-        const updatedEmployees = employees.map(emp => {
-            if (emp.id === employeeIdToRemove) {
-                const projectToRemove = projects.find(p => p.id === projectId);
-                return {
-                    ...emp,
-                    activeProjects: emp.activeProjects.filter(projectName =>
-                        projectName !== (projectToRemove ? projectToRemove.name : '')
-                    )
-                };
-            }
-            return emp;
-        });
-        setEmployees(updatedEmployees);
+    const handleRemoveFromProject = async (projectId: string, employeeId: string) => {
+        try {
+            await assignmentApi.removeEmployeeFromProject(projectId, employeeId);
+            toast.success('Employee removed from project successfully!');
+            
+            // Refresh data
+            await Promise.all([loadProjects(), loadEmployees()]);
+        } catch (error) {
+            console.error('Error removing employee from project:', error);
+            toast.error('Failed to remove employee from project');
+        }
     };
 
     const confirmRemoveEmployee = () => {
         if (employeeToRemove && projectToRemoveFrom) {
             handleRemoveFromProject(projectToRemoveFrom.id, employeeToRemove.id);
         }
+        setIsRemoveConfirmationOpen(false);
+        setEmployeeToRemove(null);
+        setProjectToRemoveFrom(null);
     };
 
     const cancelRemoveEmployee = () => {
@@ -365,7 +336,7 @@ const EmployeeManagement: React.FC = () => {
         setProjectToRemoveFrom(null);
     };
 
-    const triggerRemoveConfirmation = (projectId: number, employeeId: number, employeeName: string, projectName: string) => {
+    const triggerRemoveConfirmation = (projectId: string, employeeId: string, employeeName: string, projectName: string) => {
         const employeeData = employees.find(e => e.id === employeeId);
         const projectData = projects.find(p => p.id === projectId);
         if (employeeData && projectData) {
@@ -374,43 +345,6 @@ const EmployeeManagement: React.FC = () => {
             setIsRemoveConfirmationOpen(true);
         }
     };
-
-    const filteredEmployees = employees.filter(employee => {
-        let matchesSearch = false;
-        if (searchType === 'name') {
-            matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                employee.role.toLowerCase().includes(searchTerm.toLowerCase());
-        } else {
-            matchesSearch = String(employee.id).includes(searchTerm);
-        }
-
-        let matchesAvailability = true;
-
-        const employeeSkillSet = new Set(employee.skills);
-
-        const matchesSkills = skillFilter.length === 0 ||
-            skillFilter.every(filterSkill =>
-                Array.from(employeeSkillSet).some(empSkill =>
-                    empSkill.toLowerCase() === filterSkill.toLowerCase() // Changed to strict equality
-                )
-            );
-
-        const matchesNoProjectsFilter = !showEmployeesWithoutProjects || employee.activeProjects.length === 0;
-
-        if (isSkillMatchActive && selectedProject) {
-            const requiredProjectSkills = selectedProject.requiredSkills.map(skill =>
-                skill.toLowerCase()
-            );
-            const hasRequiredSkill = requiredProjectSkills.some(requiredSkill =>
-                Array.from(employeeSkillSet).some(empSkill =>
-                    empSkill.toLowerCase() === requiredSkill // Changed to strict equality
-                )
-            );
-            return matchesSearch && matchesAvailability && matchesSkills && hasRequiredSkill && matchesNoProjectsFilter;
-        }
-
-        return matchesSearch && matchesAvailability && matchesSkills && matchesNoProjectsFilter;
-    });
 
     const handleSkillMatch = () => {
         if (!selectedProject) {
@@ -434,8 +368,27 @@ const EmployeeManagement: React.FC = () => {
         setShowEmployeesWithoutProjects(false);
     };
 
-    const categorizedProjects = getCategorizedProjects();
-    const totalProjectsCount = categorizedProjects.length;
+    // Filter projects based on search
+    const filteredProjects = projects.filter(project => {
+        const searchLower = projectSearchTerm.toLowerCase();
+        if (projectSearchType === 'name') {
+            return project.name.toLowerCase().includes(searchLower);
+        } else if (projectSearchType === 'id') {
+            return project.id.toLowerCase().includes(searchLower);
+        }
+        return true;
+    });
+
+    // Filter employees based on search
+    const filteredEmployees = employees.filter(employee => {
+        const searchLower = searchTerm.toLowerCase();
+        if (searchType === 'name') {
+            return employee.name.toLowerCase().includes(searchLower) ||
+                   employee.role.toLowerCase().includes(searchLower);
+        } else {
+            return employee.id.toLowerCase().includes(searchLower);
+        }
+    });
 
     const scrollbarStyles = {
         overflowY: 'auto' as const,
@@ -466,7 +419,7 @@ const EmployeeManagement: React.FC = () => {
                         <MultiSelect
                             value={skillFilter}
                             onChange={setSkillFilter}
-                            options={techSkillsList}
+                            options={availableSkills}
                             darkMode={darkMode}
                             buttonRef={multiSelectButtonRef}
                         />
@@ -493,7 +446,7 @@ const EmployeeManagement: React.FC = () => {
                         <div className="bg-white rounded-xl shadow-lg p-6 h-full flex flex-col">
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-xl font-bold text-[#52007C] dark:text-white font-unbounded">
-                                    Projects ({totalProjectsCount})
+                                    Projects ({filteredProjects.length})
                                 </h2>
                                 <div className="relative flex-grow max-w-sm ml-4">
                                     <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7A00B8]" />
@@ -571,18 +524,28 @@ const EmployeeManagement: React.FC = () => {
                             </div>
 
                             <div style={scrollbarStyles} className="space-y-6 pr-2 h-full custom-scrollbar">
-                                {getCategorizedProjects().map((project) => (
-                                    <ProjectCard
-                                        key={project.id}
-                                        project={project}
-                                        isSelected={selectedProject?.id === project.id}
-                                        isExpanded={expandedProjects.includes(project.id)}
-                                        employees={employees}
-                                        handleProjectSelect={handleProjectSelect}
-                                        toggleProjectExpansion={toggleProjectExpansion}
-                                        triggerRemoveConfirmation={triggerRemoveConfirmation}
-                                    />
-                                ))}
+                                {isLoading.projects ? (
+                                    <div className="flex justify-center items-center h-32">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#BF4BF6]"></div>
+                                    </div>
+                                ) : filteredProjects.length === 0 ? (
+                                    <div className="text-center py-8 text-[#7A00B8] dark:text-[#D68BF9] italic">
+                                        No projects found matching the current filters.
+                                    </div>
+                                ) : (
+                                    filteredProjects.map((project) => (
+                                        <ProjectCard
+                                            key={project.id}
+                                            project={project}
+                                            isSelected={selectedProject?.id === project.id}
+                                            isExpanded={expandedProjects.includes(project.id)}
+                                            employees={employees}
+                                            handleProjectSelect={handleProjectSelect}
+                                            toggleProjectExpansion={toggleProjectExpansion}
+                                            triggerRemoveConfirmation={triggerRemoveConfirmation}
+                                        />
+                                    ))
+                                )}
                             </div>
                         </div>
                     </div>
@@ -665,7 +628,11 @@ const EmployeeManagement: React.FC = () => {
                             )}
                             
                             <div style={scrollbarStyles} className="space-y-4 pr-2 h-full custom-scrollbar">
-                                {filteredEmployees.length > 0 ? (
+                                {isLoading.employees ? (
+                                    <div className="flex justify-center items-center h-32">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#BF4BF6]"></div>
+                                    </div>
+                                ) : filteredEmployees.length > 0 ? (
                                     filteredEmployees.map((employee) => (
                                         <EmployeeCard
                                             key={employee.id}
@@ -674,7 +641,6 @@ const EmployeeManagement: React.FC = () => {
                                             projects={projects}
                                             handleEmployeeSelect={handleEmployeeSelect}
                                             handleOpenProjectDetails={handleOpenProjectDetails}
-                                            calculateWorkload={calculateEmployeeCurrentWorkload}
                                             isDisabled={!selectedProject}
                                         />
                                     ))
@@ -683,7 +649,7 @@ const EmployeeManagement: React.FC = () => {
                                         {isSkillMatchActive && selectedProject
                                             ? 'No employees match the project technologies.'
                                             : showEmployeesWithoutProjects
-                                                ? 'No employees without assigned projects match the current filters.'
+                                                ? 'No available employees without assigned projects match the current filters.'
                                                 : 'No employees match the current filters.'}
                                     </p>
                                 )}
@@ -731,10 +697,8 @@ const EmployeeManagement: React.FC = () => {
                         selectedEmployees={selectedEmployees}
                         selectedProject={selectedProject}
                         employees={employees}
-                        projectRoles={projectRoles}
+                        projectRoles={availableRoles}
                         assignmentError={assignmentError}
-                        getEmployeeAvailableWorkload={getEmployeeAvailableWorkload}
-                        calculateEmployeeCurrentWorkload={calculateEmployeeCurrentWorkload}
                     />
                 </div>
             </div>
