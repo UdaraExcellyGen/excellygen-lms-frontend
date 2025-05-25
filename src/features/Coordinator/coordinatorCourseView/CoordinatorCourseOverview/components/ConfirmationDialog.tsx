@@ -5,35 +5,34 @@ interface ConfirmationDialogProps {
     isOpen: boolean;
     onConfirm: () => void;
     onCancel: () => void;
+    message: string; // Added message prop for dynamic content
 }
 
-const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({ isOpen, onConfirm, onCancel }) => {
+const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({ isOpen, onConfirm, onCancel, message }) => {
     if (!isOpen) {
         return null;
     }
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-            <div className="bg-[#1B0A3F] rounded-xl p-4 sm:p-10 w-full max-w-sm sm:max-w-md border border-[#BF4BF6]/20 shadow-lg">
-                <div className="flex flex-col h-full justify-between items-center">
-                    <div className="text-center">
-                        <h3 className="text-xl sm:text-2xl font-semibold text-white mb-4 font-unbounded">Confirm Delete</h3>
-                        <p className="text-[#D68BF9] text-sm sm:text-lg font-nunito">Are you sure you want to remove this file?</p>
-                    </div>
-                    <div className="flex justify-center gap-4 sm:gap-8 mt-6">
-                        <button
-                            onClick={onConfirm}
-                            className="bg-[#BF4BF6] hover:bg-[#D68BF9] text-[#1B0A3F] font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-full transition-colors font-nunito text-sm sm:text-lg"
-                        >
-                            Yes, Delete
-                        </button>
-                        <button
-                            onClick={onCancel}
-                            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-full transition-colors font-nunito text-sm sm:text-lg"
-                        >
-                            Cancel
-                        </button>
-                    </div>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center z-50 p-4 font-nunito">
+            <div className="bg-[#1B0A3F] rounded-xl p-8 sm:p-10 w-full max-w-lg border border-[#BF4BF6]/30 shadow-2xl transform scale-95 opacity-0 animate-fade-in-scale-up">
+                <div className="text-center mb-6">
+                    <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4 font-unbounded">Confirm Action</h3>
+                    <p className="text-[#D68BF9] text-base sm:text-lg">{message}</p>
+                </div>
+                <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6">
+                    <button
+                        onClick={onConfirm}
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full transition-colors text-base sm:text-lg"
+                    >
+                        Confirm
+                    </button>
+                    <button
+                        onClick={onCancel}
+                        className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-full transition-colors text-base sm:text-lg"
+                    >
+                        Cancel
+                    </button>
                 </div>
             </div>
         </div>

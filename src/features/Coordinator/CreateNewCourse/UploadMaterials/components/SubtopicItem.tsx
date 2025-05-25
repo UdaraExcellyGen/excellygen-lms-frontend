@@ -1,12 +1,12 @@
-// features/Coordinator/CreateNewCourse/UploadMaterials/components/SubtopicItem.tsx
-import React from 'react';
-import { ChevronDown, X, FileText, Plus, Upload, Edit, Save, XCircle } from 'lucide-react';
-import { SubtopicFE, ExistingMaterialFile } from '../../../../../types/course.types'; // Adjust path if needed
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, X, FileText, Plus, Upload, Edit, Save, XCircle, Trash2 } from 'lucide-react';
+import { SubtopicFE, ExistingMaterialFile } from '../../../../../types/course.types';
+import { getQuizzesByLessonId } from '../../../../../api/services/Course/quizService';
 
 interface SubtopicItemProps {
     subtopic: SubtopicFE;
     expanded: boolean;
-    pendingFiles: File[]; // Browser File objects
+    pendingFiles: File[];
     errorMessage: string | undefined;
     showUploadSection: boolean;
     isSubmitting: boolean;
@@ -24,7 +24,6 @@ interface SubtopicItemProps {
     handleRemovePendingFile: (fileName: string) => void;
     setIsDraggingDocs: (isDragging: boolean) => void;
     isDraggingDocs: boolean;
-    // Placeholder functions now correctly defined as expecting no arguments from SubtopicItem's direct call
     handleAddVideoClick: () => void;
     handleCreateQuizClick: () => void;
     handleEditQuiz: () => void;
@@ -57,6 +56,25 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
     handleEditQuiz,
     handleRemoveQuiz,
 }) => {
+    const [hasQuiz, setHasQuiz] = useState<boolean>(false);
+    const [isCheckingQuiz, setIsCheckingQuiz] = useState<boolean>(false);
+
+    useEffect(() => {
+        if (expanded) {
+            setIsCheckingQuiz(true);
+            const checkForQuiz = async () => {
+                try {
+                    const quizzes = await getQuizzesByLessonId(subtopic.id);
+                    setHasQuiz(quizzes.length > 0);
+                } catch (error) {
+                    console.error(`Failed to check for quiz in lesson ${subtopic.id}:`, error);
+                } finally {
+                    setIsCheckingQuiz(false);
+                }
+            };
+            checkForQuiz();
+        }
+    }, [expanded, subtopic.id]);
 
     const renderMaterialIcon = (material: ExistingMaterialFile) => {
         switch (material.documentType) {
@@ -86,7 +104,6 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
         }
         handleSubtopicInputChange('lessonPoints', points.toString());
     };
-
 
     return (
         <div className="mb-4 bg-[#1B0A3F]/60 rounded-lg p-4 transition-all duration-300 ease-in-out">
@@ -119,6 +136,11 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                             title={subtopic.lessonName}
                         >
                             {subtopic.lessonName || "Unnamed Subtopic"}
+                            {hasQuiz && (
+                                <span className="ml-2 text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">
+                                    Quiz
+                                </span>
+                            )}
                         </span>
                     )}
                 </div>
@@ -138,16 +160,44 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                                 className="w-20 text-sm p-1 bg-[#2D1B59] text-white rounded border border-purple-400 text-center"
                                 disabled={isSubmitting}
                             />
-                            <button onClick={handleSaveChanges} disabled={isSubmitting} className="p-1 text-green-400 hover:text-green-300 disabled:opacity-50" aria-label="Save changes"><Save size={18} /></button>
-                            <button onClick={handleCancelEdit} disabled={isSubmitting} className="p-1 text-red-400 hover:text-red-300 disabled:opacity-50" aria-label="Cancel edit"><XCircle size={18} /></button>
+                            <button 
+                                onClick={handleSaveChanges} 
+                                disabled={isSubmitting} 
+                                className="p-1 text-green-400 hover:text-green-300 disabled:opacity-50" 
+                                aria-label="Save changes"
+                            >
+                                <Save size={18} />
+                            </button>
+                            <button 
+                                onClick={handleCancelEdit} 
+                                disabled={isSubmitting} 
+                                className="p-1 text-red-400 hover:text-red-300 disabled:opacity-50" 
+                                aria-label="Cancel edit"
+                            >
+                                <XCircle size={18} />
+                            </button>
                         </>
                     ) : (
                         <>
                             <span className="text-sm font-['Nunito_Sans'] text-gray-300 bg-[#2D1B59] px-2 py-0.5 rounded whitespace-nowrap">
                                 {subtopic.lessonPoints} pts
                             </span>
-                            <button onClick={handleToggleEdit} disabled={isSubmitting} className="p-1 text-gray-400 hover:text-white" aria-label={`Edit ${subtopic.lessonName || 'subtopic'}`}><Edit size={16} /></button>
-                            <button onClick={handleRemoveSubtopic} disabled={isSubmitting} className="p-1 text-gray-400 hover:text-red-500" aria-label={`Delete ${subtopic.lessonName || 'subtopic'}`}><X size={16} /></button>
+                            <button 
+                                onClick={handleToggleEdit} 
+                                disabled={isSubmitting} 
+                                className="p-1 text-gray-400 hover:text-white" 
+                                aria-label={`Edit ${subtopic.lessonName || 'subtopic'}`}
+                            >
+                                <Edit size={16} />
+                            </button>
+                            <button 
+                                onClick={handleRemoveSubtopic} 
+                                disabled={isSubmitting} 
+                                className="p-1 text-gray-400 hover:text-red-500" 
+                                aria-label={`Delete ${subtopic.lessonName || 'subtopic'}`}
+                            >
+                                <X size={16} />
+                            </button>
                         </>
                     )}
                 </div>
@@ -172,7 +222,9 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                                             >
                                                 {material.name}
                                             </a>
-                                            <span className="text-xs text-gray-400 ml-2 flex-shrink-0">({(material.fileSize / (1024 * 1024)).toFixed(2)} MB)</span>
+                                            <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                                                ({(material.fileSize / (1024 * 1024)).toFixed(2)} MB)
+                                            </span>
                                         </div>
                                         <button
                                             onClick={() => removeMaterial(material.id, material.name)}
@@ -188,7 +240,7 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                         </div>
                     )}
                     {subtopic.documents && subtopic.documents.length === 0 && !showUploadSection && (
-                         <p className="text-xs text-gray-400 font-['Nunito_Sans'] italic">No documents uploaded for this subtopic yet.</p>
+                        <p className="text-xs text-gray-400 font-['Nunito_Sans'] italic">No documents uploaded for this subtopic yet.</p>
                     )}
 
                     <div className="flex flex-wrap gap-2 pt-2">
@@ -198,15 +250,41 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                             className="px-3 py-1.5 bg-[#F6E6FF] text-[#1B0A3F] rounded-lg font-['Nunito_Sans'] hover:bg-[#E0D0F2] transition-colors text-xs disabled:opacity-50">
                             <Plus size={14} className="inline mr-1" /> {showUploadSection ? 'Hide Upload' : 'Add Document'}
                         </button>
-                        <button onClick={handleAddVideoClick} disabled={false} className="px-3 py-1.5 bg-gray-600 text-gray-400 rounded-lg font-['Nunito_Sans'] text-xs cursor-not-allowed"><Plus size={14} className="inline mr-1" /> Add Video </button>
-                        <button onClick={handleCreateQuizClick} disabled={false} className="px-3 py-1.5 bg-gray-600 text-gray-400 rounded-lg font-['Nunito_Sans'] text-xs cursor-not-allowed"><Plus size={14} className="inline mr-1" /> Create Quiz </button>
-                        {/* Example: Show Edit/Remove Quiz if subtopic.hasQuiz is true */}
-                        {/* {subtopic.hasQuiz && (
+                        
+                        <button 
+                            onClick={handleAddVideoClick} 
+                            disabled={isSubmitting}
+                            className="px-3 py-1.5 bg-gray-600 text-gray-400 rounded-lg font-['Nunito_Sans'] text-xs cursor-not-allowed"
+                        >
+                            <Plus size={14} className="inline mr-1" /> Add Video
+                        </button>
+                        
+                        {!hasQuiz ? (
+                            <button 
+                                onClick={handleCreateQuizClick} 
+                                disabled={isSubmitting}
+                                className="px-3 py-1.5 bg-[#F6E6FF] text-[#1B0A3F] rounded-lg font-['Nunito_Sans'] hover:bg-[#E0D0F2] transition-colors text-xs disabled:opacity-50"
+                            >
+                                <Plus size={14} className="inline mr-1" /> Create Quiz
+                            </button>
+                        ) : (
                             <>
-                                <button onClick={handleEditQuiz} disabled={isSubmitting || true} className="px-3 py-1.5 bg-gray-600 text-gray-400 ...">Edit Quiz (N/A)</button>
-                                <button onClick={handleRemoveQuiz} disabled={isSubmitting || true} className="px-3 py-1.5 bg-red-700/50 text-red-300 ...">Remove Quiz (N/A)</button>
+                                <button 
+                                    onClick={handleEditQuiz} 
+                                    disabled={isSubmitting}
+                                    className="px-3 py-1.5 bg-[#F6E6FF] text-[#1B0A3F] rounded-lg font-['Nunito_Sans'] hover:bg-[#E0D0F2] transition-colors text-xs disabled:opacity-50"
+                                >
+                                    <Edit size={14} className="inline mr-1" /> Edit Quiz
+                                </button>
+                                <button 
+                                    onClick={handleRemoveQuiz} 
+                                    disabled={isSubmitting}
+                                    className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg font-['Nunito_Sans'] hover:bg-red-200 transition-colors text-xs disabled:opacity-50"
+                                >
+                                    <Trash2 size={14} className="inline mr-1" /> Remove Quiz
+                                </button>
                             </>
-                        )} */}
+                        )}
                     </div>
 
                     {showUploadSection && (

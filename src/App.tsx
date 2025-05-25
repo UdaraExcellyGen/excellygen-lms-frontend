@@ -33,6 +33,9 @@ import LearnerNotifications from './features/Learner/LearnerNotifications/Learne
 import Leaderboard from './features/Learner/Leaderboard/Leaderboard';
 import CourseCategories from './features/Learner/CourseCategories/CourseCategories';
 import CourseContent from './features/Learner/CourseContent/CourseContent';
+import LearnerCourseOverview from './features/Learner/CourseContent/CourseOverview'; // Import the new component
+import TakeQuiz from './features/Learner/TakeQuiz/TakeQuiz';
+import QuizResults from './features/Learner/QuizResults/QuizResults';
 
 // Admin Components
 import AdminDashboard from './features/Admin/AdminDashboard/AdminDashboard';
@@ -54,6 +57,11 @@ import CoursesDisplayPage from './features/Coordinator/CoursesDisplayPage/Course
 import CourseDetails from './features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails';
 import CoordinatorCourseOverview from './features/Coordinator/coordinatorCourseView/CoordinatorCourseOverview/CoordinatorCourseOverview';
 import AssignLearners from './features/Coordinator/coordinatorCourseView/AssignLearners/AssignLearners';
+import CreateQuiz from './features/Coordinator/QuizManagement/CreateQuiz';
+
+import QuizList from './features/Coordinator/LessonQuizzes/QuizList';
+import QuizResultsCoordinator from './features/Coordinator/LessonQuizzes/QuizResultsCoordinator';
+
 
 // Project Manager Components
 import ProjectManagerDashboard from './features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard';
@@ -198,41 +206,74 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          {/* FIXED: Route for category-specific courses, now uses categoryId and maps to CourseContent */}
           <Route 
-            path="courses/:pathTitle" 
+            path="courses/:categoryId" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.Learner]}>
                 {withSidebarAndSearch(CourseContent)}
               </ProtectedRoute>
             } 
           />
+          {/* NEW: Route for specific course overview (learner view) */}
           <Route 
-            path="course/:courseId" 
+            path="course-view/:courseId" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
+                {withSidebarAndSearch(LearnerCourseOverview)}
+              </ProtectedRoute>
+            } 
+          />
+          {/* REMOVED: Old ambiguous legacy routes for Learner course content */}
+          {/*
+          <Route
+            path="course/:courseId"
             element={
               <ProtectedRoute allowedRoles={[UserRole.Learner]}>
                 {withSidebarAndSearch(CourseContent)}
+              </ProtectedRoute>
+            }
+          />
+          */}
+          
+          {/* Quiz related pages */}
+          <Route 
+            path="take-quiz/:quizId" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
+                {withSidebarAndSearch(TakeQuiz)}
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="quiz-results/:attemptId" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
+                {withSidebarAndSearch(QuizResults)}
               </ProtectedRoute>
             } 
           />
         </Route>
 
-        {/* Legacy course routes (keeping for backward compatibility) */}
-        <Route 
-          path="/courses/:pathTitle" 
+        {/* REMOVED: Top-level legacy course routes that were causing ambiguity */}
+        {/*
+        <Route
+          path="/courses/:pathTitle"
           element={
             <ProtectedRoute allowedRoles={[UserRole.Learner]}>
               {withSidebarAndSearch(CourseContent)}
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/course/:courseId" 
+        <Route
+          path="/course/:courseId"
           element={
             <ProtectedRoute allowedRoles={[UserRole.Learner]}>
               {withSidebarAndSearch(CourseContent)}
             </ProtectedRoute>
-          } 
+          }
         />
+        */}
 
         {/* Search Routes */}
         <Route 
@@ -412,6 +453,48 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          
+          {/* Quiz Management Routes */}
+          <Route 
+            path="create-quiz/:lessonId" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                {withCourseContext(CreateQuiz)}
+              </ProtectedRoute>
+            } 
+          />
+          {/* <Route 
+            path="edit-quiz/:quizId" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                {withCourseContext(EditQuiz)}
+              </ProtectedRoute>
+            } 
+          /> */}
+          <Route 
+            path="quiz-list/:lessonId" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                {withCourseContext(QuizList)}
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="quiz-results/:quizId" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                {withCourseContext(QuizResultsCoordinator)}
+              </ProtectedRoute>
+            } 
+          />
+          {/* <Route 
+            path="quiz-attempt/:attemptId" 
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
+                {withCourseContext(QuizAttemptDetail)}
+              </ProtectedRoute>
+            } 
+          /> */}
         </Route>
         
         {/* PROJECT MANAGER ROUTES  */}

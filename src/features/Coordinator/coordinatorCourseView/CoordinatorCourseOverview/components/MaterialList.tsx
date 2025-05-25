@@ -1,43 +1,55 @@
 // components/MaterialList.tsx
 import React from 'react';
-import { Material } from '../types';
-import { FileText, PlayCircle, X } from 'lucide-react';
+import { CourseDocumentDto } from '../../../../../types/course.types';
+import { FileText, X } from 'lucide-react';
 
 interface MaterialListProps {
-    materials?: Material[];
-    askDeleteConfirmation: (materialId: string) => void;
+    materials?: CourseDocumentDto[];
+    askDeleteConfirmation: (documentId: number, documentName: string) => void;
 }
 
 const MaterialList: React.FC<MaterialListProps> = ({ materials, askDeleteConfirmation }) => {
+    // Map DocumentType enum from backend string to icon
+    const getIconForDocumentType = (type: string) => {
+        switch (type.toLowerCase()) {
+            case 'pdf': return <FileText className="w-5 h-5 mr-3 text-red-400 flex-shrink-0" />;
+            case 'word': return <FileText className="w-5 h-5 mr-3 text-blue-400 flex-shrink-0" />;
+            default: return <FileText className="w-5 h-5 mr-3 text-gray-400 flex-shrink-0" />;
+        }
+    };
+
     return (
-        <>
-            {materials?.map((material, index) => (
-                <div
-                    key={index}
-                    className="bg-[#1B0A3F]/60 rounded-lg p-2 sm:p-4 flex items-center justify-between group hover:bg-[#1B0A3F]/80 transition-all duration-300"
+        <ul className="space-y-3">
+            {materials?.map((material) => (
+                <li
+                    key={material.id}
+                    className="flex items-center justify-between bg-[#1B0A3F]/70 rounded-md p-3 shadow-sm hover:bg-[#1B0A3F]/90 transition-colors duration-200"
                 >
-                    <div className="flex items-center min-w-0">
-                        {material.type === 'document' ? (
-                            <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D68BF9] flex-shrink-0" />
-                        ) : (
-                            <PlayCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D68BF9] flex-shrink-0" />
-                        )}
-                        <div className="min-w-0">
-                            <p className="text-white group-hover:text-[#D68BF9] transition-colors font-nunito text-xs sm:text-sm truncate">
-                                {material.name}
-                            </p>
-                        </div>
+                    <div className="flex items-center min-w-0 flex-grow">
+                        {getIconForDocumentType(material.documentType)}
+                        <a
+                            href={material.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-white text-sm font-medium truncate hover:underline transition-colors"
+                            title={material.name}
+                        >
+                            {material.name}
+                        </a>
+                        <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                            ({(material.fileSize / (1024 * 1024)).toFixed(2)} MB)
+                        </span>
                     </div>
                     <button
-                        onClick={() => askDeleteConfirmation(material.id)}
-                        className="hover:text-red-500 transition-colors flex-shrink-0 ml-2"
+                        onClick={() => askDeleteConfirmation(material.id, material.name)}
+                        className="p-1 rounded-full text-gray-400 hover:text-red-500 transition-colors duration-200 ml-2 flex-shrink-0"
                         aria-label={`Delete material ${material.name}`}
                     >
-                        <X className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 hover:text-red-500" />
+                        <X size={16} />
                     </button>
-                </div>
+                </li>
             ))}
-        </>
+        </ul>
     );
 };
 

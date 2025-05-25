@@ -1,16 +1,17 @@
+// src/features/Learner/CourseContent/components/CourseGrid.tsx
 import React from 'react';
-import { Course } from '../types/Course';
+import { LearnerCourseDto } from '../../../../types/course.types'; // Use LearnerCourseDto directly
 import AvailableCourseCard from './AvailableCourseCard';
 import EnrolledCourseCard from './EnrolledCourseCard';
 
 interface CourseGridProps {
   activeTab: 'courses' | 'learning';
-  availableCourses: Course[];
-  enrolledCourses: Course[];
+  availableCourses: LearnerCourseDto[]; // Expects LearnerCourseDto[]
+  enrolledCourses: LearnerCourseDto[]; // Expects LearnerCourseDto[]
   loading: boolean;
-  onEnroll: (courseId: string) => void;
-  onUnenroll: (course: Course) => void;
-  onContinueLearning: (courseId: string) => void;
+  onEnroll: (courseId: number) => void; // Expects number ID
+  onUnenroll: (course: LearnerCourseDto) => void; // Expects LearnerCourseDto
+  onContinueLearning: (courseId: number) => void; // Expects number ID
 }
 
 const CourseGrid: React.FC<CourseGridProps> = ({
@@ -35,7 +36,7 @@ const CourseGrid: React.FC<CourseGridProps> = ({
             />
           ))
         ) : (
-          <div className="col-span-full text-center text-[#D68BF9] text-lg font-nunito">
+          <div className="col-span-full text-center text-[#D68BF9] text-lg font-nunito py-10">
             No courses available for this path yet.
           </div>
         )
@@ -50,7 +51,7 @@ const CourseGrid: React.FC<CourseGridProps> = ({
             />
           ))
         ) : (
-          <div className="col-span-full text-center text-[#D68BF9] text-lg font-nunito">
+          <div className="col-span-full text-center text-[#D68BF9] text-lg font-nunito py-10">
             You haven't enrolled in any courses for this path yet.
           </div>
         )
