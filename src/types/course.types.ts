@@ -35,8 +35,6 @@ export interface LessonDto {
     lastUpdatedDate: string; // ISO 8601 string
     courseId: number;
     documents: CourseDocumentDto[];
-    // This frontend type might need quizzes if fetched with lesson (as in CoordinatorCourseOverview)
-    // Adding it as optional for flexibility when data includes it
     quizzes?: QuizDto[]; // Optional, might be populated client-side or by specific backend DTO
 }
 
@@ -56,7 +54,7 @@ export interface CourseDto {
     lessons: LessonDto[];
 }
 
-// New DTOs for Learner Module (from backend LearnerCourseDto.cs, LessonProgressDto.cs, CertificateDto.cs)
+// Learner Module DTOs (from backend LearnerCourseDto.cs, LessonProgressDto.cs, CertificateDto.cs)
 
 export interface LearnerLessonDto {
     id: number;
@@ -139,7 +137,6 @@ export interface UpdateEnrollmentPayload {
     status: string;
 }
 
-
 // Frontend-specific payloads for API requests (match backend DTOs where applicable)
 
 export interface CreateCoursePayload {
@@ -168,7 +165,6 @@ export interface UpdateLessonPayload {
     lessonName: string;
     lessonPoints: number;
 }
-
 
 // Frontend-specific state types for UI management
 
@@ -211,4 +207,15 @@ export interface CourseContextState {
     basicDetails: BasicCourseDetailsState; // Store state from step 1
     lessons: SubtopicFE[]; // Use the frontend-specific type
     lessonsLoaded: boolean;
+}
+
+// ADDED: OverallLmsStatsDto from backend ExcellyGenLMS.Application/DTOs/CommonStatsDto.cs
+// This is used for overall LMS statistics (Total Courses, Active Learners, etc.)
+export interface OverallLmsStatsDto {
+    totalCategories: number;
+    totalPublishedCourses: number;
+    totalActiveLearners: number;
+    totalActiveCoordinators: number;
+    totalProjectManagers: number;
+    averageCourseDurationOverall: string;
 }

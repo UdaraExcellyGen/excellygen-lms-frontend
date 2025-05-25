@@ -2,21 +2,18 @@
 import React from 'react';
 import StatCard from './StatCard';
 import { BookOpen, Users, Clock } from 'lucide-react'; 
-// Removed statsData import because it's passed as props directly
-// import { statsData } from '../data/statsData';
 
 interface StatsOverviewProps {
   availableCoursesCount: number;
   enrolledCoursesCount: number;
-  averageCourseDurationOverall: string; // ADDED: Prop for dynamic overall average duration
+  totalCategoryDuration: string;
 }
 
 const StatsOverview: React.FC<StatsOverviewProps> = ({ 
   availableCoursesCount, 
   enrolledCoursesCount,
-  averageCourseDurationOverall // Destructure the new prop
+  totalCategoryDuration 
 }) => {
-  // Define statsData internally using the passed props
   const statsData = [
     { 
       icon: BookOpen, 
@@ -30,13 +27,13 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
     },
     { 
       icon: Clock, 
-      label: 'Avg. Duration', 
-      value: averageCourseDurationOverall // DYNAMIC: Use the passed prop
+      label: 'Total Duration', 
+      value: totalCategoryDuration
     }
   ];
   
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-12">
       {statsData.map((stat, index) => (
         <StatCard
           key={index}
