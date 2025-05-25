@@ -1,88 +1,71 @@
+// src/features/Learner/Certificates/components/CertificateCard.tsx
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Award, Download, Star, Clock } from 'lucide-react';
-import { CertificateCardProps } from '../../../../../../../../Certificates/Certificates/types/certificates';
+// FIXED: Added Clock import
+import { Download, Award, Trash2, Clock } from 'lucide-react'; 
+import { CertificateDto } from '../../../../types/course.types'; // Use backend CertificateDto
 
-export const CertificateCard: React.FC<CertificateCardProps> = ({ certificate }) => {
-  const navigate = useNavigate();
-  
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Completed':
-        return 'bg-green-50 text-green-600';
-      case 'In Progress':
-        return 'bg-blue-50 text-blue-600';
-      default:
-        return 'bg-gray-50 text-gray-600';
-    }
-  };
+interface CertificateCardProps {
+  certificate: CertificateDto; // Expects CertificateDto
+  onDelete: (id: number) => void; // Added for delete functionality if backend supports
+}
 
+export const CertificateCard: React.FC<CertificateCardProps> = ({ certificate, onDelete }) => {
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (certificate.status === 'Completed') {
-      navigate(`/certificate/${certificate.id}`);
+    // Assuming certificate.certificateFileUrl is a direct download link
+    if (certificate.certificateFileUrl) {
+      window.open(certificate.certificateFileUrl, '_blank');
+    } else {
+      console.warn("Certificate file URL is missing.");
+      alert("Certificate file not available for download.");
     }
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-      <div className="relative h-48 bg-gradient-to-br from-[#52007C] to-[#BF4BF6] p-6">
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow flex flex-col h-full">
+      <div className="relative h-48 bg-gradient-to-br from-[#52007C] to-[#BF4BF6] p-6 flex flex-col justify-between">
         <div className="absolute inset-0 flex items-center justify-center">
           <Award className="h-20 w-20 text-white/20" />
         </div>
-        <div className="relative">
+        <div className="relative flex-grow">
           <h3 className="text-lg font-semibold text-white">{certificate.title}</h3>
-          <p className="text-[#D68BF9] mt-1">{certificate.issuer}</p>
+          <p className="text-[#D68BF9] mt-1">{certificate.courseTitle}</p>
+        </div>
+        <div className="relative flex justify-end gap-2 mt-auto">
+            <button 
+                className="p-2 text-white hover:text-[#D68BF9] rounded-full transition-colors bg-white/20 hover:bg-white/30"
+                onClick={handleDownload}
+                aria-label="Download certificate"
+            >
+                <Download className="h-5 w-5" />
+            </button>
+            {/* Enable delete if needed, for now it's just a placeholder for the delete modal trigger */}
+            {/* <button 
+                className="p-2 text-white hover:text-red-400 rounded-full transition-colors bg-white/20 hover:bg-red-400/30"
+                onClick={() => onDelete(certificate.id)}
+                aria-label="Delete certificate"
+            >
+                <Trash2 className="h-5 w-5" />
+            </button> */}
         </div>
       </div>
 
-      <div className="p-6">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(certificate.status)}`}>
-              {certificate.status}
-            </span>
-            {certificate.grade && (
-              <div className="flex items-center gap-1 mt-2 text-yellow-500">
-                <Star className="h-4 w-4 fill-current" />
-                <span className="text-sm font-medium">{certificate.grade}</span>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center">
-            {certificate.status === 'Completed' && (
-              <button 
-                className="p-2 text-gray-500 hover:text-[#BF4BF6] rounded-lg transition-colors"
-                onClick={handleDownload}
-                aria-label="Download certificate"
-              >
-                <Download className="h-5 w-5" />
-              </button>
-            )}
-          </div>
+      <div className="p-6 flex-grow flex flex-col justify-between">
+        <div className="mb-4">
+          <span className={`px-3 py-1 rounded-full text-sm bg-green-50 text-green-600`}>
+            Completed
+          </span>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Clock className="h-4 w-4" />
-            {certificate.status === 'Completed' ? (
-              <span>Completed on {certificate.completionDate}</span>
-            ) : (
-              <span>Expected completion: {certificate.expectedCompletion}</span>
-            )}
+        <div className="space-y-2 text-sm text-gray-500 mt-auto">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4" /> {/* Error was here */}
+            <span>Completed on {new Date(certificate.completionDate).toLocaleDateString()}</span>
           </div>
-          {certificate.skills && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {certificate.skills.map((skill, index) => (
-                <span 
-                  key={index}
-                  className="px-2 py-1 bg-[#F6E6FF] text-[#52007C] text-xs rounded-lg"
-                >
-                  {skill}
-                </span>
-              ))}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <Award className="h-4 w-4" />
+            <span>Issued to: {certificate.userName}</span>
+          </div>
         </div>
       </div>
     </div>

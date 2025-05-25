@@ -1,98 +1,41 @@
 // src/api/services/courseCategoryService.ts
-import axios from 'axios';
-import { PathCard } from '../../features/Learner/CourseCategories/types/PathCard';
+import apiClient from '../apiClient'; 
 
-// Interface matching the backend DTO
-export interface CourseCategoryDto {
+// Interface matching the backend DTO (from ExcellyGenLMS.Application.DTOs.Admin.CourseCategoryDtos.cs)
+// This is what the backend's /CourseCategories endpoint returns.
+export interface CourseCategoryDtoBackend {
   id: string;
   title: string;
   description: string;
-  icon: string;
+  icon: string; // The string name of the icon (e.g., "code")
   status: string;
-  totalCourses: number;
+  totalCourses: number; 
+  activeLearnersCount: number; 
+  avgDuration: string; // ADDED: Matches backend DTO
 }
 
-// Static data for fields we're keeping mock
-const getMockUserData = (title: string): { activeUsers: number, avgDuration: string } => {
-  const mockData: Record<string, { activeUsers: number, avgDuration: string }> = {
-    "Software Engineering": { activeUsers: 1250, avgDuration: "6 months" },
-    "Quality Assurance": { activeUsers: 850, avgDuration: "4 months" },
-    "Project Management": { activeUsers: 950, avgDuration: "5 months" },
-    "DevOps": { activeUsers: 1100, avgDuration: "6 months" },
-    "UI/UX Design": { activeUsers: 780, avgDuration: "4 months" },
-    "Data Science": { activeUsers: 1400, avgDuration: "8 months" },
-    "Cloud Computing": { activeUsers: 920, avgDuration: "5 months" },
-    "Cyber Security": { activeUsers: 1050, avgDuration: "7 months" }
-  };
-
-  return mockData[title] || { activeUsers: 800, avgDuration: "5 months" };
-};
-
-// Create a configured axios instance for API calls
-const createApiClient = () => {
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5177/api';
-  
-  const apiClient = axios.create({
-    baseURL: API_URL,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  // Add request interceptor to include auth token
-  apiClient.interceptors.request.use(
-    (config) => {
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    },
-    (error) => {
-      return Promise.reject(error);
-    }
-  );
-
-  return apiClient;
-};
-
-const apiClient = createApiClient();
-
 // Get all active course categories
-export const getCategories = async (): Promise<(Omit<PathCard, 'icon'> & { iconName: string })[]> => {
+// This function strictly returns data as provided by the backend API.
+export const getCategories = async (): Promise<CourseCategoryDtoBackend[]> => {
   try {
     console.log('Fetching categories from API...');
-    const response = await apiClient.get('/CourseCategories');
+    const response = await apiClient.get<CourseCategoryDtoBackend[]>('/CourseCategories'); 
     console.log('API Response:', response.data);
     
     if (!Array.isArray(response.data)) {
-      console.error('Could not find categories array in API response:', response.data);
-      throw new Error('Invalid API response format');
+      console.error('API response for categories is not an array:', response.data);
+      throw new Error('Invalid API response format for categories');
     }
     
-    // Map backend data to PathCard interface without the React icon component
-    return response.data
-      .filter(category => category.status === 'active')
-      .map(category => {
-        const { activeUsers, avgDuration } = getMockUserData(category.title);
-        
-        return {
-          id: category.id,
-          title: category.title,
-          iconName: category.icon || 'code', // Default to 'code' if no icon
-          description: category.description,
-          totalCourses: category.totalCourses,
-          activeUsers,
-          avgDuration
-        };
-      });
+    return response.data.filter(category => category.status === 'active');
+    
   } catch (error) {
     console.error('Error fetching course categories:', error);
-    throw error;
+    throw error; 
   }
 };
 
-// Get courses by category ID
+// Get courses by category ID (retained from your original file)
 export const getCoursesByCategory = async (categoryId: string) => {
   try {
     const response = await apiClient.get(`/CourseCategories/${categoryId}/courses`);

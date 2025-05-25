@@ -1,20 +1,39 @@
+// src/features/Learner/CourseContent/components/StatsOverview.tsx
 import React from 'react';
 import StatCard from './StatCard';
-import { getStatsData } from '../data/statsData';
+import { BookOpen, Users, Clock } from 'lucide-react'; 
 
 interface StatsOverviewProps {
   availableCoursesCount: number;
   enrolledCoursesCount: number;
+  totalCategoryDuration: string;
 }
 
 const StatsOverview: React.FC<StatsOverviewProps> = ({ 
   availableCoursesCount, 
-  enrolledCoursesCount 
+  enrolledCoursesCount,
+  totalCategoryDuration 
 }) => {
-  const statsData = getStatsData(availableCoursesCount, enrolledCoursesCount);
+  const statsData = [
+    { 
+      icon: BookOpen, 
+      label: 'Available Courses', 
+      value: `${availableCoursesCount}` 
+    },
+    { 
+      icon: Users, 
+      label: 'Enrolled Courses', 
+      value: `${enrolledCoursesCount}` 
+    },
+    { 
+      icon: Clock, 
+      label: 'Total Duration', 
+      value: totalCategoryDuration
+    }
+  ];
   
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-12">
       {statsData.map((stat, index) => (
         <StatCard
           key={index}

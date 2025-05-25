@@ -4,14 +4,20 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import Layout from '../../../components/Sidebar/Layout';
 import Header from './components/Header';
-import StatsOverview from './components/StatsOverview';
+import StatsOverview from './components/StatsOverview'; 
 import SearchBar from './components/SearchBar';
 import PathGrid from './components/PathGrid';
-import { getCategories } from '../../../api/services/courseCategoryService';
-import { PathCard } from './types/PathCard';
+// FIXED: Removed alias and local interface declaration for CourseCategoryDtoBackend - the alias was 'CourseCategoryDtoBackend', removed local 'interface CourseCategoryDtoBackend'
+import { getCategories as getCategoriesApi, CourseCategoryDtoBackend } from '../../../api/services/courseCategoryService'; 
+import { PathCard } from './types/PathCard'; 
+import { getOverallLmsStatsForLearner } from '../../../api/services/LearnerDashboard/learnerOverallStatsService'; 
+import { OverallLmsStatsDto } from '../../../types/course.types'; 
+
 import {
   Code2, Target, ClipboardList, Settings, Palette, LineChart, Cloud, Shield
 } from 'lucide-react';
+
+// REMOVED: The duplicate local interface CourseCategoryDtoBackend was here. It's now removed.
 
 const CourseCategories: React.FC = () => {
   const navigate = useNavigate();
@@ -19,8 +25,17 @@ const CourseCategories: React.FC = () => {
   const [paths, setPaths] = useState<PathCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [overallLmsStats, setOverallLmsStats] = useState<OverallLmsStatsDto>({
+    totalCategories: 0,
+    totalPublishedCourses: 0,
+    totalActiveLearners: 0,
+    totalActiveCoordinators: 0,
+    totalProjectManagers: 0,
+    averageCourseDurationOverall: 'N/A'
+  });
 
-  // Map icon names to React components
+
+  // Map icon names (strings from backend) to React components (for frontend display)
   const getIconComponent = (iconName: string) => {
     const iconMap: Record<string, React.ElementType> = {
       'code': Code2,
@@ -33,42 +48,52 @@ const CourseCategories: React.FC = () => {
       'shield': Shield
     };
 
-    const IconComponent = iconMap[iconName.toLowerCase()] || Code2;
+    const IconComponent = iconMap[iconName.toLowerCase()] || Code2; 
     return <IconComponent size={30} className="text-white" />;
   };
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchCategoriesAndStats = async () => { 
       try {
         setLoading(true);
-        const categoriesData = await getCategories();
+        // Fetch categories and overall LMS stats concurrently
+        const [categoriesData, fetchedOverallStats] = await Promise.all([ 
+          getCategoriesApi(), 
+          getOverallLmsStatsForLearner() 
+        ]);
         
-        // Convert the categories data to PathCard objects with React icon components
-        const pathsWithIcons = categoriesData.map(category => ({
-          title: category.title,
-          icon: getIconComponent(category.iconName),
-          description: category.description,
-          totalCourses: category.totalCourses,
-          activeUsers: category.activeUsers,
-          avgDuration: category.avgDuration
-        }));
+        setOverallLmsStats(fetchedOverallStats); 
+
+        // Map backend data to frontend PathCard format
+        const pathsWithIcons: PathCard[] = categoriesData.map(category => {
+          return {
+            id: category.id, 
+            title: category.title,
+            icon: getIconComponent(category.icon), 
+            description: category.description,
+            totalCourses: category.totalCourses,
+            activeUsers: category.activeLearnersCount, 
+            avgDuration: category.avgDuration 
+          };
+        });
         
         setPaths(pathsWithIcons);
         setError(null);
-      } catch (error) {
-        console.error('Failed to fetch categories:', error);
-        setError('Failed to load course categories');
-        toast.error('Failed to load course categories.');
+      } catch (err: any) {
+        console.error('Failed to fetch categories or overall stats:', err);
+        setError(err.response?.data?.message || 'Failed to load course categories or overall statistics.');
+        toast.error(err.response?.data?.message || 'Failed to load course categories or overall statistics.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCategories();
-  }, []);
+    fetchCategoriesAndStats();
+  }, []); 
 
-  const handleExplore = (pathTitle: string) => {
-    navigate(`/courses/${encodeURIComponent(pathTitle)}`);
+  // handleExplore navigates using the actual category ID
+  const handleExplore = (categoryId: string) => {
+    navigate(`/learner/courses/${encodeURIComponent(categoryId)}`); 
   };
 
   const filteredPaths = paths.filter(path => {
@@ -81,7 +106,11 @@ const CourseCategories: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-6">
         <div className="max-w-7xl mx-auto px-8 space-y-8">
           <Header />
-          <StatsOverview />
+          {/* Pass overall LMS stats to StatsOverview */}
+          <StatsOverview 
+            totalCoursesOverall={overallLmsStats.totalPublishedCourses} 
+            totalActiveLearnersOverall={overallLmsStats.totalActiveLearners} 
+          />
           <SearchBar 
             searchQuery={searchQuery} 
             setSearchQuery={setSearchQuery} 
@@ -104,7 +133,7 @@ const CourseCategories: React.FC = () => {
           ) : (
             <PathGrid 
               paths={filteredPaths} 
-              onExplore={handleExplore} 
+              onExplore={(pathId) => handleExplore(pathId)} 
             />
           )}
         </div>

@@ -5,7 +5,19 @@ import toast from 'react-hot-toast';
 
 import { useCourseContext } from '../../contexts/CourseContext';
 import { SubtopicFE, ExistingMaterialFile, CourseDocumentDto, LessonDto, UpdateLessonPayload } from '../../../../types/course.types'; // Adjust path
-import { getCourseById, addLesson, updateLesson, deleteLesson, uploadDocument, deleteDocument } from '../../../../api/services/Course/courseService'; // Adjust path
+import { 
+    getCourseById, 
+    addLesson, 
+    updateLesson, 
+    deleteLesson, 
+    uploadDocument, 
+    deleteDocument 
+} from '../../../../api/services/Course/courseService'; // Adjust path
+
+import {
+    getQuizzesByLessonId,
+    deleteQuiz
+} from '../../../../api/services/Course/quizService';
 
 import Header from './components/Header';
 import ProgressBar from './components/ProgressBar';
@@ -105,31 +117,31 @@ const UploadMaterials: React.FC = () => {
     }, []);
 
     // Modified handleAddNewSubtopic function in UploadMaterials.tsx
-const handleAddNewSubtopic = useCallback(async () => {
-    if (!courseId) { toast.error("Course ID is missing to add a subtopic."); return; }
-    setIsSubmittingAction(true);
-    const loadingToast = toast.loading("Adding new subtopic...");
-    try {
-        const payload = { courseId, lessonName: "New Subtopic", lessonPoints: 1 };
-        const newLessonDto = await addLesson(payload);
-        const newSubtopic: SubtopicFE = {
-            id: newLessonDto.id, lessonName: newLessonDto.lessonName, lessonPoints: newLessonDto.lessonPoints,
-            courseId: newLessonDto.courseId, documents: [], isEditing: true, // Set isEditing to true
-            originalName: newLessonDto.lessonName, originalPoints: newLessonDto.lessonPoints,
-        };
-        addLessonToState(newSubtopic);
-        setExpandedSubtopics(prev => ({ ...prev, [newLessonDto.id]: true })); // Expand new subtopic
-        setShowUploadSections(null); // Close any open upload sections
-        toast.dismiss(loadingToast);
-        toast.success("Subtopic added successfully.");
-    } catch (error) {
-        console.error("Failed to add subtopic:", error);
-        toast.dismiss(loadingToast);
-        // Error message likely handled by apiClient interceptor
-    } finally {
-        setIsSubmittingAction(false);
-    }
-}, [courseId, addLessonToState]);
+    const handleAddNewSubtopic = useCallback(async () => {
+        if (!courseId) { toast.error("Course ID is missing to add a subtopic."); return; }
+        setIsSubmittingAction(true);
+        const loadingToast = toast.loading("Adding new subtopic...");
+        try {
+            const payload = { courseId, lessonName: "New Subtopic", lessonPoints: 1 };
+            const newLessonDto = await addLesson(payload);
+            const newSubtopic: SubtopicFE = {
+                id: newLessonDto.id, lessonName: newLessonDto.lessonName, lessonPoints: newLessonDto.lessonPoints,
+                courseId: newLessonDto.courseId, documents: [], isEditing: true, // Set isEditing to true
+                originalName: newLessonDto.lessonName, originalPoints: newLessonDto.lessonPoints,
+            };
+            addLessonToState(newSubtopic);
+            setExpandedSubtopics(prev => ({ ...prev, [newLessonDto.id]: true })); // Expand new subtopic
+            setShowUploadSections(null); // Close any open upload sections
+            toast.dismiss(loadingToast);
+            toast.success("Subtopic added successfully.");
+        } catch (error) {
+            console.error("Failed to add subtopic:", error);
+            toast.dismiss(loadingToast);
+            // Error message likely handled by apiClient interceptor
+        } finally {
+            setIsSubmittingAction(false);
+        }
+    }, [courseId, addLessonToState]);
 
     const handleSubtopicInputChangeInternal = useCallback((lessonId: number, field: 'lessonName' | 'lessonPoints', value: string) => {
         setLessonsState(
@@ -358,9 +370,76 @@ const handleAddNewSubtopic = useCallback(async () => {
     }, [courseId, navigate, pendingUploadFiles, courseData.lessons]);
 
     const handleSaveDraftAction = useCallback(() => { toast.error("Save as Draft feature is not implemented yet."); }, []);
-    const handleCreateQuizAction = useCallback((lessonId: number) => { toast.error(`Quiz creation for lesson ${lessonId} N/A.`); }, []);
-    const handleEditQuizAction = useCallback((lessonId: number) => { toast.error(`Quiz editing for lesson ${lessonId} N/A.`); }, []);
-    const handleRemoveQuizAction = useCallback((lessonId: number) => { toast.error(`Quiz removal for lesson ${lessonId} N/A.`); }, []);
+    
+    const handleCreateQuizAction = useCallback((lessonId: number) => {
+        if (!courseId) {
+            toast.error("Course ID is missing. Cannot create quiz.");
+            return;
+        }
+        navigate(`/coordinator/create-quiz/${lessonId}?courseId=${courseId}`);
+    }, [navigate, courseId]);
+
+    const handleEditQuizAction = useCallback((lessonId: number) => {
+        if (!courseId) {
+            toast.error("Course ID is missing. Cannot edit quiz.");
+            return;
+        }
+        // First, find the quiz ID for this lesson
+        getQuizzesByLessonId(lessonId)
+            .then(quizzes => {
+                if (quizzes.length > 0) {
+                    const quizId = quizzes[0].quizId;
+                    navigate(`/coordinator/edit-quiz/${quizId}?lessonId=${lessonId}&courseId=${courseId}`);
+                } else {
+                    toast.error("No quiz found for this lesson.");
+                }
+            })
+            .catch(error => {
+                console.error(`Failed to get quiz for lesson ${lessonId}:`, error);
+                toast.error("Failed to load quiz information. Please try again.");
+            });
+    }, [navigate, courseId]);
+
+   // Update this function in UploadMaterials.tsx
+const handleRemoveQuizAction = useCallback((lessonId: number) => {
+    if (!courseId) {
+        toast.error("Course ID is missing. Cannot remove quiz.");
+        return;
+    }
+
+    if (!window.confirm("Are you sure you want to delete this quiz? This action cannot be undone.")) {
+        return;
+    }
+
+    setIsSubmittingAction(true);
+    
+    getQuizzesByLessonId(lessonId)
+        .then(quizzes => {
+            if (quizzes.length > 0) {
+                const quizId = quizzes[0].quizId;
+                return deleteQuiz(quizId)
+                    .then(() => {
+                        toast.success("Quiz deleted successfully.");
+                        // Force UI refresh
+                        const subtopicToRefresh = courseData.lessons.find(l => l.id === lessonId);
+                        if (subtopicToRefresh) {
+                            // Force expanded state update to trigger useEffect in SubtopicItem
+                            setExpandedSubtopics(prev => ({ ...prev }));
+                        }
+                    });
+            } else {
+                toast.error("No quiz found for this lesson.");
+            }
+        })
+        .catch(error => {
+            console.error(`Failed to delete quiz for lesson ${lessonId}:`, error);
+            toast.error("Failed to delete quiz. Please try again.");
+        })
+        .finally(() => {
+            setIsSubmittingAction(false);
+        });
+}, [courseId, setIsSubmittingAction, courseData.lessons, setExpandedSubtopics]);
+    
     const handleAddVideoAction = useCallback((lessonId: number) => { toast.error(`Video add for lesson ${lessonId} N/A.`); }, []);
 
 

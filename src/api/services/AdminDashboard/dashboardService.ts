@@ -33,3 +33,4 @@ export const getDashboardNotifications = async (): Promise<Notification[]> => {
     return [];
   }
 };
+
