@@ -104,6 +104,26 @@ const CreateQuiz: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Helper function to validate a single question
+  const validateQuestion = (question: CreateQuizBankQuestionDto): string | null => {
+    if (!question.questionContent.trim()) {
+      return 'Question content cannot be empty';
+    }
+    
+    // Check if at least one option is marked as correct
+    if (!question.options.some(o => o.isCorrect)) {
+      return 'You must select a correct answer';
+    }
+    
+    // Check if all option texts are filled
+    const emptyOptionIndex = question.options.findIndex(o => !o.optionText.trim());
+    if (emptyOptionIndex !== -1) {
+      return `Option ${emptyOptionIndex + 1} cannot be empty`;
+    }
+    
+    return null; // No errors
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
@@ -213,10 +233,15 @@ const CreateQuiz: React.FC = () => {
 
     setQuizState(prev => {
       const updatedQuestions = prev.questions.filter((_, i) => i !== prev.currentQuestionIndex);
+      // Recalculate question bank order for remaining questions
+      const reorderedQuestions = updatedQuestions.map((q, index) => ({
+        ...q,
+        questionBankOrder: index + 1
+      }));
       return {
         ...prev,
-        questions: updatedQuestions,
-        currentQuestionIndex: Math.min(prev.currentQuestionIndex, updatedQuestions.length - 1)
+        questions: reorderedQuestions,
+        currentQuestionIndex: Math.min(prev.currentQuestionIndex, reorderedQuestions.length - 1)
       };
     });
   };
@@ -255,22 +280,56 @@ const CreateQuiz: React.FC = () => {
       return;
     }
 
-    // Validate questions
-    const invalidQuestionIndex = quizState.questions.findIndex(q => 
-      !q.questionContent.trim() || 
-      !q.options.some(o => o.isCorrect) ||
-      q.options.some(o => !o.optionText.trim())
-    );
-
-    if (invalidQuestionIndex !== -1) {
-      toast.error(`Question ${invalidQuestionIndex + 1} is incomplete. Please fill all fields and select a correct answer.`);
-      setQuizState(prev => ({ ...prev, currentQuestionIndex: invalidQuestionIndex }));
+    // Ensure quizSize is not greater than quizBankSize
+    if (quizState.quizSize > quizState.quizBankSize) {
+      toast.error(`Quiz size (${quizState.quizSize}) cannot be greater than quiz bank size (${quizState.quizBankSize})`);
       return;
+    }
+
+    // Validate each question individually
+    for (let i = 0; i < quizState.questions.length; i++) {
+      const errorMessage = validateQuestion(quizState.questions[i]);
+      if (errorMessage) {
+        toast.error(`Question ${i + 1}: ${errorMessage}`);
+        setQuizState(prev => ({ ...prev, currentQuestionIndex: i }));
+        return;
+      }
     }
 
     // Check if the number of questions matches the bank size
     if (quizState.questions.length !== quizState.quizBankSize) {
-      toast.error(`You need to create exactly ${quizState.quizBankSize} questions for this quiz bank.`);
+      toast.error(`You need exactly ${quizState.quizBankSize} questions, but have ${quizState.questions.length}`);
+      return;
+    }
+
+    // Prepare sanitized questions first so we can validate them
+    const sanitizedQuestions = quizState.questions.map((q, index) => ({
+      questionContent: q.questionContent.trim(),
+      questionType: "MCQ", // Required field - ensure correct case
+      questionBankOrder: index + 1, // Ensure correct ordering
+      options: q.options.map(o => ({
+        optionText: o.optionText.trim(),
+        isCorrect: o.isCorrect
+      }))
+    }));
+
+    // Verify each question has exactly one correct answer
+    const invalidQuestions = sanitizedQuestions.filter(q => 
+      !q.options.some(o => o.isCorrect)
+    );
+    
+    if (invalidQuestions.length > 0) {
+      toast.error(`${invalidQuestions.length} question(s) don't have a correct answer selected`);
+      return;
+    }
+
+    // Check for empty option text
+    const questionsWithEmptyOptions = sanitizedQuestions.filter(q =>
+      q.options.some(o => !o.optionText.trim())
+    );
+    
+    if (questionsWithEmptyOptions.length > 0) {
+      toast.error(`${questionsWithEmptyOptions.length} question(s) have empty option text`);
       return;
     }
 
@@ -286,41 +345,62 @@ const CreateQuiz: React.FC = () => {
         lessonId: lessonId
       };
 
+      console.log("Creating quiz with data:", JSON.stringify(quizDto, null, 2));
+      
       const createdQuiz = await createQuiz(quizDto);
+      console.log("Quiz created successfully:", createdQuiz);
       setCreatedQuizId(createdQuiz.quizId);
 
-      // 2. Create quiz bank with questions
-      // Make sure questions have questionType field
-      const sanitizedQuestions = quizState.questions.map(q => ({
-        questionContent: q.questionContent.trim(),
-        questionType: "MCQ", // Add this field
-        options: q.options.map(o => ({
-          optionText: o.optionText.trim(),
-          isCorrect: o.isCorrect
-        })),
-        questionBankOrder: q.questionBankOrder
-      }));
-
+      // Create quiz bank DTO according to expected backend format
       const quizBankDto: CreateQuizBankDto = {
         quizBankSize: quizState.quizBankSize,
-        questions: sanitizedQuestions
+        questions: sanitizedQuestions,
+        // Add any other required fields here based on your backend API
       };
 
+      // Log the exact payload
+      console.log("Quiz bank creation payload:", JSON.stringify(quizBankDto, null, 2));
+
       await createQuizBank(lessonId, quizBankDto);
+      console.log("Quiz bank created successfully");
 
       toast.dismiss(saveToastId);
       toast.success('Quiz created successfully!');
       navigate(`/coordinator/upload-materials/${courseId}`);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving quiz:', error);
+      
+      // Log detailed error information for debugging
+      if (error.response) {
+        console.error("Error status:", error.response.status);
+        console.error("Error data:", error.response.data);
+        console.error("Validation errors:", error.response?.data?.errors); // ASP.NET validation errors
+        console.error("Error headers:", error.response.headers);
+      } else if (error.request) {
+        console.error("No response received:", error.request);
+      } else {
+        console.error("Error message:", error.message);
+      }
+      
       toast.dismiss(saveToastId);
+      
+      // Create a readable error message from validation errors
+      let errorMessage = "Failed to create quiz. ";
+      if (error.response?.data?.errors) {
+        const errorDetails = Object.entries(error.response.data.errors)
+          .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+          .join('; ');
+        errorMessage += errorDetails;
+      } else {
+        errorMessage = error.response?.data?.message || 'Failed to create quiz. Please try again.';
+      }
       
       // If we got a quizId but the bank creation failed
       if (createdQuizId) {
-        toast.error('Quiz was created but adding questions failed. Please try editing the quiz.');
+        toast.error(`Quiz was created but adding questions failed: ${errorMessage}`);
       } else {
-        toast.error('Failed to create quiz. Please try again.');
+        toast.error(errorMessage);
       }
     } finally {
       setIsSaving(false);

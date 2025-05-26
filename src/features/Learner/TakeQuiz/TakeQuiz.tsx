@@ -28,11 +28,13 @@ const TakeQuiz: React.FC = () => {
   const [showResults, setShowResults] = useState<boolean>(false);
   const [quizResults, setQuizResults] = useState<QuizAttemptDto | null>(null);
   const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Initialize quiz attempt
   useEffect(() => {
     const initializeQuiz = async () => {
       if (!quizId) {
+        setError("No quiz ID specified");
         toast.error('No quiz specified');
         navigate(-1);
         return;
@@ -53,10 +55,16 @@ const TakeQuiz: React.FC = () => {
         // Get questions for this quiz
         const questions = await getQuestionsForLearner(quizId);
         
+        if (!questions || questions.length === 0) {
+          setError("No questions found for this quiz");
+          toast.error('No questions found for this quiz');
+          return;
+        }
+        
         // Initialize quiz state
         const newQuizAttempt: ActiveQuizState = {
           quizId: quizId,
-          quizTitle: attemptResponse.quizTitle,
+          quizTitle: attemptResponse.quizTitle || "Quiz",
           timeLimitMinutes: 15, // Default, should come from attempt
           attemptId: attemptResponse.quizAttemptId,
           questions: questions,
@@ -73,8 +81,8 @@ const TakeQuiz: React.FC = () => {
         startTimer(15 * 60); // 15 minutes in seconds
       } catch (error) {
         console.error('Error initializing quiz:', error);
+        setError("Failed to load quiz. Please try again.");
         toast.error('Failed to load quiz. Please try again.');
-        navigate(-1);
       } finally {
         setIsLoading(false);
       }
@@ -185,7 +193,7 @@ const TakeQuiz: React.FC = () => {
 
     // Check if all questions have been answered
     const unansweredCount = quizAttempt.questions.filter(q => 
-      !quizAttempt.selectedAnswers[q.quizBankQuestionId]
+      q && q.quizBankQuestionId && !quizAttempt.selectedAnswers[q.quizBankQuestionId]
     ).length;
 
     if (unansweredCount > 0 && !window.confirm(`You have ${unansweredCount} unanswered questions. Are you sure you want to submit?`)) {
@@ -241,6 +249,20 @@ const TakeQuiz: React.FC = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#52007C] p-6 flex flex-col justify-center items-center">
+        <p className="text-white text-xl mb-4">{error}</p>
+        <button 
+          onClick={() => navigate(-1)} 
+          className="px-4 py-2 bg-[#BF4BF6] text-white rounded-lg hover:bg-[#D68BF9] transition-colors"
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
   if (!quizAttempt) {
     return (
       <div className="min-h-screen bg-[#52007C] p-6 flex justify-center items-center">
@@ -250,7 +272,17 @@ const TakeQuiz: React.FC = () => {
   }
 
   const currentQuestion = quizAttempt.questions[quizAttempt.currentQuestionIndex];
-  const selectedOptionId = quizAttempt.selectedAnswers[currentQuestion.quizBankQuestionId];
+  if (!currentQuestion) {
+    return (
+      <div className="min-h-screen bg-[#52007C] p-6 flex justify-center items-center">
+        <p className="text-white text-xl">No questions available for this quiz.</p>
+      </div>
+    );
+  }
+  
+  const selectedOptionId = currentQuestion.quizBankQuestionId ? 
+    quizAttempt.selectedAnswers[currentQuestion.quizBankQuestionId] : undefined;
+  
   const answeredCount = Object.keys(quizAttempt.selectedAnswers).length;
   const totalQuestions = quizAttempt.questions.length;
 
@@ -351,7 +383,7 @@ const TakeQuiz: React.FC = () => {
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm
                   ${quizAttempt.currentQuestionIndex === index 
                     ? 'bg-[#BF4BF6] text-white' 
-                    : quizAttempt.selectedAnswers[question.quizBankQuestionId]
+                    : question && question.quizBankQuestionId && quizAttempt.selectedAnswers[question.quizBankQuestionId]
                       ? 'bg-[#34137C] text-white'
                       : 'bg-[#34137C]/50 text-gray-300'
                   }`}
@@ -373,10 +405,14 @@ const TakeQuiz: React.FC = () => {
           <p className="text-white mb-6">{currentQuestion.questionContent}</p>
           
           <div className="space-y-3">
-            {currentQuestion.options.map(option => (
+            {currentQuestion.options && currentQuestion.options.map(option => (
               <button
                 key={option.mcqOptionId}
-                onClick={() => handleSelectAnswer(currentQuestion.quizBankQuestionId, option.mcqOptionId)}
+                onClick={() => {
+                  if (currentQuestion.quizBankQuestionId) {
+                    handleSelectAnswer(currentQuestion.quizBankQuestionId, option.mcqOptionId);
+                  }
+                }}
                 className={`w-full text-left p-4 rounded-lg border transition-colors ${
                   selectedOptionId === option.mcqOptionId
                     ? 'bg-[#BF4BF6] text-white border-[#BF4BF6]'

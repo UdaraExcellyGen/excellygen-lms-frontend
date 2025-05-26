@@ -1,363 +1,426 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronDown, X, FileText, Plus, Upload, Edit, Save, XCircle, Trash2 } from 'lucide-react';
+// src/features/Coordinator/CreateNewCourse/UploadMaterials/components/SubtopicItem.tsx
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronDown, ChevronUp, Edit, Trash, Download, Plus, Video, FileText, List, Edit3, Upload, X } from 'lucide-react';
 import { SubtopicFE, ExistingMaterialFile } from '../../../../../types/course.types';
+import { QuizDto } from '../../../../../types/quiz.types';
 import { getQuizzesByLessonId } from '../../../../../api/services/Course/quizService';
 
 interface SubtopicItemProps {
-    subtopic: SubtopicFE;
-    expanded: boolean;
-    pendingFiles: File[];
-    errorMessage: string | undefined;
-    showUploadSection: boolean;
-    isSubmitting: boolean;
-    toggleSubtopic: () => void;
-    handleRemoveSubtopic: () => void;
-    handleSubtopicInputChange: (field: 'lessonName' | 'lessonPoints', value: string) => void;
-    handleToggleEdit: () => void;
-    handleSaveChanges: () => void;
-    handleCancelEdit: () => void;
-    removeMaterial: (documentId: number, documentName: string) => void;
-    handleUploadDocumentClick: () => void;
-    handleDrop: (e: React.DragEvent<HTMLDivElement>) => void;
-    handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    handleUploadPendingFiles: () => void;
-    handleRemovePendingFile: (fileName: string) => void;
-    setIsDraggingDocs: (isDragging: boolean) => void;
-    isDraggingDocs: boolean;
-    handleAddVideoClick: () => void;
-    handleCreateQuizClick: () => void;
-    handleEditQuiz: () => void;
-    handleRemoveQuiz: () => void;
+  subtopic: SubtopicFE;
+  expanded: boolean;
+  pendingFiles: File[];
+  errorMessage?: string;
+  showUploadSection: boolean;
+  isSubmitting: boolean;
+  toggleSubtopic: () => void;
+  handleRemoveSubtopic: () => void;
+  handleSubtopicInputChange: (field: 'lessonName' | 'lessonPoints', value: string) => void;
+  handleToggleEdit: () => void;
+  handleSaveChanges: () => void;
+  handleCancelEdit: () => void;
+  removeMaterial: (docId: number, docName: string) => void;
+  handleUploadDocumentClick: () => void;
+  handleDrop: (e: React.DragEvent<HTMLDivElement>) => void;
+  handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleUploadPendingFiles: () => void;
+  handleRemovePendingFile: (fileName: string) => void;
+  setIsDraggingDocs: (isDragging: boolean) => void;
+  isDraggingDocs: boolean;
+  handleAddVideoClick: () => void;
+  handleCreateQuizClick: () => void;
+  handleEditQuiz: () => void;
+  handleRemoveQuiz: () => void;
 }
 
 const SubtopicItem: React.FC<SubtopicItemProps> = ({
-    subtopic,
-    expanded,
-    pendingFiles,
-    errorMessage,
-    showUploadSection,
-    isSubmitting,
-    toggleSubtopic,
-    handleRemoveSubtopic,
-    handleSubtopicInputChange,
-    handleToggleEdit,
-    handleSaveChanges,
-    handleCancelEdit,
-    removeMaterial,
-    handleUploadDocumentClick,
-    handleAddVideoClick,
-    handleDrop,
-    handleFileSelect,
-    handleUploadPendingFiles,
-    handleRemovePendingFile,
-    setIsDraggingDocs,
-    isDraggingDocs,
-    handleCreateQuizClick,
-    handleEditQuiz,
-    handleRemoveQuiz,
+  subtopic,
+  expanded,
+  pendingFiles,
+  errorMessage,
+  showUploadSection,
+  isSubmitting,
+  toggleSubtopic,
+  handleRemoveSubtopic,
+  handleSubtopicInputChange,
+  handleToggleEdit,
+  handleSaveChanges,
+  handleCancelEdit,
+  removeMaterial,
+  handleUploadDocumentClick,
+  handleDrop,
+  handleFileSelect,
+  handleUploadPendingFiles,
+  handleRemovePendingFile,
+  setIsDraggingDocs,
+  isDraggingDocs,
+  handleAddVideoClick,
+  handleCreateQuizClick,
+  handleEditQuiz,
+  handleRemoveQuiz,
 }) => {
-    const [hasQuiz, setHasQuiz] = useState<boolean>(false);
-    const [isCheckingQuiz, setIsCheckingQuiz] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [quizzes, setQuizzes] = useState<QuizDto[]>([]);
+  const [loadingQuizzes, setLoadingQuizzes] = useState(false);
 
-    useEffect(() => {
-        if (expanded) {
-            setIsCheckingQuiz(true);
-            const checkForQuiz = async () => {
-                try {
-                    const quizzes = await getQuizzesByLessonId(subtopic.id);
-                    setHasQuiz(quizzes.length > 0);
-                } catch (error) {
-                    console.error(`Failed to check for quiz in lesson ${subtopic.id}:`, error);
-                } finally {
-                    setIsCheckingQuiz(false);
-                }
-            };
-            checkForQuiz();
-        }
-    }, [expanded, subtopic.id]);
+  // Load quizzes when subtopic expands
+  useEffect(() => {
+    if (expanded && subtopic?.id) {
+      setLoadingQuizzes(true);
+      getQuizzesByLessonId(subtopic.id)
+        .then(fetchedQuizzes => {
+          setQuizzes(fetchedQuizzes || []);
+        })
+        .catch(error => {
+          console.error(`Failed to load quizzes for lesson ${subtopic.id}:`, error);
+          setQuizzes([]);
+        })
+        .finally(() => {
+          setLoadingQuizzes(false);
+        });
+    }
+  }, [expanded, subtopic?.id]);
 
-    const renderMaterialIcon = (material: ExistingMaterialFile) => {
-        switch (material.documentType) {
-            case 'PDF': return <FileText size={16} className="text-red-400 mr-2 flex-shrink-0" />;
-            case 'Word': return <FileText size={16} className="text-blue-400 mr-2 flex-shrink-0" />;
-            default: return <FileText size={16} className="text-gray-400 mr-2 flex-shrink-0" />;
-        }
-    };
+  // Guard clause
+  if (!subtopic || typeof subtopic.id === 'undefined') {
+    console.error("SubtopicItem received invalid subtopic data:", subtopic);
+    return null;
+  }
 
-    const handlePointsInputChangeEvent = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        if (value === '' || /^\d*$/.test(value)) {
-            handleSubtopicInputChange('lessonPoints', value);
-        }
-    };
+  const handleFileButtonClick = () => {
+    fileInputRef.current?.click();
+  };
 
-    const handlePointsInputBlurEvent = (e: React.FocusEvent<HTMLInputElement>) => {
-        let points = parseInt(e.target.value, 10);
-        const originalPoints = subtopic.originalPoints ?? 1;
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingDocs(true);
+  };
 
-        if (isNaN(points) || e.target.value.trim() === '') {
-            points = originalPoints;
-        } else if (points < 1) {
-            points = 1;
-        } else if (points > 100) {
-            points = 100;
-        }
-        handleSubtopicInputChange('lessonPoints', points.toString());
-    };
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDraggingDocs(false);
+    }
+  };
 
-    return (
-        <div className="mb-4 bg-[#1B0A3F]/60 rounded-lg p-4 transition-all duration-300 ease-in-out">
-            <div className="flex justify-between items-center gap-2">
-                <div className="flex-grow flex items-center gap-2 min-w-0">
-                    <button
-                        onClick={toggleSubtopic}
-                        aria-expanded={expanded}
-                        className="p-1 text-white hover:text-[#D68BF9] transition-colors flex-shrink-0"
-                        aria-label={expanded ? `Collapse ${subtopic.lessonName || 'subtopic'}` : `Expand ${subtopic.lessonName || 'subtopic'}`}
-                    >
-                        <ChevronDown
-                            className={`w-5 h-5 transform transition-transform ${expanded ? 'rotate-180' : ''}`}
-                        />
-                    </button>
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
 
-                    {subtopic.isEditing ? (
-                        <input
-                            type="text"
-                            value={subtopic.lessonName}
-                            onChange={(e) => handleSubtopicInputChange('lessonName', e.target.value)}
-                            className="flex-grow p-1 bg-[#2D1B59] border border-purple-400 rounded outline-none font-['Unbounded'] text-white text-sm min-w-0"
-                            disabled={isSubmitting}
-                            placeholder="Subtopic Name"
-                        />
-                    ) : (
-                        <span
-                            className="font-['Unbounded'] text-white cursor-pointer hover:text-[#D68BF9] text-sm flex-grow truncate"
-                            onClick={toggleSubtopic}
-                            title={subtopic.lessonName}
-                        >
-                            {subtopic.lessonName || "Unnamed Subtopic"}
-                            {hasQuiz && (
-                                <span className="ml-2 text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">
-                                    Quiz
-                                </span>
-                            )}
-                        </span>
-                    )}
-                </div>
+  const hasQuizzes = quizzes.length > 0;
+  const materialsList = subtopic.documents || [];
 
-                <div className="flex items-center gap-2 flex-shrink-0">
-                    {subtopic.isEditing ? (
-                        <>
-                            <label htmlFor={`points-${subtopic.id}`} className="text-xs text-gray-300 whitespace-nowrap">Pts:</label>
-                            <input
-                                type="number"
-                                id={`points-${subtopic.id}`}
-                                min="1"
-                                max="100"
-                                value={subtopic.lessonPoints === 0 && subtopic.isEditing ? '' : subtopic.lessonPoints}
-                                onChange={handlePointsInputChangeEvent}
-                                onBlur={handlePointsInputBlurEvent}
-                                className="w-20 text-sm p-1 bg-[#2D1B59] text-white rounded border border-purple-400 text-center"
-                                disabled={isSubmitting}
-                            />
-                            <button 
-                                onClick={handleSaveChanges} 
-                                disabled={isSubmitting} 
-                                className="p-1 text-green-400 hover:text-green-300 disabled:opacity-50" 
-                                aria-label="Save changes"
-                            >
-                                <Save size={18} />
-                            </button>
-                            <button 
-                                onClick={handleCancelEdit} 
-                                disabled={isSubmitting} 
-                                className="p-1 text-red-400 hover:text-red-300 disabled:opacity-50" 
-                                aria-label="Cancel edit"
-                            >
-                                <XCircle size={18} />
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <span className="text-sm font-['Nunito_Sans'] text-gray-300 bg-[#2D1B59] px-2 py-0.5 rounded whitespace-nowrap">
-                                {subtopic.lessonPoints} pts
-                            </span>
-                            <button 
-                                onClick={handleToggleEdit} 
-                                disabled={isSubmitting} 
-                                className="p-1 text-gray-400 hover:text-white" 
-                                aria-label={`Edit ${subtopic.lessonName || 'subtopic'}`}
-                            >
-                                <Edit size={16} />
-                            </button>
-                            <button 
-                                onClick={handleRemoveSubtopic} 
-                                disabled={isSubmitting} 
-                                className="p-1 text-gray-400 hover:text-red-500" 
-                                aria-label={`Delete ${subtopic.lessonName || 'subtopic'}`}
-                            >
-                                <X size={16} />
-                            </button>
-                        </>
-                    )}
-                </div>
+  return (
+    <div className="bg-[#1B0A3F]/50 rounded-lg mb-4 overflow-hidden">
+      {/* Subtopic Header */}
+      <div 
+        className="p-4 flex justify-between items-center cursor-pointer" 
+        onClick={toggleSubtopic}
+      >
+        <div className="flex items-center space-x-3">
+          {expanded ? (
+            <ChevronUp className="text-[#D68BF9] w-5 h-5" />
+          ) : (
+            <ChevronDown className="text-[#D68BF9] w-5 h-5" />
+          )}
+          <div className="flex-1">
+            {subtopic.isEditing ? (
+              <input
+                type="text"
+                value={subtopic.lessonName}
+                onChange={(e) => handleSubtopicInputChange('lessonName', e.target.value)}
+                className="bg-[#34137C]/60 text-white px-3 py-1 rounded-md border border-[#BF4BF6]/30 w-full max-w-md"
+                onClick={(e) => e.stopPropagation()}
+                placeholder="Enter subtopic name"
+              />
+            ) : (
+              <h3 className="text-white font-medium">{subtopic.lessonName}</h3>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="bg-[#34137C]/60 px-2 py-1 rounded text-white text-xs flex items-center">
+            <span className="mr-1">Points:</span>
+            {subtopic.isEditing ? (
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={subtopic.lessonPoints}
+                onChange={(e) => handleSubtopicInputChange('lessonPoints', e.target.value)}
+                className="bg-[#34137C] text-white w-12 px-1 rounded border border-[#BF4BF6]/30"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <span>{subtopic.lessonPoints}</span>
+            )}
+          </div>
+          {subtopic.isEditing ? (
+            <div className="flex items-center space-x-1">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSaveChanges();
+                }} 
+                className="text-green-400 hover:text-green-300 text-xs px-2 py-1 bg-green-800/30 rounded"
+                disabled={isSubmitting}
+              >
+                Save
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCancelEdit();
+                }} 
+                className="text-gray-400 hover:text-gray-300 text-xs px-2 py-1 bg-gray-800/30 rounded"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-1">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleEdit();
+                }} 
+                className="text-[#D68BF9] hover:text-white"
+                disabled={isSubmitting}
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemoveSubtopic();
+                }} 
+                className="text-red-400 hover:text-red-300"
+                disabled={isSubmitting}
+              >
+                <Trash className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Expanded Content */}
+      {expanded && (
+        <div className="px-4 pb-4">
+          {/* Documents Section */}
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <h4 className="text-[#D68BF9] text-sm flex items-center">
+                <FileText className="w-4 h-4 mr-1" />
+                Documents ({materialsList.length})
+              </h4>
+              <button 
+                onClick={handleUploadDocumentClick} 
+                className="bg-[#34137C] hover:bg-[#34137C]/80 text-[#D68BF9] text-xs py-1 px-2 rounded flex items-center"
+                disabled={isSubmitting}
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add Document
+              </button>
+            </div>
+            
+            {/* Existing Documents */}
+            <div className="space-y-2 mb-3">
+              {materialsList.length > 0 ? (
+                materialsList.map((doc) => (
+                  <div 
+                    key={doc.id} 
+                    className="bg-[#34137C]/30 p-2 rounded-md flex justify-between items-center"
+                  >
+                    <div className="flex items-center">
+                      <FileText className="w-4 h-4 text-[#D68BF9] mr-2" />
+                      <span className="text-white text-sm">{doc.name}</span>
+                      <span className="text-gray-400 text-xs ml-2">
+                        ({(doc.fileSize / 1024 / 1024).toFixed(2)} MB)
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <a 
+                        href={doc.fileUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-[#D68BF9] hover:text-white"
+                        download={doc.name}
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
+                      <button 
+                        onClick={() => removeMaterial(doc.id, doc.name)} 
+                        className="text-red-400 hover:text-red-300"
+                        disabled={isSubmitting}
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-400 text-sm italic">No documents uploaded yet</p>
+              )}
             </div>
 
-            {expanded && (
-                <div className="mt-4 space-y-4 pl-6 border-l-2 border-[#BF4BF6]/30 ml-2">
-                    {subtopic.documents && subtopic.documents.length > 0 && (
-                        <div>
-                            <p className="text-sm text-[#D68BF9] mb-2 font-['Nunito_Sans'] font-semibold">Uploaded Documents:</p>
-                            <ul className="space-y-2">
-                                {subtopic.documents.map((material) => (
-                                    <li key={material.id} className="bg-[#1B0A3F]/40 rounded-lg p-3 flex items-center justify-between hover:bg-[#1B0A3F]/70">
-                                        <div className="flex items-center gap-2 overflow-hidden">
-                                            {renderMaterialIcon(material)}
-                                            <a
-                                                href={material.fileUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-sm text-white font-['Nunito_Sans'] truncate hover:underline"
-                                                title={material.name}
-                                            >
-                                                {material.name}
-                                            </a>
-                                            <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
-                                                ({(material.fileSize / (1024 * 1024)).toFixed(2)} MB)
-                                            </span>
-                                        </div>
-                                        <button
-                                            onClick={() => removeMaterial(material.id, material.name)}
-                                            disabled={isSubmitting}
-                                            className="p-1 rounded-full text-gray-400 hover:text-red-500 transition-colors h-6 w-6 flex items-center justify-center flex-shrink-0 disabled:opacity-50"
-                                            aria-label={`Delete document ${material.name}`}
-                                        >
-                                            <X size={14} />
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                    {subtopic.documents && subtopic.documents.length === 0 && !showUploadSection && (
-                        <p className="text-xs text-gray-400 font-['Nunito_Sans'] italic">No documents uploaded for this subtopic yet.</p>
-                    )}
-
-                    <div className="flex flex-wrap gap-2 pt-2">
-                        <button
-                            onClick={handleUploadDocumentClick}
-                            disabled={isSubmitting}
-                            className="px-3 py-1.5 bg-[#F6E6FF] text-[#1B0A3F] rounded-lg font-['Nunito_Sans'] hover:bg-[#E0D0F2] transition-colors text-xs disabled:opacity-50">
-                            <Plus size={14} className="inline mr-1" /> {showUploadSection ? 'Hide Upload' : 'Add Document'}
-                        </button>
-                        
-                        <button 
-                            onClick={handleAddVideoClick} 
-                            disabled={isSubmitting}
-                            className="px-3 py-1.5 bg-gray-600 text-gray-400 rounded-lg font-['Nunito_Sans'] text-xs cursor-not-allowed"
-                        >
-                            <Plus size={14} className="inline mr-1" /> Add Video
-                        </button>
-                        
-                        {!hasQuiz ? (
-                            <button 
-                                onClick={handleCreateQuizClick} 
-                                disabled={isSubmitting}
-                                className="px-3 py-1.5 bg-[#F6E6FF] text-[#1B0A3F] rounded-lg font-['Nunito_Sans'] hover:bg-[#E0D0F2] transition-colors text-xs disabled:opacity-50"
-                            >
-                                <Plus size={14} className="inline mr-1" /> Create Quiz
-                            </button>
-                        ) : (
-                            <>
-                                <button 
-                                    onClick={handleEditQuiz} 
-                                    disabled={isSubmitting}
-                                    className="px-3 py-1.5 bg-[#F6E6FF] text-[#1B0A3F] rounded-lg font-['Nunito_Sans'] hover:bg-[#E0D0F2] transition-colors text-xs disabled:opacity-50"
-                                >
-                                    <Edit size={14} className="inline mr-1" /> Edit Quiz
-                                </button>
-                                <button 
-                                    onClick={handleRemoveQuiz} 
-                                    disabled={isSubmitting}
-                                    className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg font-['Nunito_Sans'] hover:bg-red-200 transition-colors text-xs disabled:opacity-50"
-                                >
-                                    <Trash2 size={14} className="inline mr-1" /> Remove Quiz
-                                </button>
-                            </>
-                        )}
-                    </div>
-
-                    {showUploadSection && (
-                        <div className="mt-4 bg-[#1B0A3F]/50 backdrop-blur-sm rounded-xl border border-[#BF4BF6]/30 shadow-inner p-4">
-                            <div className="flex justify-between items-center mb-2">
-                                <p className="text-sm text-white font-['Nunito_Sans'] font-semibold">Upload New Documents</p>
-                                <button onClick={handleUploadDocumentClick} className="p-1 text-gray-400 hover:text-white" aria-label="Close upload section"><XCircle size={16} /></button>
-                            </div>
-                            {pendingFiles && pendingFiles.length > 0 && (
-                                <div className="mb-4 bg-[#1B0A3F]/30 rounded-lg p-3 max-h-40 overflow-y-auto">
-                                    <p className="text-xs text-gray-300 font-['Nunito_Sans'] mb-1">Files ready for upload:</p>
-                                    <ul className="list-none pl-0 text-gray-300 space-y-1">
-                                        {pendingFiles.map(file => (
-                                            <li key={`${file.name}-${file.lastModified}`} className="text-xs font-['Nunito_Sans'] flex items-center justify-between bg-[#2D1B59]/80 p-1.5 rounded-md">
-                                                <div className="flex items-center gap-2 overflow-hidden">
-                                                    <FileText size={14} className="text-gray-400 flex-shrink-0" />
-                                                    <span className="truncate" title={file.name}>{file.name}</span>
-                                                    <span className="text-gray-500 ml-1 flex-shrink-0">({(file.size / 1024).toFixed(1)} KB)</span>
-                                                </div>
-                                                <button
-                                                    onClick={() => handleRemovePendingFile(file.name)}
-                                                    disabled={isSubmitting}
-                                                    className="p-0.5 rounded-full text-gray-400 hover:text-red-500 transition-colors h-5 w-5 flex items-center justify-center flex-shrink-0 disabled:opacity-50"
-                                                    aria-label={`Remove ${file.name} from upload list`}
-                                                >
-                                                    <X size={12} />
-                                                </button>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                            <div
-                                className={`border-2 border-dashed ${isDraggingDocs ? 'border-[#BF4BF6] bg-[#F6E6FF]/10' : 'border-gray-600/50'} rounded-lg p-6 text-center transition-colors`}
-                                onDragOver={(e) => { e.preventDefault(); setIsDraggingDocs(true); }}
-                                onDragEnter={() => setIsDraggingDocs(true)}
-                                onDragLeave={() => setIsDraggingDocs(false)}
-                                onDrop={handleDrop}
-                            >
-                                <Upload size={28} className="text-gray-400 mx-auto mb-2" />
-                                <p className="text-xs text-gray-300 font-['Nunito_Sans']">Drag & drop files here or</p>
-                                <input
-                                    type="file"
-                                    multiple
-                                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                                    onChange={handleFileSelect}
-                                    className="hidden"
-                                    id={`document-upload-${subtopic.id}`}
-                                    disabled={isSubmitting}
-                                />
-                                <label
-                                    htmlFor={`document-upload-${subtopic.id}`}
-                                    className="mt-1 inline-block cursor-pointer text-sm text-[#BF4BF6] hover:text-[#D68BF9] transition-colors font-['Nunito_Sans'] underline"
-                                >
-                                    Click to upload
-                                </label>
-                                <p className="text-xs text-gray-500 font-['Nunito_Sans'] mt-1">PDF, DOC, DOCX (Max 5MB)</p>
-                            </div>
-                            {errorMessage && (<p className="text-red-400 text-sm mt-2 font-['Nunito_Sans'] whitespace-pre-line">{errorMessage}</p>)}
-                            <div className="flex justify-end mt-3">
-                                <button
-                                    onClick={handleUploadPendingFiles}
-                                    disabled={isSubmitting || !pendingFiles || pendingFiles.length === 0}
-                                    className="px-4 py-2 bg-[#BF4BF6] text-white rounded-lg font-['Nunito_Sans'] hover:bg-[#D68BF9] transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                                    {isSubmitting ? 'Uploading...' : `Upload ${pendingFiles?.length || 0} File(s)`}
-                                </button>
-                            </div>
-                        </div>
-                    )}
+            {/* Upload Section */}
+            {showUploadSection && (
+              <div className="bg-[#34137C]/20 border border-[#BF4BF6]/30 rounded-lg p-4">
+                <div 
+                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                    isDraggingDocs 
+                      ? 'border-[#D68BF9] bg-[#D68BF9]/10' 
+                      : 'border-[#BF4BF6]/50 hover:border-[#D68BF9]'
+                  }`}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                >
+                  <Upload className="w-8 h-8 text-[#D68BF9] mx-auto mb-2" />
+                  <p className="text-white text-sm mb-2">
+                    Drag and drop files here or{' '}
+                    <button 
+                      onClick={handleFileButtonClick}
+                      className="text-[#D68BF9] underline hover:text-white"
+                    >
+                      browse
+                    </button>
+                  </p>
+                  <p className="text-gray-400 text-xs">
+                    Supported: PDF, DOC, DOCX (Max 5MB each)
+                  </p>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    accept=".pdf,.doc,.docx"
+                    multiple
+                  />
                 </div>
+
+                {/* Error Message */}
+                {errorMessage && (
+                  <div className="mt-3 p-2 bg-red-900/30 border border-red-500/30 rounded text-red-300 text-sm">
+                    {errorMessage}
+                  </div>
+                )}
+
+                {/* Pending Files */}
+                {pendingFiles.length > 0 && (
+                  <div className="mt-3">
+                    <h5 className="text-white text-sm mb-2">Pending Files:</h5>
+                    <div className="space-y-1">
+                      {pendingFiles.map((file, index) => (
+                        <div key={index} className="flex justify-between items-center bg-[#1B0A3F]/50 p-2 rounded">
+                          <span className="text-white text-sm truncate flex-1">{file.name}</span>
+                          <button 
+                            onClick={() => handleRemovePendingFile(file.name)}
+                            className="text-red-400 hover:text-red-300 ml-2"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-end space-x-2 mt-3">
+                      <button 
+                        onClick={() => handleUploadPendingFiles()}
+                        className="bg-[#BF4BF6] hover:bg-[#D68BF9] text-white text-sm py-1 px-3 rounded"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? 'Uploading...' : `Upload ${pendingFiles.length} File(s)`}
+                      </button>
+                      <button 
+                        onClick={handleUploadDocumentClick}
+                        className="bg-gray-700 hover:bg-gray-600 text-white text-sm py-1 px-3 rounded"
+                        disabled={isSubmitting}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <button 
+              onClick={handleAddVideoClick} 
+              className="bg-[#34137C] hover:bg-[#34137C]/80 text-[#D68BF9] text-xs py-1 px-2 rounded flex items-center"
+              disabled={isSubmitting}
+            >
+              <Video className="w-3 h-3 mr-1" />
+              Add Video
+            </button>
+          </div>
+
+          {/* Quizzes Section */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <h4 className="text-[#D68BF9] text-sm flex items-center">
+                <List className="w-4 h-4 mr-1" />
+                Quizzes {loadingQuizzes ? '(Loading...)' : `(${quizzes.length})`}
+              </h4>
+              {!hasQuizzes && (
+                <button 
+                  onClick={handleCreateQuizClick}
+                  className="bg-[#34137C] hover:bg-[#34137C]/80 text-[#D68BF9] text-xs py-1 px-2 rounded flex items-center"
+                  disabled={isSubmitting}
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Create Quiz
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              {hasQuizzes ? (
+                quizzes.map((quiz) => (
+                  <div 
+                    key={quiz.quizId} 
+                    className="bg-[#34137C]/30 p-2 rounded-md flex justify-between items-center"
+                  >
+                    <div className="flex items-center">
+                      <List className="w-4 h-4 text-[#D68BF9] mr-2" />
+                      <span className="text-white text-sm">{quiz.quizTitle}</span>
+                      <span className="text-gray-400 text-xs ml-2">
+                        ({quiz.quizSize} questions • {quiz.timeLimitMinutes} min)
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button 
+                        onClick={handleEditQuiz}
+                        className="text-[#D68BF9] hover:text-white"
+                        disabled={isSubmitting}
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={handleRemoveQuiz}
+                        className="text-red-400 hover:text-red-300"
+                        disabled={isSubmitting}
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-400 text-sm italic">
+                  {loadingQuizzes ? 'Loading quizzes...' : 'No quizzes created yet'}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
-    );
+      )}
+    </div>
+  );
 };
 
 export default SubtopicItem;
