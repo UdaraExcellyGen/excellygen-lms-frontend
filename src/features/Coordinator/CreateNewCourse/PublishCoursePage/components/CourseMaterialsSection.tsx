@@ -5,22 +5,25 @@ import { ChevronDown, FileText } from 'lucide-react';
 import { SubtopicFE } from '../../../../../types/course.types'; // Adjust path
 import SubtopicSection from './SubtopicSection';
 
-// QuizBank related imports are commented out for now
-// import { QuizBank } from '../../../../../contexts/CourseContext';
-
 interface CourseMaterialsSectionProps {
     localSubtopics: SubtopicFE[]; // Use SubtopicFE
     expandedTopics: string[]; // ID string for the main section 'materials'
     setExpandedTopics: React.Dispatch<React.SetStateAction<string[]>>;
     expandedSubtopics: Record<number, boolean>; // Key is number (lessonId) for subtopic expansion
-    // setExpandedSubtopics prop might not be needed if toggleSubtopic is passed down
     toggleSubtopic: (subtopicId: number) => void; // Use number
     handleDeleteMaterial: (lessonId: number, documentId: number, documentName: string) => void;
-    // Quiz related props - keep types if you plan to use them, but pass no-op functions
-    handleViewQuiz: (quizBank?: any) => void;
-     showQuizOverviewPage: any | null;
-     handleCloseQuizOverview: () => void;
+    // Quiz related props
+    quizzes: Record<number, any[]>;
+    loadingQuizzes: boolean;
+    handleViewQuiz: (lessonId: number) => void;
+    isEditMode?: boolean;
+    onEditQuiz?: (lessonId: number) => void;
+    onRemoveQuiz?: (lessonId: number) => void;
+    showQuizOverviewPage: any | null;
+    handleCloseQuizOverview: () => void;
     handleSaveOverviewQuizDetails: (updatedQuizBank: any) => void;
+    courseId?: number;
+    isLearnerView?: boolean;
 }
 
 const CourseMaterialsSection: React.FC<CourseMaterialsSectionProps> = ({
@@ -30,10 +33,17 @@ const CourseMaterialsSection: React.FC<CourseMaterialsSectionProps> = ({
     expandedSubtopics,
     toggleSubtopic,
     handleDeleteMaterial,
-    // handleViewQuiz,
-    // showQuizOverviewPage,
-    // handleCloseQuizOverview,
-    // handleSaveOverviewQuizDetails,
+    quizzes,
+    loadingQuizzes,
+    handleViewQuiz,
+    isEditMode = false,
+    onEditQuiz,
+    onRemoveQuiz,
+    showQuizOverviewPage,
+    handleCloseQuizOverview,
+    handleSaveOverviewQuizDetails,
+    courseId,
+    isLearnerView = false,
 }) => {
     const toggleSection = (sectionId: string) => {
         setExpandedTopics(prev =>
@@ -47,8 +57,7 @@ const CourseMaterialsSection: React.FC<CourseMaterialsSectionProps> = ({
                 onClick={() => toggleSection('materials')}
                 className="w-full px-6 py-4 flex items-center justify-between text-white hover:bg-[#BF4BF6]/5 transition-colors"
             >
-                {/* ... (icon and text same as before) ... */}
-                 <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#BF4BF6] to-[#7A00B8] flex items-center justify-center relative font-nunito">
                         <FileText className="w-5 h-5 text-white" />
                     </div>
@@ -57,7 +66,7 @@ const CourseMaterialsSection: React.FC<CourseMaterialsSectionProps> = ({
                             Course Materials (Lessons & Documents)
                         </h3>
                         <p className="text-sm text-[#D68BF9] font-nunito">
-                            Review uploaded documents and subtopics.
+                            Review uploaded documents, subtopics, and quizzes.
                         </p>
                     </div>
                 </div>
@@ -70,15 +79,27 @@ const CourseMaterialsSection: React.FC<CourseMaterialsSectionProps> = ({
 
             {expandedTopics.includes('materials') && (
                 <div className="px-6 py-4 space-y-3 border-t border-[#BF4BF6]/20">
+                    {loadingQuizzes && (
+                        <div className="text-white text-center p-2 font-nunito italic">
+                            Loading quizzes...
+                        </div>
+                    )}
+                    
                     {localSubtopics && localSubtopics.length > 0 ? (
-                        localSubtopics.map((subtopic: SubtopicFE) => ( // Use SubtopicFE
+                        localSubtopics.map((subtopic: SubtopicFE) => (
                             <SubtopicSection
                                 key={subtopic.id}
                                 subtopic={subtopic}
                                 expandedSubtopics={expandedSubtopics}
-                                toggleSubtopic={toggleSubtopic} // Pass the correctly typed toggle
+                                toggleSubtopic={toggleSubtopic}
                                 handleDeleteMaterial={handleDeleteMaterial}
-                                // handleViewQuiz={handleViewQuiz} // Pass if quizzes are implemented
+                                quizzes={quizzes}
+                                handleViewQuiz={handleViewQuiz}
+                                isEditMode={isEditMode}
+                                onEditQuiz={onEditQuiz}
+                                onRemoveQuiz={onRemoveQuiz}
+                                courseId={courseId}
+                                isLearnerView={isLearnerView}
                             />
                         ))
                     ) : (

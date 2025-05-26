@@ -1,7 +1,7 @@
 // src/features/Learner/CourseContent/LearnerCourseOverview.tsx
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, BookOpen, CheckCircle, List, Clock, FileText, Download, PlayCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, BookOpen, CheckCircle, List, Clock, FileText, Download, PlayCircle, AlertCircle, Award } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { LearnerCourseDto, LearnerLessonDto } from '../../../types/course.types';
@@ -52,9 +52,14 @@ const LearnerCourseOverview: React.FC = () => {
     fetchCourseDetails();
   }, [courseId, navigate]);
 
-  const handleGoBack = () => {
-    navigate(-1);
-  };
+const handleGoBack = () => {
+  if (courseData && courseData.category && courseData.category.id) {
+    navigate(`/learner/courses/${courseData.category.id}`);
+  } else {
+    // Fallback if category ID is not available
+    navigate("/learner/course-categories");
+  }
+};
 
   const toggleLessonExpand = (lessonId: number) => {
     setExpandedLessons(prev => ({
@@ -121,7 +126,10 @@ const LearnerCourseOverview: React.FC = () => {
   };
 
   const handleStartQuiz = (quizId: number) => {
-    navigate(`/learner/take-quiz/${quizId}`);
+    // Pass courseId in navigation state so it can be used in quiz results
+    navigate(`/learner/take-quiz/${quizId}`, { 
+      state: { courseId: courseId } 
+    });
   };
 
   const handleGenerateCertificate = async () => {
@@ -241,7 +249,11 @@ const LearnerCourseOverview: React.FC = () => {
           
           <div className="w-full bg-[#34137C] rounded-full h-4">
             <div 
-              className={`h-4 rounded-full ${isCourseCompleted ? 'bg-green-500' : 'bg-[#BF4BF6]'}`}
+              className={`h-4 rounded-full transition-all duration-500 ${
+                isCourseCompleted 
+                  ? 'bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9]' 
+                  : 'bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9]'
+              }`}
               style={{ width: `${courseData.progressPercentage}%` }}
             ></div>
           </div>
@@ -251,7 +263,7 @@ const LearnerCourseOverview: React.FC = () => {
               <button
                 onClick={handleGenerateCertificate}
                 disabled={isGeneratingCertificate}
-                className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg flex items-center"
+                className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-6 py-3 rounded-lg flex items-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-medium"
               >
                 {isGeneratingCertificate ? (
                   <>
@@ -262,7 +274,10 @@ const LearnerCourseOverview: React.FC = () => {
                     Generating...
                   </>
                 ) : (
-                  <>Generate Certificate</>
+                  <>
+                    <Award className="w-4 h-4 mr-2" />
+                    Generate Certificate
+                  </>
                 )}
               </button>
             </div>

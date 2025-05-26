@@ -32,48 +32,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return () => window.removeEventListener('resize', checkMobile);
   }, [setIsCollapsed]);
 
+  // Always return the gradient background
   const getBackgroundColor = () => {
-    // Check for course learning pattern (/course/{id}/learn)
-    if (location.pathname.match(/^\/course\/\d+\/learn$/)) {
-      return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-    }
-  
-    // Check for course title pattern (/courses/{any title})
-    if (location.pathname.match(/^\/courses\/[^/]+$/)) {
-      return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-    }
-
-    if (location.pathname.match(/^\/certificate\/[^/]+$/)) {
-      return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-    }
-  
-    // Handle other specific routes
-    switch (location.pathname) {
-      case '/settings':
-        return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/learner/dashboard':
-        return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/learner/course-categories':
-        return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/learner/forum':
-        return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/learner/leaderboard':
-        return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/learner/certificate':
-        return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/learner/notifications':
-        return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/learner/profile':
-        return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/learner/badges-rewards':
-        return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/learner/projects':
-        return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      case '/cv':
-        return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
-      default:
-        return 'bg-[#52007C]';
-    }
+    return 'bg-gradient-to-b from-[#52007C] to-[#34137C]';
   };
 
   return (
