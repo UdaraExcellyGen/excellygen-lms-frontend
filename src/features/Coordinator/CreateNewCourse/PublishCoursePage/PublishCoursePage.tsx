@@ -1,6 +1,6 @@
 // features/Coordinator/CreateNewCourse/PublishCoursePage/PublishCoursePage.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 import { useCourseContext } from '../../contexts/CourseContext';
@@ -16,7 +16,7 @@ import {
 
 // Import API service functions
 import { getCourseById, deleteDocument, publishCourse } from '../../../../api/services/Course/courseService';
-import { getQuizzesByLessonId } from '../../../../api/services/Course/quizService';
+import { getQuizzesByLessonId, deleteQuiz } from '../../../../api/services/Course/quizService';
 
 import PageHeader from './components/PageHeader';
 import ProgressSteps from './components/ProgressSteps';
@@ -38,6 +38,7 @@ interface DisplayCourseData {
 
 const PublishCoursePage: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     // Get courseId from URL param (if navigating directly) or context
     const { courseId: courseIdFromParam } = useParams<{ courseId: string }>();
     const { courseData: contextCourseData, setLessonsState, removeDocumentFromLessonState, resetCourseContext } = useCourseContext();
@@ -49,6 +50,7 @@ const PublishCoursePage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isPublishing, setIsPublishing] = useState(false);
     const [isDeletingMaterial, setIsDeletingMaterial] = useState(false);
+    const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
 
     // State for UI components
     const [expandedTopics, setExpandedTopics] = useState<string[]>(['materials']);
@@ -60,6 +62,7 @@ const PublishCoursePage: React.FC = () => {
     const [showQuizOverviewPage, setShowQuizOverviewPage] = useState<QuizBank | null>(null);
     const [quizzes, setQuizzes] = useState<Record<number, any[]>>({});
     const [loadingQuizzes, setLoadingQuizzes] = useState(false);
+    const [deleteQuizConfirmation, setDeleteQuizConfirmation] = useState<{lessonId: number, quizId: number} | null>(null);
 
     // Function to map context/API data to DisplayCourseData
     const mapToDisplayData = useCallback((
@@ -189,7 +192,18 @@ const PublishCoursePage: React.FC = () => {
             
             setIsLoading(false);
         }
-    }, [courseId, contextCourseData.basicDetails, contextCourseData.lessons, contextCourseData.lessonsLoaded, navigate, setLessonsState, mapToDisplayData]);
+    }, [courseId, contextCourseData.basicDetails, contextCourseData.lessons, contextCourseData.lessonsLoaded, navigate, setLessonsState, mapToDisplayData, lastRefresh]);
+
+    // Listen for route changes to refresh data when returning from quiz edit
+    useEffect(() => {
+        // Force a refresh when returning to this component
+        const handleRouteChange = () => {
+            setLastRefresh(Date.now());
+        };
+        
+        // This effect runs when the component mounts or when location changes
+        handleRouteChange();
+    }, [location.pathname]);
 
     const handleBack = () => {
         if (courseId) {
@@ -285,10 +299,10 @@ const PublishCoursePage: React.FC = () => {
             const quizData = quizzes[lessonId][0];
             const quizBank: QuizBank = {
                 id: quizData.quizId,
-                title: quizData.title,
+                title: quizData.quizTitle || quizData.title || '',
                 description: quizData.description || '',
                 questions: quizData.questions || [],
-                timeLimitMinutes: quizData.timeLimitMinutes,
+                timeLimitMinutes: quizData.timeLimitMinutes || 0,
                 totalMarks: quizData.totalMarks,
                 lessonId: lessonId
             };
@@ -320,6 +334,69 @@ const PublishCoursePage: React.FC = () => {
         }
         handleCloseQuizOverview();
         toast.success("Quiz details updated.");
+    };
+
+    const handleEditQuiz = (lessonId: number) => {
+        if (!courseId) {
+            toast.error("Course ID is missing. Cannot edit quiz.");
+            return;
+        }
+        
+        getQuizzesByLessonId(lessonId)
+            .then(quizzes => {
+                if (quizzes.length > 0) {
+                    const quizId = quizzes[0].quizId;
+                    navigate(`/coordinator/edit-quiz/${quizId}?lessonId=${lessonId}&courseId=${courseId}`);
+                } else {
+                    toast.error("No quiz found for this lesson to edit. Please create one first.");
+                }
+            })
+            .catch(error => {
+                console.error(`Failed to get quiz for lesson ${lessonId}:`, error);
+                toast.error("Failed to load quiz information. Please try again.");
+            });
+    };
+
+    const handleRemoveQuiz = (lessonId: number) => {
+        if (!courseId) {
+            toast.error("Course ID is missing. Cannot remove quiz.");
+            return;
+        }
+
+        // Find the quiz ID for this lesson
+        if (quizzes[lessonId] && quizzes[lessonId].length > 0) {
+            const quizId = quizzes[lessonId][0].quizId;
+            setDeleteQuizConfirmation({ lessonId, quizId });
+        } else {
+            toast.error("No quiz found for this lesson.");
+        }
+    };
+
+    const handleConfirmDeleteQuiz = async () => {
+        if (!deleteQuizConfirmation) return;
+        
+        const { lessonId, quizId } = deleteQuizConfirmation;
+        const loadingToastId = toast.loading("Deleting quiz...");
+        
+        try {
+            await deleteQuiz(quizId);
+            
+            // Update local quiz state
+            setQuizzes(prev => {
+                const newQuizzes = { ...prev };
+                newQuizzes[lessonId] = [];
+                return newQuizzes;
+            });
+            
+            toast.dismiss(loadingToastId);
+            toast.success("Quiz deleted successfully.");
+        } catch (error) {
+            toast.dismiss(loadingToastId);
+            console.error(`Failed to delete quiz ${quizId}:`, error);
+            toast.error("Failed to delete quiz. Please try again.");
+        } finally {
+            setDeleteQuizConfirmation(null);
+        }
     };
 
     if (isLoading) {
@@ -371,6 +448,9 @@ const PublishCoursePage: React.FC = () => {
                     quizzes={quizzes}
                     loadingQuizzes={loadingQuizzes}
                     handleViewQuiz={handleViewQuiz}
+                    onEditQuiz={handleEditQuiz}
+                    onRemoveQuiz={handleRemoveQuiz}
+                    courseId={courseId}
                     showQuizOverviewPage={showQuizOverviewPage}
                     handleCloseQuizOverview={handleCloseQuizOverview}
                     handleSaveOverviewQuizDetails={handleSaveOverviewQuizDetails}
@@ -381,6 +461,13 @@ const PublishCoursePage: React.FC = () => {
                     onConfirm={handleConfirmDeleteMaterial}
                     onCancel={handleCancelDelete}
                     message={`Are you sure you want to delete "${materialToDelete?.name || 'this material'}"? This action cannot be undone.`}
+                />
+
+                <ConfirmationDialog
+                    isOpen={!!deleteQuizConfirmation}
+                    onConfirm={handleConfirmDeleteQuiz}
+                    onCancel={() => setDeleteQuizConfirmation(null)}
+                    message="Are you sure you want to delete this quiz? This action cannot be undone."
                 />
 
                 {showQuizOverviewPage && (

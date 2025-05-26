@@ -1,9 +1,9 @@
 // src/features/Coordinator/coordinatorCourseView/CoordinatorCourseOverview/components/SubtopicItem.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Edit, Trash, Download, Plus, Video, FileText, List, Edit3 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Edit, Trash, Download, Plus, Video, FileText, List } from 'lucide-react';
 import { LessonDto, CourseDocumentDto } from '../../../../../types/course.types';
-import { QuizDto } from '../../../../../types/quiz.types';
 import { getQuizzesByLessonId } from '../../../../../api/services/Course/quizService';
+import QuizItem from '../../../CreateNewCourse/PublishCoursePage/components/QuizItem';
 
 interface SubtopicItemProps {
   lesson: LessonDto;
@@ -55,7 +55,7 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
   lessonPointsDisplay,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [actualQuizzes, setActualQuizzes] = useState<QuizDto[]>([]);
+  const [actualQuizzes, setActualQuizzes] = useState<any[]>([]);
   const [loadingQuizzes, setLoadingQuizzes] = useState(false);
 
   // Guard clause
@@ -89,6 +89,12 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
 
   const hasQuizzes = actualQuizzes.length > 0;
   const materialsList = materials || [];
+
+  // Handler to view quiz details - can be expanded if needed
+  const handleViewQuiz = (lessonId: number) => {
+    // For now, just delegate to edit quiz which will open the quiz editor
+    onEditQuiz(lessonId);
+  };
 
   return (
     <div className="bg-[#1B0A3F]/50 rounded-lg mb-4 overflow-hidden">
@@ -265,44 +271,15 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
             <div className="space-y-2">
               {hasQuizzes ? (
                 actualQuizzes.map((quiz) => (
-                  <div 
-                    key={quiz.quizId} 
-                    className="bg-[#34137C]/30 p-2 rounded-md flex justify-between items-center"
-                  >
-                    <div className="flex items-center">
-                      <List className="w-4 h-4 text-[#D68BF9] mr-2" />
-                      <span className="text-white text-sm">{quiz.quizTitle}</span>
-                      <span className="text-gray-400 text-xs ml-2">
-                        ({quiz.quizSize} questions • {quiz.timeLimitMinutes} min)
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {isEditMode && (
-                        <>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEditQuiz(lesson.id);
-                            }} 
-                            className="text-[#D68BF9] hover:text-white"
-                            disabled={isSaving}
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onRemoveQuiz(lesson.id);
-                            }} 
-                            className="text-red-400 hover:text-red-300"
-                            disabled={isSaving}
-                          >
-                            <Trash className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                  <QuizItem
+                    key={quiz.quizId}
+                    lessonId={lesson.id}
+                    quiz={quiz}
+                    handleViewQuiz={handleViewQuiz}
+                    isEditMode={isEditMode}
+                    onEditQuiz={onEditQuiz}
+                    onRemoveQuiz={onRemoveQuiz}
+                  />
                 ))
               ) : (
                 <p className="text-gray-400 text-sm italic">

@@ -696,254 +696,31 @@ const CoordinatorCourseOverview: React.FC = () => {
         return (
             <div className="space-y-4">
                 {courseData.lessons.map((lesson) => (
-                    <div key={lesson.id} className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-xl overflow-hidden transition-all duration-300 hover:shadow-[0_0_15px_rgba(191,75,246,0.3)]">
-                        {/* Lesson Header */}
-                        <div 
-                            className="p-4 flex justify-between items-center cursor-pointer border-l-4 border-[#BF4BF6]"
-                            onClick={() => toggleSubtopicExpand(lesson.id)}
-                        >
-                            <div className="flex items-center space-x-3 flex-1">
-                                {expandedSubtopics[lesson.id] ? (
-                                    <ArrowLeft className="text-[#D68BF9] w-5 h-5 transform rotate-90" />
-                                ) : (
-                                    <ArrowLeft className="text-[#D68BF9] w-5 h-5 transform -rotate-90" />
-                                )}
-                                
-                                <div className="flex-1">
-                                    {isEditMode ? (
-                                        <input
-                                            type="text"
-                                            value={editSubtopicsData[lesson.id]?.lessonName || lesson.lessonName}
-                                            onChange={(e) => handleEditSubtopicNameChange(lesson.id, e.target.value)}
-                                            className="bg-[#34137C]/50 text-white border border-[#BF4BF6]/30 rounded-md px-2 py-1 w-full focus:outline-none focus:border-[#BF4BF6]"
-                                            onClick={(e) => e.stopPropagation()}
-                                        />
-                                    ) : (
-                                        <h3 className="text-white font-medium">{lesson.lessonName}</h3>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                {isEditMode ? (
-                                    <>
-                                        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-                                            <label className="text-[#D68BF9] text-xs mr-2">Points:</label>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                max="10"
-                                                value={editSubtopicsData[lesson.id]?.lessonPoints || 1}
-                                                onChange={(e) => handleEditSubtopicPointsChange(lesson.id, parseInt(e.target.value, 10))}
-                                                className="bg-[#34137C]/50 text-white border border-[#BF4BF6]/30 rounded-md px-2 py-1 w-16 focus:outline-none focus:border-[#BF4BF6]"
-                                            />
-                                        </div>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleRemoveSubtopic(lesson.id, lesson.lessonName);
-                                            }}
-                                            className="bg-red-600/80 hover:bg-red-500 text-white p-1.5 rounded-md transition-colors"
-                                            disabled={isSaving}
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </>
-                                ) : (
-                                    <div className="flex items-center bg-[#34137C]/50 px-2 py-0.5 rounded-full">
-                                        <Award className="w-3 h-3 text-[#D68BF9] mr-1" />
-                                        <span className="text-white text-xs">{lessonPointsDisplay[lesson.id] || lesson.lessonPoints} pts</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Expanded Content */}
-                        {expandedSubtopics[lesson.id] && (
-                            <div className="p-4 pt-0 border-t border-[#BF4BF6]/20 mt-2">
-                                {/* Documents Section */}
-                                <div className="mb-4">
-                                    <h4 className="text-[#D68BF9] text-sm mb-2 flex items-center">
-                                        <FileText className="w-4 h-4 mr-1" /> Documents
-                                    </h4>
-                                    
-                                    {lesson.documents && lesson.documents.length > 0 ? (
-                                        <div className="space-y-2">
-                                            {lesson.documents.map((doc) => (
-                                                <div 
-                                                    key={doc.id} 
-                                                    className="bg-[#34137C]/50 p-3 rounded-md flex justify-between items-center"
-                                                >
-                                                    <div className="flex items-center">
-                                                        {doc.documentType === 'PDF' ? (
-                                                            <FileText className="w-4 h-4 text-[#D68BF9] mr-2" />
-                                                        ) : (
-                                                            <PlayCircle className="w-4 h-4 text-[#D68BF9] mr-2" />
-                                                        )}
-                                                        <span className="text-white text-sm">{doc.name}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <a 
-                                                            href={doc.fileUrl} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer"
-                                                            className="text-[#D68BF9] hover:text-white transition-colors"
-                                                        >
-                                                            <Download className="w-4 h-4" />
-                                                        </a>
-                                                        
-                                                        {isEditMode && (
-                                                            <button 
-                                                                onClick={() => askDeleteConfirmation(doc.id, lesson.id, doc.name)}
-                                                                className="text-red-400 hover:text-red-300 transition-colors"
-                                                                disabled={isSaving}
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-gray-400 text-sm italic bg-[#34137C]/30 p-3 rounded-md">
-                                            No documents available for this lesson.
-                                        </div>
-                                    )}
-                                    
-                                    {isEditMode && (
-                                        <div className="mt-3 bg-[#34137C]/50 p-3 rounded-md">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <div className="flex-1">
-                                                    <input
-                                                        type="file"
-                                                        id={`document-upload-${lesson.id}`}
-                                                        onChange={(e) => handleDocumentFileChange(e, lesson.id)}
-                                                        className="hidden"
-                                                    />
-                                                    <label 
-                                                        htmlFor={`document-upload-${lesson.id}`}
-                                                        className="cursor-pointer flex items-center bg-[#34137C] hover:bg-[#4A1F95] text-white px-3 py-2 rounded-lg transition-colors text-sm"
-                                                    >
-                                                        <Plus size={16} className="mr-1" /> Select Document
-                                                    </label>
-                                                </div>
-                                                
-                                                {newDocumentFiles[lesson.id] && (
-                                                    <div className="flex-1 flex flex-wrap items-center gap-2">
-                                                        <span className="text-white text-sm truncate max-w-[150px]">
-                                                            {newDocumentFiles[lesson.id]?.name}
-                                                        </span>
-                                                        <div className="flex gap-2">
-                                                            <button
-                                                                onClick={() => handleAddMaterial(lesson.id)}
-                                                                disabled={uploadingDocId === lesson.id || !newDocumentFiles[lesson.id]}
-                                                                className="bg-[#BF4BF6] hover:bg-[#D68BF9] text-white text-xs py-1 px-3 rounded-md disabled:opacity-50 transition-colors"
-                                                            >
-                                                                {uploadingDocId === lesson.id ? (
-                                                                    <span className="flex items-center">
-                                                                        <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                                        </svg>
-                                                                        Uploading...
-                                                                    </span>
-                                                                ) : "Upload"}
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleCancelDocumentUpload(lesson.id)}
-                                                                className="bg-gray-600 hover:bg-gray-500 text-white text-xs py-1 px-3 rounded-md transition-colors"
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Quiz Section */}
-                                <div>
-                                    <h4 className="text-[#D68BF9] text-sm mb-2 flex items-center">
-                                        <List className="w-4 h-4 mr-1" /> Quiz
-                                    </h4>
-                                    
-                                    {groupedQuizzes[lesson.id]?.length > 0 ? (
-                                        <div className="bg-[#34137C]/50 p-3 rounded-md">
-                                            <div className="flex justify-between items-center">
-                                                <div className="flex items-center">
-                                                    <List className="w-4 h-4 text-[#D68BF9] mr-2" />
-                                                    <span className="text-white text-sm">
-                                                        {groupedQuizzes[lesson.id][0].title || "Lesson Quiz"}
-                                                    </span>
-                                                </div>
-                                                
-                                                {isEditMode ? (
-                                                    <div className="relative">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                toggleQuizOptions(lesson.id);
-                                                            }}
-                                                            className="bg-[#BF4BF6] hover:bg-[#D68BF9] text-white text-xs py-1.5 px-3 rounded-md flex items-center gap-1 transition-colors"
-                                                        >
-                                                            <Edit size={14} /> Quiz Options
-                                                        </button>
-                                                        
-                                                        {showQuizOptions === lesson.id && (
-                                                            <div className="absolute right-0 mt-1 w-36 bg-[#1B0A3F] border border-[#BF4BF6]/40 rounded-md shadow-lg z-10">
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleEditQuiz(lesson.id);
-                                                                    }}
-                                                                    className="w-full text-left px-4 py-2 text-white text-sm hover:bg-[#34137C] flex items-center gap-1.5 transition-colors"
-                                                                >
-                                                                    <Edit size={14} className="text-[#D68BF9]" /> Edit Quiz
-                                                                </button>
-                                                                
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleRemoveQuiz(lesson.id);
-                                                                    }}
-                                                                    className="w-full text-left px-4 py-2 text-white text-sm hover:bg-[#34137C] border-t border-[#BF4BF6]/20 flex items-center gap-1.5 transition-colors text-red-400 hover:text-red-300"
-                                                                >
-                                                                    <Trash2 size={14} /> Delete Quiz
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => handleEditQuiz(lesson.id)}
-                                                        className="bg-[#34137C] hover:bg-[#4A1F95] text-white text-xs py-1.5 px-3 rounded-md flex items-center gap-1 transition-colors"
-                                                    >
-                                                        <Edit size={14} /> View Quiz
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="bg-[#34137C]/30 p-3 rounded-md flex justify-between items-center">
-                                            <span className="text-gray-400 text-sm italic">No quiz available for this lesson.</span>
-                                            
-                                            {isEditMode && (
-                                                <button
-                                                    onClick={() => handleCreateQuiz(lesson.id)}
-                                                    className="bg-[#BF4BF6] hover:bg-[#D68BF9] text-white text-xs py-1.5 px-3 rounded-md flex items-center gap-1 transition-colors"
-                                                >
-                                                    <Plus size={14} /> Create Quiz
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    <SubtopicItem
+                        key={lesson.id}
+                        lesson={lesson}
+                        isEditMode={isEditMode}
+                        editData={editSubtopicsData[lesson.id]}
+                        onEditNameChange={handleEditSubtopicNameChange}
+                        onEditPointsChange={handleEditSubtopicPointsChange}
+                        onRemoveSubtopic={handleRemoveSubtopic}
+                        isExpanded={!!expandedSubtopics[lesson.id]}
+                        toggleExpand={() => toggleSubtopicExpand(lesson.id)}
+                        materials={lesson.documents}
+                        quizzes={(lesson as any).quizzes || []}
+                        onDeleteMaterial={askDeleteConfirmation}
+                        onAddMaterial={handleAddMaterial}
+                        onCancelDocumentUpload={handleCancelDocumentUpload}
+                        onDocumentFileChange={handleDocumentFileChange}
+                        newDocumentFile={newDocumentFiles[lesson.id] || null}
+                        isUploadingDoc={uploadingDocId === lesson.id}
+                        onAddVideo={handleAddVideoMaterial}
+                        onCreateQuiz={handleCreateQuiz}
+                        onEditQuiz={handleEditQuiz}
+                        onRemoveQuiz={handleRemoveQuiz}
+                        isSaving={isSaving}
+                        lessonPointsDisplay={lessonPointsDisplay[lesson.id] || lesson.lessonPoints}
+                    />
                 ))}
             </div>
         );

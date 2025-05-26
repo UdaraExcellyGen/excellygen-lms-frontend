@@ -16,6 +16,7 @@ const QuizResults: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [attemptDetails, setAttemptDetails] = useState<QuizAttemptDetailDto | null>(null);
   const [animatedScore, setAnimatedScore] = useState<number>(0);
+  const [localCourseId, setLocalCourseId] = useState<number | null>(location.state?.courseId || null);
 
   const courseId = location.state?.courseId;
 
@@ -47,6 +48,15 @@ const QuizResults: React.FC = () => {
     fetchAttemptDetails();
   }, [attemptId, navigate]);
 
+  // Add this effect to extract courseId from the attempt details if missing from location.state
+  useEffect(() => {
+    // If courseId isn't provided in location.state but attemptDetails has been loaded
+    // and contains courseId, update our local courseId state
+    if (!courseId && attemptDetails?.courseId) {
+      setLocalCourseId(attemptDetails.courseId);
+    }
+  }, [courseId, attemptDetails]);
+
   const animateScore = (targetScore: number) => {
     let current = 0;
     const increment = targetScore / 60; // 60 steps for smoother animation
@@ -66,8 +76,15 @@ const QuizResults: React.FC = () => {
     if (targetCourseId) {
       navigate(`/learner/course-view/${targetCourseId}`);
     } else {
-      navigate('/learner/course-categories');
-      toast.info('Redirected to course categories');
+      // Try to get courseId from the attempt details
+      if (attemptDetails?.lessonId) {
+        // If we have a lessonId but no courseId, we can try to navigate to the dashboard
+        navigate('/learner/dashboard');
+        toast.info('Redirected to dashboard');
+      } else {
+        navigate('/learner/course-categories');
+        toast.info('Redirected to course categories');
+      }
     }
   };
 

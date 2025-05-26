@@ -90,16 +90,20 @@ const TakeQuiz: React.FC = () => {
 
     initializeQuiz();
 
+    // Improved cleanup
     return () => {
       if (timerInterval) {
         clearInterval(timerInterval);
+        setTimerInterval(null);
       }
     };
   }, [quizId, navigate, courseId]);
 
   const startTimer = useCallback((initialSeconds: number) => {
+    // Clear any existing timer first
     if (timerInterval) {
       clearInterval(timerInterval);
+      setTimerInterval(null);
     }
 
     const newInterval = setInterval(() => {
@@ -110,6 +114,8 @@ const TakeQuiz: React.FC = () => {
         
         if (newTimeRemaining <= 0) {
           clearInterval(newInterval);
+          // We need to clear the timer state to avoid memory leaks
+          setTimerInterval(null);
           handleCompleteQuiz();
           return { ...prev, timeRemaining: 0 };
         }
@@ -199,19 +205,19 @@ const TakeQuiz: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      const results = await completeQuizAttempt(quizAttempt.attemptId);
-      
+      // Clear the timer interval before navigating away
       if (timerInterval) {
         clearInterval(timerInterval);
+        setTimerInterval(null);
       }
       
+      const results = await completeQuizAttempt(quizAttempt.attemptId);
       navigate(`/learner/quiz-results/${quizAttempt.attemptId}`, {
         state: { courseId }
       });
     } catch (error) {
       console.error('Error completing quiz:', error);
       toast.error('Failed to submit quiz. Please try again.');
-    } finally {
       setIsSubmitting(false);
     }
   };
