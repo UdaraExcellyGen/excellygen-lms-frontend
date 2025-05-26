@@ -56,6 +56,7 @@ export const getQuizBank = async (quizBankId: number): Promise<QuizBankDto> => {
 };
 
 // Create a quiz bank for a lesson
+// In quizService.ts
 export const createQuizBank = async (lessonId: number, createQuizBankDto: CreateQuizBankDto): Promise<QuizBankDto> => {
   const response = await apiClient.post<QuizBankDto>(`/quiz/bank/lesson/${lessonId}`, createQuizBankDto);
   return response.data;

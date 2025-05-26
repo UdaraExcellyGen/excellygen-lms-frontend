@@ -1,54 +1,112 @@
 // src/features/Learner/CourseContent/components/AvailableCourseCard.tsx
-import React from 'react';
-import { Clock, Layers, Users } from 'lucide-react';
-import { LearnerCourseDto } from '../../../../types/course.types'; // Use LearnerCourseDto directly
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Clock, Tag, User, BookOpen } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { LearnerCourseDto } from '../../../../types/course.types';
+import { createEnrollment } from '../../../../api/services/Course/enrollmentService';
 
 interface AvailableCourseCardProps {
-  course: LearnerCourseDto; // Expects LearnerCourseDto
-  onEnroll: (courseId: number) => void; // Expects number ID
-  loading: boolean;
+  course: LearnerCourseDto;
+  onEnrollmentSuccess?: () => void; // Make this callback optional
 }
 
 const AvailableCourseCard: React.FC<AvailableCourseCardProps> = ({ 
   course, 
-  onEnroll, 
-  loading 
+  onEnrollmentSuccess 
 }) => {
+  const navigate = useNavigate();
+  const [isEnrolling, setIsEnrolling] = useState(false);
+  
+  const handleEnrollClick = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click (navigation) when enrolling
+    
+    if (isEnrolling) return; // Prevent multiple clicks
+    
+    setIsEnrolling(true);
+    try {
+      await createEnrollment(course.id);
+      toast.success(`Enrolled in "${course.title}" successfully!`);
+      
+      // Call the callback if provided
+      if (typeof onEnrollmentSuccess === 'function') {
+        onEnrollmentSuccess();
+      }
+      
+      // Refresh the page after a short delay to show the updated enrollment status
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Enrollment error:', error);
+      toast.error('Failed to enroll in course');
+    } finally {
+      setIsEnrolling(false);
+    }
+  };
+  
+  const handleCardClick = () => {
+    navigate(`/learner/course-view/${course.id}`);
+  };
+  
   return (
-    <div className="group bg-white/10 backdrop-blur-lg rounded-xl p-6 relative min-h-[400px] flex flex-col justify-between shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-      <div>
-        {course.thumbnailUrl && (
-          <img src={course.thumbnailUrl} alt={course.title} className="w-full h-40 object-cover rounded-md mb-4" />
+    <div 
+      className="bg-[#1B0A3F]/50 rounded-xl overflow-hidden hover:shadow-lg hover:shadow-[#BF4BF6]/20 transition duration-300 cursor-pointer"
+      onClick={handleCardClick}
+    >
+      <div className="h-40 overflow-hidden relative">
+        {course.thumbnailUrl ? (
+          <img 
+            src={course.thumbnailUrl} 
+            alt={course.title} 
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-[#34137C] flex items-center justify-center">
+            <BookOpen className="w-12 h-12 text-[#D68BF9]" />
+          </div>
         )}
-        <h3 className="text-xl text-white font-unbounded font-bold mb-2">
-          {course.title}
-        </h3>
-        <p className="text-[#D68BF9] text-sm mb-4 line-clamp-3">
-          {course.description}
-        </p>
-        <div className="space-y-2 text-sm">
-          <div className="flex items-center gap-2 text-gray-300">
-            <Clock className="h-4 w-4" />
-            <span className="font-nunito">{course.estimatedTime} Hours</span>
-          </div>
-          <div className="flex items-center gap-2 text-gray-300">
-            <Layers className="h-4 w-4" />
-            <span className="font-nunito">{course.category.title}</span>
-          </div>
-          {/* Removed dynamic activeUsers, using static placeholder or status */}
-          <div className="flex items-center gap-2 text-gray-300">
-            <Users className="h-4 w-4" />
-            <span className="font-nunito">{course.status === 'Published' ? 'Available' : course.status}</span>
-          </div>
+        <div className="absolute top-2 right-2 bg-[#34137C] px-2 py-1 rounded-full text-xs text-white">
+          {course.category.title}
         </div>
       </div>
-      <button 
-        onClick={() => onEnroll(course.id)}
-        disabled={loading}
-        className="mt-6 w-full px-6 py-3 bg-gradient-to-r from-[#BF4BF6] to-[#7A00B8] text-white rounded-lg hover:scale-105 hover:from-[#D68BF9] hover:to-[#BF4BF6] transition-all duration-300 font-nunito shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {loading ? 'Enrolling...' : 'Enroll Now'}
-      </button>
+      
+      <div className="p-4">
+        <h3 className="text-white font-semibold text-lg mb-2 line-clamp-1">{course.title}</h3>
+        
+        <div className="mb-3 flex flex-wrap gap-1">
+          {course.technologies.slice(0, 3).map(tech => (
+            <span key={tech.id} className="bg-[#34137C] text-xs text-white px-2 py-1 rounded-full">
+              {tech.name}
+            </span>
+          ))}
+          {course.technologies.length > 3 && (
+            <span className="bg-[#34137C] text-xs text-white px-2 py-1 rounded-full">
+              +{course.technologies.length - 3} more
+            </span>
+          )}
+        </div>
+        
+        <div className="flex justify-between items-center text-gray-300 text-xs mb-4">
+          <div className="flex items-center">
+            <Clock className="w-3 h-3 mr-1" />
+            <span>{course.estimatedTime} hours</span>
+          </div>
+          <div className="flex items-center">
+            <User className="w-3 h-3 mr-1" />
+            <span>Active learners: {course.activeLearnersCount || 0}</span>
+          </div>
+        </div>
+        
+        <button
+          onClick={handleEnrollClick}
+          disabled={isEnrolling}
+          className="w-full bg-[#BF4BF6] hover:bg-[#D68BF9] text-white py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isEnrolling ? 'Enrolling...' : 'Enroll Now'}
+        </button>
+      </div>
     </div>
   );
 };

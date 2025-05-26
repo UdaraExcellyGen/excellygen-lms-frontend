@@ -219,3 +219,11 @@ export interface OverallLmsStatsDto {
     totalProjectManagers: number;
     averageCourseDurationOverall: string;
 }
+
+export interface UpdateCourseCoordinatorDtoFE {
+    title: string;
+    description?: string; // Optional field
+    estimatedTime: number;
+    categoryId: string;
+    technologyIds: string[];
+}

@@ -1,11 +1,11 @@
-// src/contexts/CourseContext.tsx
+// src/features/Coordinator/contexts/CourseContext.tsx
 import React, { createContext, useState, useContext, ReactNode, useCallback } from 'react';
 import {
     BasicCourseDetailsState,
     CourseContextState,
     SubtopicFE,
     ExistingMaterialFile
-} from '../../../types/course.types'; // Ensure path is correct
+} from '../../../types/course.types';
 
 // --- Initial State ---
 const initialBasicDetails: BasicCourseDetailsState = {
@@ -48,73 +48,71 @@ export const CourseProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const updateBasicCourseDetails = useCallback((details: BasicCourseDetailsState) => {
         setCourseData(prev => ({
             ...prev,
-            // Ensure we are creating a new object for basicDetails to trigger re-renders where it's a dependency
             basicDetails: { ...details },
         }));
-    }, []); // This function itself is stable
+    }, []);
 
     const setCreatedCourseId = useCallback((id: number | null) => {
         setCourseData(prev => ({
             ...prev,
             createdCourseId: id,
-            // When a new course ID is set (or cleared), reset lessons and their loaded status
-            lessons: id === null ? [] : prev.createdCourseId === id ? prev.lessons : [], // Keep lessons if ID is same, else clear
+            lessons: id === null ? [] : prev.createdCourseId === id ? prev.lessons : [],
             lessonsLoaded: id === null ? false : prev.createdCourseId === id ? prev.lessonsLoaded : false,
         }));
-    }, []); // Stable
+    }, []);
 
     const setLessonsState = useCallback((lessons: SubtopicFE[]) => {
         setCourseData(prev => ({ ...prev, lessons: lessons }));
-    }, []); // Stable
+    }, []);
 
     const setLessonsLoaded = useCallback((loaded: boolean) => {
         setCourseData(prev => ({ ...prev, lessonsLoaded: loaded }));
-    }, []); // Stable
+    }, []);
 
     const addLessonToState = useCallback((lesson: SubtopicFE) => {
         setCourseData(prev => ({ ...prev, lessons: [...prev.lessons, lesson] }));
-    }, []); // Stable
+    }, []);
 
     const updateLessonInState = useCallback((updatedLesson: SubtopicFE) => {
         setCourseData(prev => ({
             ...prev,
-            lessons: prev.lessons.map(l => l.id === updatedLesson.id ? { ...updatedLesson } : l) // Ensure new object for updated lesson
+            lessons: prev.lessons.map(l => l.id === updatedLesson.id ? { ...updatedLesson } : l)
         }));
-    }, []); // Stable
+    }, []);
 
     const removeLessonFromState = useCallback((lessonId: number) => {
         setCourseData(prev => ({
             ...prev,
             lessons: prev.lessons.filter(l => l.id !== lessonId)
         }));
-    }, []); // Stable
+    }, []);
 
     const addDocumentToLessonState = useCallback((lessonId: number, document: ExistingMaterialFile) => {
         setCourseData(prev => ({
             ...prev,
             lessons: prev.lessons.map(l =>
                 l.id === lessonId
-                    ? { ...l, documents: [...l.documents, document] } // New documents array
+                    ? { ...l, documents: [...l.documents, document] }
                     : l
             )
         }));
-    }, []); // Stable
+    }, []);
 
     const removeDocumentFromLessonState = useCallback((lessonId: number, documentId: number) => {
         setCourseData(prev => ({
             ...prev,
             lessons: prev.lessons.map(l =>
                 l.id === lessonId
-                    ? { ...l, documents: l.documents.filter(d => d.id !== documentId) } // New documents array
+                    ? { ...l, documents: l.documents.filter(d => d.id !== documentId) }
                     : l
             )
         }));
-    }, []); // Stable
+    }, []);
 
     const resetCourseContext = useCallback(() => {
-        console.log("Resetting Course Context to initial state"); // Add log for debugging
-        setCourseData(initialCourseState); // initialCourseState is defined outside and is stable
-    }, []); // Dependency on initialCourseState is implicit, but [] is fine as it's module-scoped constant
+        console.log("Resetting Course Context to initial state");
+        setCourseData(initialCourseState);
+    }, []);
 
     // Context Value
     const value: CourseContextType = {
