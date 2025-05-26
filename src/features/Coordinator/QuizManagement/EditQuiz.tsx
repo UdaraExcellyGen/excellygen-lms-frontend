@@ -1,7 +1,7 @@
 // src/features/Coordinator/QuizManagement/EditQuiz.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, Plus, Save, Trash2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import {
@@ -44,9 +44,25 @@ const EditQuiz: React.FC = () => {
   const lessonIdParam = queryParams.get('lessonId');
   const courseIdParam = queryParams.get('courseId');
   
-  const quizId = quizIdParam ? parseInt(quizIdParam, 10) : 0;
-  const lessonId = lessonIdParam ? parseInt(lessonIdParam, 10) : 0;
-  const courseId = courseIdParam ? parseInt(courseIdParam, 10) : 0;
+  // Parse and validate all IDs
+  let quizId = 0;
+  let lessonId = 0;
+  let courseId = 0;
+  
+  try {
+    quizId = quizIdParam ? parseInt(quizIdParam, 10) : 0;
+    lessonId = lessonIdParam ? parseInt(lessonIdParam, 10) : 0;
+    courseId = courseIdParam ? parseInt(courseIdParam, 10) : 0;
+    
+    if (isNaN(quizId)) quizId = 0;
+    if (isNaN(lessonId)) lessonId = 0;
+    if (isNaN(courseId)) courseId = 0;
+  } catch (e) {
+    console.error("Error parsing URL parameters:", e);
+  }
+
+  // Store original courseId to ensure consistent navigation
+  const [originalCourseId] = useState<number>(courseId);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -69,21 +85,31 @@ const EditQuiz: React.FC = () => {
   // Form validation
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Helper function to safely navigate to course view
+  const navigateToCourseView = () => {
+    const targetCourseId = originalCourseId || courseId;
+    if (targetCourseId) {
+      // Use absolute path to ensure correct navigation
+      navigate(`/coordinator/course-view/${targetCourseId}`);
+    } else {
+      // Fallback if no courseId is available
+      navigate("/coordinator/course-display-page");
+    }
+  };
+
   useEffect(() => {
     const loadQuizData = async () => {
       if (!quizId || !lessonId || !courseId) {
         toast.error('Missing required parameters');
-        navigate(-1);
+        navigateToCourseView();
         return;
       }
 
       try {
         setIsLoading(true);
-        console.log("Loading quiz data for quizId:", quizId);
         
         // Fetch quiz details
         const quizDetails = await getQuizDetails(quizId);
-        console.log("Quiz details loaded:", quizDetails);
         
         // Make sure quizBankId exists before fetching
         if (!quizDetails.quizBankId) {
@@ -94,7 +120,6 @@ const EditQuiz: React.FC = () => {
         
         // Fetch quiz bank with questions
         const quizBank = await getQuizBank(quizDetails.quizBankId);
-        console.log("Quiz bank loaded:", quizBank);
 
         // Store original questions for comparison during save
         const origQuestions: OriginalQuestion[] = quizBank.questions.map(q => ({
@@ -132,7 +157,7 @@ const EditQuiz: React.FC = () => {
       } catch (error) {
         console.error('Error loading quiz data:', error);
         toast.error('Failed to load quiz data. Please try again.');
-        navigate(`/coordinator/upload-materials/${courseId}`);
+        navigateToCourseView();
       } finally {
         setIsLoading(false);
       }
@@ -272,12 +297,9 @@ const EditQuiz: React.FC = () => {
     setStep('details');
   };
 
+  // Always use the safe navigation function
   const handleCancel = () => {
-    if (courseId) {
-      navigate(`/coordinator/upload-materials/${courseId}`);
-    } else {
-      navigate(-1);
-    }
+    navigateToCourseView();
   };
 
   const handleSaveQuiz = async () => {
@@ -378,7 +400,11 @@ const EditQuiz: React.FC = () => {
 
       toast.dismiss(saveToastId);
       toast.success('Quiz updated successfully!');
-      navigate(`/coordinator/upload-materials/${courseId}`);
+      
+      // Ensure we navigate after the toast is shown and use our safe navigation function
+      setTimeout(() => {
+        navigateToCourseView();
+      }, 100);
     } catch (error) {
       console.error('Error updating quiz:', error);
       toast.dismiss(saveToastId);
@@ -389,42 +415,65 @@ const EditQuiz: React.FC = () => {
   };
 
   if (isLoading) {
-    return <div className="min-h-screen bg-[#52007C] p-6 flex justify-center items-center">
-      <p className="text-white text-xl">Loading quiz data...</p>
-    </div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] flex justify-center items-center">
+        <div className="text-white text-xl flex items-center">
+          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Loading quiz data...
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-xl p-4 mb-6 flex justify-between items-center">
+        <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-xl p-6 mb-6 flex justify-between items-center shadow-lg border border-[#BF4BF6]/20">
           <div className="flex items-center gap-4">
             <button 
               onClick={handleCancel} 
-              className="hover:bg-[#F6E6FF] p-2 rounded-lg transition-colors h-10 w-10 flex items-center justify-center"
+              className="bg-[#34137C]/60 hover:bg-[#34137C] p-2 rounded-lg transition-colors h-10 w-10 flex items-center justify-center text-[#D68BF9]"
             >
-              <ArrowLeft size={20} className="text-[#1B0A3F]" />
+              <ArrowLeft size={20} />
             </button>
-            <h1 className="text-xl font-['Unbounded'] text-[#1B0A3F]">
-              Edit Quiz
+            <h1 className="text-xl font-semibold text-white flex items-center gap-2">
+              <span>Edit Quiz</span>
+              <span className="text-sm bg-[#34137C] text-[#D68BF9] px-3 py-1 rounded-full">
+                {quizState.quizTitle}
+              </span>
             </h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button 
               onClick={handleCancel} 
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              className="px-4 py-2 bg-[#34137C]/60 text-white rounded-lg hover:bg-[#34137C] transition-colors flex items-center gap-1"
               disabled={isSaving}
             >
               Cancel
             </button>
             <button 
               onClick={handleSaveQuiz} 
-              className="px-4 py-2 bg-[#BF4BF6] text-white rounded-lg hover:bg-[#D68BF9] transition-colors flex items-center gap-2"
+              className="px-5 py-2 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               disabled={isSaving}
             >
-              <Save size={16} />
-              {isSaving ? 'Saving...' : 'Save Changes'}
+              {isSaving ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save size={16} />
+                  Save Changes
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -432,25 +481,39 @@ const EditQuiz: React.FC = () => {
         {/* Tabs */}
         <div className="flex mb-4">
           <button 
-            className={`px-4 py-2 rounded-tl-lg rounded-tr-lg ${step === 'details' ? 'bg-[#BF4BF6] text-white' : 'bg-[#34137C] text-[#D68BF9]'}`}
+            className={`px-5 py-3 rounded-t-lg flex items-center gap-1.5 font-medium transition-colors ${
+              step === 'details' 
+              ? 'bg-[#1B0A3F]/60 text-white border-t border-l border-r border-[#BF4BF6]/30' 
+              : 'bg-[#34137C]/30 text-[#D68BF9] hover:bg-[#34137C]/50'
+            }`}
             onClick={() => setStep('details')}
           >
+            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+              step === 'details' ? 'bg-[#BF4BF6] text-white' : 'bg-[#34137C] text-[#D68BF9]'
+            }`}>1</span>
             Quiz Details
           </button>
           <button 
-            className={`px-4 py-2 rounded-tl-lg rounded-tr-lg ${step === 'questions' ? 'bg-[#BF4BF6] text-white' : 'bg-[#34137C] text-[#D68BF9]'}`}
+            className={`px-5 py-3 rounded-t-lg flex items-center gap-1.5 font-medium transition-colors ${
+              step === 'questions' 
+              ? 'bg-[#1B0A3F]/60 text-white border-t border-l border-r border-[#BF4BF6]/30' 
+              : 'bg-[#34137C]/30 text-[#D68BF9] hover:bg-[#34137C]/50'
+            }`}
             onClick={() => step === 'questions' ? null : handleContinueToQuestions()}
           >
+            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+              step === 'questions' ? 'bg-[#BF4BF6] text-white' : 'bg-[#34137C] text-[#D68BF9]'
+            }`}>2</span>
             Questions ({quizState.questions.length})
           </button>
         </div>
 
         {/* Warning for modified quiz bank size */}
         {quizState.quizBankSize !== quizState.questions.length && (
-          <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-4 rounded">
+          <div className="bg-[#1B0A3F]/60 backdrop-blur-md border-l-4 border-yellow-500 p-4 mb-4 rounded-lg">
             <div className="flex items-start">
               <AlertCircle className="text-yellow-500 mr-2 flex-shrink-0" size={20} />
-              <p className="text-yellow-800 text-sm">
+              <p className="text-yellow-200 text-sm">
                 <span className="font-bold">Warning:</span> You've set the question bank size to {quizState.quizBankSize}, but you have {quizState.questions.length} questions. 
                 {quizState.quizBankSize > quizState.questions.length 
                   ? ` You need to add ${quizState.quizBankSize - quizState.questions.length} more questions to match your bank size.` 
@@ -461,63 +524,63 @@ const EditQuiz: React.FC = () => {
         )}
 
         {/* Main Content */}
-        <div className="bg-[#1B0A3F]/40 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 p-6">
+        <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 p-6 shadow-lg">
           {step === 'details' ? (
             // Quiz Details Form
             <div className="space-y-6">
               <div>
-                <label className="block text-white mb-2">Quiz Title</label>
+                <label className="block text-white mb-2 font-medium">Quiz Title</label>
                 <input
                   type="text"
                   name="quizTitle"
                   value={quizState.quizTitle}
                   onChange={handleInputChange}
-                  className={`w-full p-3 rounded-lg bg-[#34137C]/60 text-white border ${errors.quizTitle ? 'border-red-500' : 'border-[#BF4BF6]/30'}`}
+                  className={`w-full p-3 rounded-lg bg-[#34137C]/60 text-white border ${errors.quizTitle ? 'border-red-500' : 'border-[#BF4BF6]/30'} focus:outline-none focus:border-[#BF4BF6]`}
                   placeholder="Enter quiz title"
                 />
-                {errors.quizTitle && <p className="text-red-500 mt-1">{errors.quizTitle}</p>}
+                {errors.quizTitle && <p className="text-red-400 mt-1 text-sm">{errors.quizTitle}</p>}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-white mb-2">Time Limit (minutes)</label>
+                  <label className="block text-white mb-2 font-medium">Time Limit (minutes)</label>
                   <input
                     type="number"
                     name="timeLimitMinutes"
                     value={quizState.timeLimitMinutes}
                     onChange={handleInputChange}
-                    className={`w-full p-3 rounded-lg bg-[#34137C]/60 text-white border ${errors.timeLimitMinutes ? 'border-red-500' : 'border-[#BF4BF6]/30'}`}
+                    className={`w-full p-3 rounded-lg bg-[#34137C]/60 text-white border ${errors.timeLimitMinutes ? 'border-red-500' : 'border-[#BF4BF6]/30'} focus:outline-none focus:border-[#BF4BF6]`}
                     min="1"
                     max="180"
                   />
-                  {errors.timeLimitMinutes && <p className="text-red-500 mt-1">{errors.timeLimitMinutes}</p>}
+                  {errors.timeLimitMinutes && <p className="text-red-400 mt-1 text-sm">{errors.timeLimitMinutes}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-white mb-2">Quiz Size (questions shown)</label>
+                  <label className="block text-white mb-2 font-medium">Quiz Size (questions shown)</label>
                   <input
                     type="number"
                     name="quizSize"
                     value={quizState.quizSize}
                     onChange={handleInputChange}
-                    className={`w-full p-3 rounded-lg bg-[#34137C]/60 text-white border ${errors.quizSize ? 'border-red-500' : 'border-[#BF4BF6]/30'}`}
+                    className={`w-full p-3 rounded-lg bg-[#34137C]/60 text-white border ${errors.quizSize ? 'border-red-500' : 'border-[#BF4BF6]/30'} focus:outline-none focus:border-[#BF4BF6]`}
                     min="1"
                     max="100"
                   />
-                  {errors.quizSize && <p className="text-red-500 mt-1">{errors.quizSize}</p>}
+                  {errors.quizSize && <p className="text-red-400 mt-1 text-sm">{errors.quizSize}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-white mb-2">Question Bank Size</label>
+                  <label className="block text-white mb-2 font-medium">Question Bank Size</label>
                   <input
                     type="number"
                     name="quizBankSize"
                     value={quizState.quizBankSize}
                     onChange={handleInputChange}
-                    className={`w-full p-3 rounded-lg bg-[#34137C]/60 text-white border ${errors.quizBankSize ? 'border-red-500' : 'border-[#BF4BF6]/30'}`}
+                    className={`w-full p-3 rounded-lg bg-[#34137C]/60 text-white border ${errors.quizBankSize ? 'border-red-500' : 'border-[#BF4BF6]/30'} focus:outline-none focus:border-[#BF4BF6]`}
                     min={quizState.quizSize}
                   />
-                  {errors.quizBankSize && <p className="text-red-500 mt-1">{errors.quizBankSize}</p>}
+                  {errors.quizBankSize && <p className="text-red-400 mt-1 text-sm">{errors.quizBankSize}</p>}
                 </div>
               </div>
 
@@ -533,9 +596,10 @@ const EditQuiz: React.FC = () => {
               <div className="flex justify-end mt-4">
                 <button
                   onClick={handleContinueToQuestions}
-                  className="px-5 py-2 bg-[#BF4BF6] hover:bg-[#D68BF9] text-white rounded-lg transition-colors"
+                  className="px-5 py-2.5 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
                   Continue to Questions
+                  <ArrowLeft className="transform rotate-180 w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -543,73 +607,85 @@ const EditQuiz: React.FC = () => {
             // Questions Form
             <div>
               {/* Question Navigation */}
-              <div className="flex mb-4 flex-wrap gap-2">
-                {quizState.questions.map((_, index) => (
+              <div className="mb-6 border-b border-[#BF4BF6]/20 pb-4">
+                <h3 className="text-white font-medium mb-3">Question Navigator</h3>
+                <div className="flex flex-wrap gap-2">
+                  {quizState.questions.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleNavigateToQuestion(index)}
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                        quizState.currentQuestionIndex === index
+                          ? 'bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] text-white shadow-md transform scale-105'
+                          : 'bg-[#34137C]/60 text-[#D68BF9] hover:bg-[#34137C] hover:text-white'
+                      }`}
+                    >
+                      {index + 1}
+                    </button>
+                  ))}
                   <button
-                    key={index}
-                    onClick={() => handleNavigateToQuestion(index)}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      quizState.currentQuestionIndex === index
-                        ? 'bg-[#BF4BF6] text-white'
-                        : 'bg-[#34137C] text-[#D68BF9]'
-                    }`}
+                    onClick={handleAddQuestion}
+                    className="w-10 h-10 rounded-lg bg-[#34137C]/60 text-[#D68BF9] flex items-center justify-center hover:bg-[#34137C] transition-colors"
+                    title="Add new question"
                   >
-                    {index + 1}
+                    <Plus size={18} />
                   </button>
-                ))}
-                <button
-                  onClick={handleAddQuestion}
-                  className="w-10 h-10 rounded-full bg-[#34137C] text-[#D68BF9] flex items-center justify-center"
-                >
-                  <Plus size={16} />
-                </button>
+                </div>
               </div>
 
               {/* Current Question */}
               {quizState.questions.length > 0 && (
-                <div className="bg-[#34137C]/60 rounded-lg p-6 mb-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-white font-semibold">Question {quizState.currentQuestionIndex + 1}</h3>
+                <div className="bg-[#34137C]/40 rounded-lg p-6 mb-6 border border-[#BF4BF6]/20">
+                  <div className="flex justify-between items-center mb-4 pb-3 border-b border-[#BF4BF6]/20">
+                    <h3 className="text-white font-semibold flex items-center">
+                      <span className="bg-[#BF4BF6] text-white w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">
+                        {quizState.currentQuestionIndex + 1}
+                      </span>
+                      Question {quizState.currentQuestionIndex + 1} of {quizState.questions.length}
+                    </h3>
                     <button
                       onClick={handleRemoveQuestion}
-                      className="text-red-400 hover:text-red-500"
+                      className="text-red-400 hover:text-red-300 bg-[#34137C]/60 hover:bg-[#34137C] p-2 rounded-lg transition-colors"
                       disabled={quizState.questions.length <= 1}
+                      title="Delete this question"
                     >
                       <Trash2 size={16} />
                     </button>
                   </div>
 
-                  <div className="mb-4">
-                    <label className="block text-white mb-2">Question Content</label>
+                  <div className="mb-6">
+                    <label className="block text-white mb-2 font-medium">Question Content</label>
                     <textarea
                       value={quizState.questions[quizState.currentQuestionIndex]?.questionContent || ''}
                       onChange={(e) => handleQuestionContentChange(e.target.value)}
-                      className="w-full p-3 rounded-lg bg-[#1B0A3F]/40 text-white border border-[#BF4BF6]/30"
+                      className="w-full p-3 rounded-lg bg-[#1B0A3F]/60 text-white border border-[#BF4BF6]/30 focus:outline-none focus:border-[#BF4BF6]"
                       rows={3}
                       placeholder="Enter your question here"
                     />
                   </div>
 
-                  <div className="space-y-3">
-                    <label className="block text-white mb-2">Answer Options (select the correct one)</label>
+                  <div className="space-y-4">
+                    <label className="block text-white mb-2 font-medium">
+                      Answer Options (select the correct one)
+                    </label>
                     {quizState.questions[quizState.currentQuestionIndex]?.options.map((option, optionIndex) => (
-                      <div key={optionIndex} className="flex items-center gap-2">
+                      <div key={optionIndex} className="flex items-center gap-3 bg-[#1B0A3F]/40 p-3 rounded-lg border border-[#BF4BF6]/20 hover:border-[#BF4BF6]/40 transition-colors">
                         <button
                           type="button"
                           onClick={() => handleCorrectAnswerChange(optionIndex)}
-                          className={`rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center border ${
+                          className={`rounded-full w-6 h-6 flex-shrink-0 flex items-center justify-center border transition-all duration-200 ${
                             option.isCorrect
-                              ? 'bg-[#BF4BF6] border-[#BF4BF6] text-white'
-                              : 'border-[#BF4BF6]/50 bg-transparent'
+                              ? 'bg-[#BF4BF6] border-[#BF4BF6] text-white shadow-md transform scale-105'
+                              : 'border-[#BF4BF6]/50 bg-transparent hover:bg-[#34137C]'
                           }`}
                         >
-                          {option.isCorrect && '✓'}
+                          {option.isCorrect && <CheckCircle size={14} />}
                         </button>
                         <input
                           type="text"
                           value={option.optionText}
                           onChange={(e) => handleOptionChange(optionIndex, e.target.value)}
-                          className="flex-1 p-2 rounded-lg bg-[#1B0A3F]/40 text-white border border-[#BF4BF6]/30"
+                          className="flex-1 p-2.5 rounded-lg bg-[#1B0A3F]/60 text-white border border-[#BF4BF6]/30 focus:outline-none focus:border-[#BF4BF6]"
                           placeholder={`Option ${optionIndex + 1}`}
                         />
                       </div>
@@ -618,20 +694,33 @@ const EditQuiz: React.FC = () => {
                 </div>
               )}
 
-              <div className="flex justify-between mt-4">
+              <div className="flex justify-between mt-6">
                 <button
                   onClick={handleBackToDetails}
-                  className="px-5 py-2 border border-[#BF4BF6]/30 text-[#D68BF9] rounded-lg hover:bg-[#BF4BF6]/10 transition-colors"
+                  className="px-5 py-2.5 border border-[#BF4BF6]/30 text-[#D68BF9] rounded-lg hover:bg-[#BF4BF6]/10 transition-colors flex items-center gap-2"
                 >
+                  <ArrowLeft className="w-4 h-4" />
                   Back to Details
                 </button>
                 <button
                   onClick={handleSaveQuiz}
-                  className="px-5 py-2 bg-[#BF4BF6] hover:bg-[#D68BF9] text-white rounded-lg transition-colors flex items-center gap-2"
+                  className="px-5 py-2.5 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                   disabled={isSaving}
                 >
-                  <Save size={16} />
-                  {isSaving ? 'Saving...' : 'Save Changes'}
+                  {isSaving ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      Save Quiz
+                    </>
+                  )}
                 </button>
               </div>
             </div>
