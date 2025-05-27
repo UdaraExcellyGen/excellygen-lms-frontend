@@ -8,7 +8,8 @@ import {
   CreateEmployeeAssignmentRequest,
   BulkAssignEmployeesRequest,
   EmployeeFilter,
-  EmployeeWorkload
+  EmployeeWorkload,
+  UpdateEmployeeAssignmentRequest
 } from '../../../features/ProjectManager/Employee-assign/types/types';
 
 const API_BASE = '/project-manager';
@@ -86,6 +87,12 @@ export const assignmentApi = {
   // Bulk assign employees to project
   bulkAssignEmployeesToProject: async (request: BulkAssignEmployeesRequest): Promise<EmployeeAssignment[]> => {
     const response = await apiClient.post(`${API_BASE}/employee-assignments/bulk`, request);
+    return response.data;
+  },
+
+  // Update employee assignment
+  updateEmployeeAssignment: async (assignmentId: number, request: UpdateEmployeeAssignmentRequest): Promise<EmployeeAssignment> => {
+    const response = await apiClient.put(`${API_BASE}/employee-assignments/${assignmentId}`, request);
     return response.data;
   },
 

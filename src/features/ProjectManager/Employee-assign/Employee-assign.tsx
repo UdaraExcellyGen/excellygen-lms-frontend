@@ -18,6 +18,7 @@ import BottomBarWithAvatars from './components/BottomBarWithAvatars';
 import ConfirmationDialog from './components/ConfirmationDialog';
 import EmployeeCard from './components/EmployeeCard';
 import ProjectCard from './components/ProjectCard';
+import EditWorkloadModal from './components/EditWorkloadModal'; // ADDED
 
 // Import types and API services
 import { Employee, Project, EmployeeAssignment, EmployeeFilter } from './types/types';
@@ -38,13 +39,13 @@ const EmployeeManagement: React.FC = () => {
     const [searchType, setSearchType] = useState('name');
     const [projectSearchType, setProjectSearchType] = useState('name');
     const navigate = useNavigate();
-    
+
     // Data states
     const [projects, setProjects] = useState<Project[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [availableRoles, setAvailableRoles] = useState<string[]>([]);
     const [availableSkills, setAvailableSkills] = useState<string[]>([]);
-    
+
     // Loading states
     const [isLoading, setIsLoading] = useState({
         projects: false,
@@ -52,7 +53,7 @@ const EmployeeManagement: React.FC = () => {
         roles: false,
         skills: false
     });
-    
+
     // Dialog states
     const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
     const [projectDetailsPopup, setProjectDetailsPopup] = useState({ isOpen: false, project: null as Project | null });
@@ -64,6 +65,18 @@ const EmployeeManagement: React.FC = () => {
     const [employeeToRemove, setEmployeeToRemove] = useState<Employee | null>(null);
     const [projectToRemoveFrom, setProjectToRemoveFrom] = useState<Project | null>(null);
     const [showWarningMessage, setShowWarningMessage] = useState(false);
+
+    // Edit assignment modal states
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false); // ADDED
+    const [selectedAssignment, setSelectedAssignment] = useState<{ // ADDED
+        id: number;
+        employeeName: string;
+        projectName: string;
+        role: string;
+        workloadPercentage: number;
+        employeeId: string;
+    } | null>(null);
+    const [editAssignmentError, setEditAssignmentError] = useState(''); // ADDED
 
     const multiSelectButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -122,7 +135,7 @@ const EmployeeManagement: React.FC = () => {
         try {
             const statusFilter = projectStatusFilter !== 'All' ? projectStatusFilter : undefined;
             const projectsData = await projectApi.getAllProjects(statusFilter);
-            
+
             // Load assignments for each project
             const projectsWithAssignments = await Promise.all(
                 projectsData.map(async (project) => {
@@ -135,7 +148,7 @@ const EmployeeManagement: React.FC = () => {
                     }
                 })
             );
-            
+
             setProjects(projectsWithAssignments);
         } catch (error) {
             console.error('Error loading projects:', error);
@@ -209,7 +222,7 @@ const EmployeeManagement: React.FC = () => {
             setShowWarningMessage(true);
             return;
         }
-        
+
         setSelectedEmployees(prev =>
             prev.includes(employeeId) ? prev.filter(id => id !== employeeId) : [...prev, employeeId]
         );
@@ -277,10 +290,10 @@ const EmployeeManagement: React.FC = () => {
             });
 
             toast.success('Employees assigned successfully!');
-            
+
             // Refresh data
             await Promise.all([loadProjects(), loadEmployees()]);
-            
+
             setIsConfirmationOpen(false);
             setSelectedEmployees([]);
             setSelectedProject(null);
@@ -312,7 +325,7 @@ const EmployeeManagement: React.FC = () => {
         try {
             await assignmentApi.removeEmployeeFromProject(projectId, employeeId);
             toast.success('Employee removed from project successfully!');
-            
+
             // Refresh data
             await Promise.all([loadProjects(), loadEmployees()]);
         } catch (error) {
@@ -366,6 +379,45 @@ const EmployeeManagement: React.FC = () => {
         setSelectedProject(null);
         setIsSkillMatchActive(false);
         setShowEmployeesWithoutProjects(false);
+    };
+
+    // ADDED HANDLERS
+    const triggerEditAssignment = (assignment: {
+        id: number;
+        employeeName: string;
+        projectName: string;
+        role: string;
+        workloadPercentage: number;
+        employeeId: string;
+    }) => {
+        setSelectedAssignment(assignment);
+        setEditAssignmentError('');
+        setIsEditModalOpen(true);
+    };
+
+    const handleEditAssignmentClose = () => {
+        setIsEditModalOpen(false);
+        setSelectedAssignment(null);
+        setEditAssignmentError('');
+    };
+
+    const handleEditAssignmentConfirm = async (assignmentId: number, role: string, workloadPercentage: number) => {
+        try {
+            await assignmentApi.updateEmployeeAssignment(assignmentId, { role, workloadPercentage });
+            toast.success('Assignment updated successfully!');
+
+            // Refresh data
+            await Promise.all([loadProjects(), loadEmployees()]);
+
+            setIsEditModalOpen(false);
+            setSelectedAssignment(null);
+            setEditAssignmentError('');
+        } catch (error: any) {
+            console.error('Error updating assignment:', error);
+            const errorMessage = error.response?.data?.message || 'Failed to update assignment';
+            setEditAssignmentError(errorMessage);
+            toast.error('Failed to update assignment');
+        }
     };
 
     // Filter projects based on search
@@ -543,6 +595,7 @@ const EmployeeManagement: React.FC = () => {
                                             handleProjectSelect={handleProjectSelect}
                                             toggleProjectExpansion={toggleProjectExpansion}
                                             triggerRemoveConfirmation={triggerRemoveConfirmation}
+                                            triggerEditAssignment={triggerEditAssignment} // UPDATED
                                         />
                                     ))
                                 )}
@@ -607,7 +660,7 @@ const EmployeeManagement: React.FC = () => {
                                     Free Bench
                                 </button>
                             </div>
-                            
+
                             {/* Warning message if no project is selected */}
                             {showWarningMessage && (
                                 <div className="mb-4 p-3 rounded-lg bg-amber-100 border border-amber-300 text-amber-800 transition-all duration-300 transform ease-in-out">
@@ -617,7 +670,7 @@ const EmployeeManagement: React.FC = () => {
                                     </p>
                                 </div>
                             )}
-                            
+
                             {!selectedProject && (
                                 <div className="mb-4 p-3 rounded-lg bg-gray-100 border border-gray-200 text-gray-600">
                                     <p className="text-sm flex items-center gap-2">
@@ -626,7 +679,7 @@ const EmployeeManagement: React.FC = () => {
                                     </p>
                                 </div>
                             )}
-                            
+
                             <div style={scrollbarStyles} className="space-y-4 pr-2 h-full custom-scrollbar">
                                 {isLoading.employees ? (
                                     <div className="flex justify-center items-center h-32">
@@ -699,6 +752,17 @@ const EmployeeManagement: React.FC = () => {
                         employees={employees}
                         projectRoles={availableRoles}
                         assignmentError={assignmentError}
+                    />
+
+                    {/* ADDED MODAL */}
+                    <EditWorkloadModal
+                        isOpen={isEditModalOpen}
+                        assignment={selectedAssignment}
+                        onClose={handleEditAssignmentClose}
+                        onConfirm={handleEditAssignmentConfirm}
+                        availableRoles={availableRoles}
+                        employees={employees}
+                        error={editAssignmentError}
                     />
                 </div>
             </div>
