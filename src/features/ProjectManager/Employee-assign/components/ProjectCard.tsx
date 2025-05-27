@@ -1,7 +1,7 @@
 // Path: src/features/ProjectManager/Employee-assign/components/ProjectCard.tsx
 
 import React from 'react';
-import { FaProjectDiagram, FaChevronUp, FaChevronDown, FaUserCircle, FaTrashAlt, FaLaptopCode } from 'react-icons/fa';
+import { FaProjectDiagram, FaChevronUp, FaChevronDown, FaUserCircle, FaTrashAlt, FaLaptopCode, FaEdit } from 'react-icons/fa';
 import { Project, Employee } from '../types/types';
 
 interface ProjectCardProps {
@@ -12,6 +12,14 @@ interface ProjectCardProps {
   handleProjectSelect: (project: Project) => void;
   toggleProjectExpansion: (projectId: string) => void;
   triggerRemoveConfirmation: (projectId: string, employeeId: string, employeeName: string, projectName: string) => void;
+  triggerEditAssignment: (assignment: {
+    id: number;
+    employeeName: string;
+    projectName: string;
+    role: string;
+    workloadPercentage: number;
+    employeeId: string;
+  }) => void;
 }
 
 const ProjectCard: React.FC<ProjectCardProps> = ({ 
@@ -21,7 +29,8 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   employees,
   handleProjectSelect,
   toggleProjectExpansion,
-  triggerRemoveConfirmation
+  triggerRemoveConfirmation,
+  triggerEditAssignment
 }) => {
   const getRoleCount = (roleName: string) => {
     return project.employeeAssignments.filter(assignment => assignment.role === roleName).length;
@@ -200,16 +209,16 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 </div>
               )}
               
-              <div className="grid grid-cols-2 gap-2 p-4 rounded-lg bg-[#F6E6FF]">
+              <div className="grid grid-cols-1 gap-2 p-4 rounded-lg bg-[#F6E6FF]">
                 {/* Show each assignment separately */}
                 {project.employeeAssignments.map((assignment) => {
                   const employee = employees.find((e) => e.id === assignment.employeeId);
                   return employee ? (
                     <div
                       key={`${assignment.employeeId}-${assignment.role}`}
-                      className="flex items-center justify-between p-2 rounded-lg bg-white"
+                      className="flex items-center justify-between p-3 rounded-lg bg-white"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-[#F6E6FF] flex items-center justify-center">
                           <FaUserCircle className="w-5 h-5 text-[#BF4BF6]" />
                         </div>
@@ -223,17 +232,39 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                           <span className="text-xs text-[#7A00B8] dark:text-[#D68BF9]">(ID: {employee.id})</span>
                         </div>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          triggerRemoveConfirmation(project.id, assignment.employeeId, assignment.employeeName, project.name);
-                        }}
-                        className="px-2 py-1 hover:bg-[#F6E6FF] dark:hover:bg-[#1B0A3F]
-                          rounded transition-colors text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-500"
-                      >
-                        <FaTrashAlt className="w-4 h-4" />
-                        <span className="sr-only">Remove</span>
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            triggerEditAssignment({
+                              id: assignment.id,
+                              employeeName: assignment.employeeName,
+                              projectName: project.name,
+                              role: assignment.role,
+                              workloadPercentage: assignment.workloadPercentage,
+                              employeeId: assignment.employeeId
+                            });
+                          }}
+                          className="px-2 py-1 hover:bg-[#F6E6FF] dark:hover:bg-[#1B0A3F]
+                            rounded transition-colors text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-500"
+                          title="Edit Assignment"
+                        >
+                          <FaEdit className="w-4 h-4" />
+                          <span className="sr-only">Edit</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            triggerRemoveConfirmation(project.id, assignment.employeeId, assignment.employeeName, project.name);
+                          }}
+                          className="px-2 py-1 hover:bg-[#F6E6FF] dark:hover:bg-[#1B0A3F]
+                            rounded transition-colors text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-500"
+                          title="Remove Assignment"
+                        >
+                          <FaTrashAlt className="w-4 h-4" />
+                          <span className="sr-only">Remove</span>
+                        </button>
+                      </div>
                     </div>
                   ) : null;
                 })}
