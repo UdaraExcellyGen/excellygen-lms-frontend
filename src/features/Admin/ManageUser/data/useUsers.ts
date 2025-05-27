@@ -66,6 +66,8 @@ export const useUsers = () => {
     department: '',
     password: ''
   });
+  // Added state for temporary password generation
+  const [generateTempPassword, setGenerateTempPassword] = useState(true);
 
   // Filter states
   const [filterState, setFilterState] = useState<FilterState>({
@@ -80,6 +82,11 @@ export const useUsers = () => {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // Reset generateTempPassword when editing state changes
+  useEffect(() => {
+    setGenerateTempPassword(!editingUser ? true : false);
+  }, [editingUser]);
 
   // Case-insensitive role comparison helper
   const roleMatches = (userRole: string, filterRole: string) => {
@@ -243,8 +250,8 @@ export const useUsers = () => {
     return emailRegex.test(email);
   };
 
-  // Handle adding or updating a user
-  const handleAddUser = async () => {
+  // Handle adding or updating a user with option to skip password generation
+  const handleAddUser = async (skipPasswordGen = false) => {
     try {
       setIsSubmitting(true);
       
@@ -307,23 +314,30 @@ export const useUsers = () => {
           const updateDto: UpdateUserDto = {
             ...userWithNormalizedRoles,
             status: editingUser.status,
-            // Set generateTemporaryPassword if the password field is empty (indicating we want to generate one)
-            generateTemporaryPassword: userWithNormalizedRoles.password === ''
+            // Set generateTemporaryPassword based on our flag
+            generateTemporaryPassword: userWithNormalizedRoles.password === '' && generateTempPassword
           };
+          
+          // If password is 'NO_CHANGE', remove it from the payload to avoid sending it to the server
+          if (updateDto.password === 'NO_CHANGE') {
+            delete updateDto.password;
+            updateDto.generateTemporaryPassword = false;
+          }
           
           const updatedUser = await updateUser(editingUser.id, updateDto);
           
-          // Check if a temporary password was returned
-          if (updatedUser.temporaryPassword) {
+          // Check if a temporary password was returned AND we're not skipping the password dialog
+          if (updatedUser.temporaryPassword && !skipPasswordGen && generateTempPassword) {
             setTempPasswordData({
-              userId: updatedUser.id,  // Include the user ID
+              userId: updatedUser.id,
               userName: updatedUser.name,
               userEmail: updatedUser.email,
               tempPassword: updatedUser.temporaryPassword
             });
             setShowTempPasswordModal(true);
-
           } else {
+            // Make sure we don't show the dialog if we're skipping it
+            setShowTempPasswordModal(false);
             toast.success('User updated successfully');
           }
           
@@ -375,7 +389,7 @@ export const useUsers = () => {
           // Check if a temporary password was returned
           if (createdUser.temporaryPassword) {
             setTempPasswordData({
-              userId: createdUser.id,  // Include the user ID
+              userId: createdUser.id,
               userName: createdUser.name,
               userEmail: createdUser.email,
               tempPassword: createdUser.temporaryPassword
@@ -471,6 +485,7 @@ export const useUsers = () => {
     });
     setEditingUser(null);
     setError(null);
+    setGenerateTempPassword(true); // Reset this flag when form is reset
   };
 
   // Update roles for new user
@@ -508,6 +523,28 @@ export const useUsers = () => {
         };
       }
     });
+  };
+
+  // Custom function to handle user submission with password generation control
+  const handleSubmitUser = async () => {
+    // If editing a user and not generating a temp password
+    if (editingUser && !generateTempPassword) {
+      // Set password to 'NO_CHANGE' to indicate we don't want to change it
+      setNewUser(prev => ({ ...prev, password: 'NO_CHANGE' }));
+      
+      // Call handleAddUser with skipPasswordGen=true to prevent showing temp password dialog
+      await handleAddUser(true);
+    } else {
+      // For new users or when generating a new password for existing users
+      if (editingUser) {
+        // For existing users generating a new password, make sure password field is empty
+        // to signal the backend to generate a new password
+        setNewUser(prev => ({ ...prev, password: '' }));
+      }
+      
+      // Call handleAddUser normally to generate password and show dialog
+      await handleAddUser(false);
+    }
   };
 
   // Delete a user
@@ -641,6 +678,8 @@ export const useUsers = () => {
     // Form states
     editingUser,
     newUser,
+    generateTempPassword,
+    setGenerateTempPassword,
     
     // Filter states
     filterState,
@@ -657,6 +696,7 @@ export const useUsers = () => {
     setShowDeleteModal,
     setUserToDelete,
     handleAddUser,
+    handleSubmitUser,
     handleToggleStatus,
     confirmDelete,
     resetForm,

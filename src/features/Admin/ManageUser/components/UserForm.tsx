@@ -13,6 +13,8 @@ interface UserFormProps {
   updateNewUserRoles: (role: string, isChecked: boolean) => void;
   resetForm: () => void;
   formatRoleName: (role: string) => string;
+  generateTempPassword: boolean;
+  setGenerateTempPassword: (value: boolean) => void;
 }
 
 const UserForm: React.FC<UserFormProps> = ({
@@ -25,11 +27,12 @@ const UserForm: React.FC<UserFormProps> = ({
   isSubmitting,
   updateNewUserRoles,
   resetForm,
-  formatRoleName
+  formatRoleName,
+  generateTempPassword,
+  setGenerateTempPassword
 }) => {
   const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
   const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false);
-  const [generateTempPassword, setGenerateTempPassword] = useState<boolean>(!editingUser);
 
   // Available departments
   const departments = [
@@ -108,7 +111,7 @@ const UserForm: React.FC<UserFormProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] 
                animate-fadeIn"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -152,8 +155,10 @@ const UserForm: React.FC<UserFormProps> = ({
           if (!hasErrors) {
             // If editing and generating temp password, set the password field to empty
             // to signal the backend to generate a temporary password
-            if (editingUser && generateTempPassword) {
-              setNewUser(prev => ({ ...prev, password: '' }));
+            if (editingUser && !generateTempPassword) {
+              // If editing and NOT generating temp password, set to a special value
+              // that indicates no password change is needed
+              setNewUser(prev => ({ ...prev, password: 'NO_CHANGE' }));
             }
             
             handleAddUser();

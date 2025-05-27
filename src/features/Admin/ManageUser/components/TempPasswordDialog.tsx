@@ -67,7 +67,7 @@ const TempPasswordDialog: React.FC<TempPasswordDialogProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000] p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md animate-fadeIn">
         <div className="flex justify-between items-center p-6 border-b">
           <h3 className="text-xl font-medium text-[#1B0A3F] font-['Unbounded']">
