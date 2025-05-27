@@ -7,7 +7,6 @@ import Header from './components/Header';
 import StatsOverview from './components/StatsOverview'; 
 import SearchBar from './components/SearchBar';
 import PathGrid from './components/PathGrid';
-// FIXED: Removed alias and local interface declaration for CourseCategoryDtoBackend - the alias was 'CourseCategoryDtoBackend', removed local 'interface CourseCategoryDtoBackend'
 import { getCategories as getCategoriesApi, CourseCategoryDtoBackend } from '../../../api/services/courseCategoryService'; 
 import { PathCard } from './types/PathCard'; 
 import { getOverallLmsStatsForLearner } from '../../../api/services/LearnerDashboard/learnerOverallStatsService'; 
@@ -16,8 +15,6 @@ import { OverallLmsStatsDto } from '../../../types/course.types';
 import {
   Code2, Target, ClipboardList, Settings, Palette, LineChart, Cloud, Shield
 } from 'lucide-react';
-
-// REMOVED: The duplicate local interface CourseCategoryDtoBackend was here. It's now removed.
 
 const CourseCategories: React.FC = () => {
   const navigate = useNavigate();
@@ -33,7 +30,6 @@ const CourseCategories: React.FC = () => {
     totalProjectManagers: 0,
     averageCourseDurationOverall: 'N/A'
   });
-
 
   // Map icon names (strings from backend) to React components (for frontend display)
   const getIconComponent = (iconName: string) => {
@@ -118,14 +114,14 @@ const CourseCategories: React.FC = () => {
           
           {loading ? (
             <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#BF4BF6]"></div>
             </div>
           ) : error ? (
-            <div className="text-white text-center py-10">
-              <p className="text-xl">{error}</p>
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-8 text-center border border-[#BF4BF6]/20 shadow-lg">
+              <p className="text-white text-xl mb-4">{error}</p>
               <button 
                 onClick={() => window.location.reload()} 
-                className="mt-4 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-md"
+                className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-4 py-2 rounded-lg transition-colors"
               >
                 Retry
               </button>
