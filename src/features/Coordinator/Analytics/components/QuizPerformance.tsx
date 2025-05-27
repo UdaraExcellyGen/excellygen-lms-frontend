@@ -1,7 +1,7 @@
 import React from 'react';
 import {
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -44,24 +44,37 @@ const QuizPerformance: React.FC<QuizPerformanceProps> = ({
       </div>
     </div>
 
-    <div className="h-64">
+    <div className="h-80">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart 
+        <BarChart 
           data={quizData[selectedCourse]?.[selectedQuiz] || []}
-          margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
+          margin={{ top: 20, right: 30, left: 60, bottom: 60 }}
         >
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
-          <XAxis dataKey="range" />
-          <YAxis />
-          <Tooltip content={<CustomTooltip />} />
-          <Line 
-            type="monotone" 
-            dataKey="count" 
-            stroke="#52007C"
-            strokeWidth={2}
-            dot={{ fill: "#52007C", strokeWidth: 2 }}
+          <XAxis 
+            dataKey="range" 
+            label={{ 
+              value: 'Marks Range', 
+              position: 'insideBottom', 
+              offset: -5,
+              style: { textAnchor: 'middle', fontSize: '14px', fontWeight: 'bold' }
+            }}
           />
-        </LineChart>
+          <YAxis 
+            label={{ 
+              value: 'Number of Learners', 
+              angle: -90, 
+              position: 'insideLeft',
+              style: { textAnchor: 'middle', fontSize: '14px', fontWeight: 'bold' }
+            }}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Bar 
+            dataKey="count" 
+            fill="#52007C"
+            radius={[4, 4, 0, 0]}
+          />
+        </BarChart>
       </ResponsiveContainer>
     </div>
   </div>
