@@ -1,0 +1,166 @@
+/* src/styles/global.css */
+
+/* Import Google Fonts */
+/* Add this at the top of your global.css */
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600;6..12,700&family=Unbounded:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Add default font families in the base layer */
+@layer base {
+  html {
+    font-family: 'Nunito Sans', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Unbounded', sans-serif;
+  }
+}
+
+/* Custom animations */
+@keyframes pulse-slow {
+  0%, 100% { 
+    opacity: 0.5; 
+    transform: scale(1); 
+  }
+  50% { 
+    opacity: 0.8; 
+    transform: scale(1.05); 
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Subtle hover effects */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -5px rgba(31, 27, 45, 0.08);
+}
+
+/* Enhanced glassmorphism */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-effect-dark {
+  background: rgba(27, 10, 63, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@layer components {
+  .tooltip {
+    @apply invisible opacity-0 absolute left-full ml-2 px-2 py-1 bg-russian-violet text-white text-sm rounded-md whitespace-nowrap;
+    transform: translateY(-50%);
+    transition: all 0.2s ease;
+  }
+
+  .tooltip::before {
+    content: '';
+    @apply absolute top-1/2 -left-1 w-2 h-2 bg-russian-violet transform rotate-45 -translate-y-1/2;
+  }
+
+  .tooltip-container:hover .tooltip {
+    @apply visible opacity-100;
+  }
+  
+  /* Enhanced button styles */
+  .btn-icon {
+    @apply flex items-center justify-center rounded-lg transition-all duration-300;
+  }
+  
+  .btn-icon-primary {
+    @apply btn-icon bg-gray-50 text-gray-600 hover:bg-[#F6E6FF] hover:text-[#BF4BF6] hover:shadow-sm;
+  }
+  
+  .btn-icon-danger {
+    @apply btn-icon bg-gray-50 text-gray-600 hover:bg-red-50 hover:text-red-600;
+  }
+  
+  /* Notification badge */
+  .notification-badge {
+    @apply absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center;
+  }
+  
+  .notification-badge-inner {
+    @apply absolute w-full h-full rounded-full bg-[#BF4BF6] flex items-center justify-center;
+  }
+  
+  .notification-badge-pulse {
+    @apply absolute w-full h-full rounded-full bg-[#BF4BF6] animate-pulse-slow opacity-60;
+  }
+  
+  .notification-badge-text {
+    @apply text-[10px] font-semibold text-white leading-none;
+  }
+}
+
+/* Custom scrollbar */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #BF4BF6 #F6E6FF;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #F6E6FF;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #BF4BF6;
+  border-radius: 10px;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+  background: #1B0A3F;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #7A00B8;
+}
+
+/* Gradient highlights */
+.gradient-border-top {
+  position: relative;
+}
+
+.gradient-border-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(to right, #7A00B8, #BF4BF6);
+}
+
+/* Professional status indicators */
+.status-dot {
+  @apply absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white;
+}
+
+.status-online {
+  @apply status-dot bg-emerald-500;
+}
+
+.status-away {
+  @apply status-dot bg-amber-400;
+}
+
+.status-busy {
+  @apply status-dot bg-red-500;
+}
+
+.status-offline {
+  @apply status-dot bg-gray-400;
+}

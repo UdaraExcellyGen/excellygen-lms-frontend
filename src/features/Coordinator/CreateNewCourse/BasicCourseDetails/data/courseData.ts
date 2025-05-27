@@ -1,0 +1,3 @@
+// features/Coordinator/CreateNewCourse/BasicCourseDetails/data/courseData.ts
+export const courseCategories = ['UI/UX','Web Developer', 'Frontend Development', 'Backend Development', 'Mobile Development', 'Data Science', 'Cybersecurity', 'Project Management'];
+export const availableTechnologies = ['.NET', 'Node.js', 'React.js', 'Python', 'AWS', 'C++', 'Java', 'Swift', 'Kotlin', 'PHP', 'Ruby', 'Go', 'Rust', 'TypeScript', 'Angular', 'Vue.js', 'Svelte', 'Flutter', 'React Native', 'Xamarin', 'Ionic', 'SQL', 'NoSQL', 'GraphQL', 'Docker', 'Kubernetes', 'Jenkins', 'Git', 'AWS', 'Azure', 'GCP'];
