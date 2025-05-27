@@ -9,6 +9,9 @@ interface ChartDataItem {
   color: string;
 }
 
+// Custom colors that match the purple theme
+const COLORS = ['#BF4BF6', '#D68BF9', '#52007C', '#34137C', '#F6E6FF'];
+
 const UserDistribution: React.FC = () => {
   const [data, setData] = useState<ChartDataItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -22,7 +25,14 @@ const UserDistribution: React.FC = () => {
     try {
       setLoading(true);
       const response = await getUserDistributionAnalytics();
-      setData(response.distributionData || []);
+      
+      // Apply custom colors to match the theme
+      const dataWithColors = (response.distributionData || []).map((item, index) => ({
+        ...item,
+        color: COLORS[index % COLORS.length]
+      }));
+      
+      setData(dataWithColors);
       setError(null);
     } catch (err: any) {
       console.error('Error loading user distribution data:', err);
@@ -32,19 +42,19 @@ const UserDistribution: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="bg-white rounded-2xl p-6">Loading user distribution data...</div>;
-  if (error) return <div className="bg-white rounded-2xl p-6 text-red-500">Error: {error}</div>;
-  if (!data || data.length === 0) return <div className="bg-white rounded-2xl p-6">No user distribution data available</div>;
+  if (loading) return <div className="p-6">Loading user distribution data...</div>;
+  if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
+  if (!data || data.length === 0) return <div className="p-6">No user distribution data available</div>;
 
   return (
-    <div className="bg-white rounded-2xl p-6">
-      <h2 className="text-xl font-['Unbounded'] mb-6">User Distribution</h2>
+    <div className="p-6">
+      <h2 className="text-xl font-['Unbounded'] mb-6 text-[#1B0A3F]">User Distribution</h2>
       <div className="h-64 relative">
-        <div className="absolute top-2 left-1/2 transform -translate-x-1/2 flex justify-center gap-6 z-10">
+        <div className="absolute top-2 left-1/2 transform -translate-x-1/2 flex flex-wrap justify-center gap-3 z-10">
           {data.map((entry, index) => (
             <div key={index} className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: entry.color }} />
-              <span className="text-sm text-gray-600">{entry.name}</span>
+              <span className="text-sm text-[#1B0A3F]">{entry.name}</span>
             </div>
           ))}
         </div>
@@ -60,7 +70,7 @@ const UserDistribution: React.FC = () => {
               nameKey="name"
             >
               {data.map((entry, index) => (
-                <Cell key={index} fill={entry.color || '#ccc'} />
+                <Cell key={index} fill={entry.color || COLORS[index % COLORS.length]} />
               ))}
             </Pie>
             <Tooltip 
@@ -68,8 +78,8 @@ const UserDistribution: React.FC = () => {
                 if (active && payload && payload.length) {
                   const data = payload[0].payload;
                   return (
-                    <div className="bg-white p-2 rounded shadow-lg border border-gray-100">
-                      <p className="text-sm font-semibold">{data.name}</p>
+                    <div className="bg-white p-2 rounded shadow-lg border border-[#BF4BF6]/20">
+                      <p className="text-sm font-semibold text-[#1B0A3F]">{data.name}</p>
                       <p className="text-sm" style={{ color: data.color }}>
                         Count: {data.value}
                       </p>

@@ -1,12 +1,15 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Header: React.FC = () => {
+  const navigate = useNavigate();
+  
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+    <div className="p-4 sm:p-6">
       <div className="flex items-center gap-4">
         <button 
-          onClick={() => window.history.back()} 
+          onClick={() => navigate('/admin/dashboard')} 
           className="p-2 hover:bg-[#F6E6FF] rounded-full transition-colors duration-200"
         >
           <ArrowLeft size={24} className="text-[#BF4BF6]" />

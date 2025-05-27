@@ -147,8 +147,8 @@ const Header: React.FC<HeaderProps> = ({
   console.log('Avatar URL:', avatarUrl); // Debug log
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm mb-6 transition-all duration-300 hover:shadow-md">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 sm:p-6">
+    <div className="p-4 sm:p-6 relative">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4 mb-4 sm:mb-0">
           {/* User Avatar with improved implementation */}
           <div className="w-12 sm:w-16 h-12 sm:h-16 rounded-full overflow-hidden bg-gradient-to-br from-[#52007C] to-[#BF4BF6] border-2 border-[#BF4BF6] flex items-center justify-center transition-transform duration-300 hover:scale-105">
@@ -171,7 +171,7 @@ const Header: React.FC<HeaderProps> = ({
           
           <div>
             <h1 className="text-xl sm:text-2xl text-[#1B0A3F] font-['Unbounded']">{adminName}</h1>
-            <p className="text-sm sm:text-base text-gray-400 font-['Nunito_Sans']">{role}</p>
+            <p className="text-sm sm:text-base text-gray-500 font-['Nunito_Sans']">{role}</p>
           </div>
         </div>
                 
@@ -182,10 +182,10 @@ const Header: React.FC<HeaderProps> = ({
             className="relative group"
             aria-label="View notifications"
           >
-            <div className="p-2.5 rounded-lg bg-gray-50 transition-all duration-300 group-hover:bg-[#F6E6FF] group-hover:shadow-md flex items-center justify-center relative">
+            <div className="p-2.5 rounded-lg bg-[#F6E6FF] transition-all duration-300 group-hover:bg-[#F0D6FF] group-hover:shadow-md flex items-center justify-center relative">
               <Bell 
                 size={20} 
-                className="text-gray-600 group-hover:text-[#BF4BF6] transition-colors duration-300" 
+                className="text-[#BF4BF6] transition-colors duration-300" 
                 strokeWidth={1.8}
               />
               
@@ -201,17 +201,21 @@ const Header: React.FC<HeaderProps> = ({
             </div>
             
             {/* Tooltip */}
-            <div className="absolute hidden md:group-hover:block right-0 mt-2 bg-gray-800 text-white text-xs py-1.5 px-3 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap z-50">
+            <div className="absolute hidden md:group-hover:block right-0 mt-2 bg-[#1B0A3F] text-white text-xs py-1.5 px-3 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap z-50">
               {newNotificationsCount} new notification{newNotificationsCount !== 1 ? 's' : ''}
             </div>
           </button>
 
-          {/* Role Switcher */}
+          {/* Role Switcher - Very Simple Direct Implementation */}
           {user && user.roles && user.roles.length > 1 && (
-            <div className="relative" ref={dropdownRef}>
+            <div 
+              className="relative" 
+              ref={dropdownRef} 
+              style={{ zIndex: 9999 }}
+            >
               <button 
                 onClick={toggleDropdown}
-                className="flex items-center gap-2.5 px-3.5 py-2.5 text-gray-700 transition-all duration-300 rounded-lg hover:bg-[#F6E6FF] hover:text-[#BF4BF6]"
+                className="flex items-center gap-2.5 px-3.5 py-2.5 text-[#1B0A3F] transition-all duration-300 rounded-lg hover:bg-[#F6E6FF] hover:text-[#BF4BF6]"
                 aria-label="Switch role"
                 aria-expanded={dropdownOpen}
                 aria-haspopup="true"
@@ -227,10 +231,16 @@ const Header: React.FC<HeaderProps> = ({
                 />
               </button>
               
-              {/* Dropdown Menu */}
+              {/* Super Simple Dropdown - Direct Approach */}
               {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white border border-gray-100 overflow-hidden z-50">
-                  <div className="text-sm text-gray-500 px-4 py-2.5 border-b border-gray-100 font-['Nunito_Sans'] bg-gray-50">
+                <div 
+                  className="absolute top-full right-0 mt-2 w-56 rounded-lg shadow-lg bg-white border border-[#BF4BF6]/20 overflow-hidden"
+                  style={{ 
+                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+                    zIndex: 9999,
+                  }}
+                >
+                  <div className="text-sm text-gray-500 px-4 py-2.5 border-b border-gray-100 font-['Nunito_Sans'] bg-[#F6E6FF]">
                     Switch Role
                   </div>
                   <div className="py-1">
