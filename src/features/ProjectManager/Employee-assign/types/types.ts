@@ -55,6 +55,11 @@ export interface CreateEmployeeAssignmentRequest {
   workloadPercentage: number;
 }
 
+export interface UpdateEmployeeAssignmentRequest {
+  role: string;
+  workloadPercentage: number;
+}
+
 export interface BulkAssignEmployeesRequest {
   projectId: string;
   assignments: EmployeeAssignmentRequest[];
