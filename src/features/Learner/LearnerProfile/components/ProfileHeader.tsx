@@ -11,7 +11,7 @@ interface ProfileHeaderProps {
   handleCancel: () => void;
   isViewOnly?: boolean;
   onAvatarUpload?: (file: File) => void;
-  onAvatarDelete?: () => void;  // Add this prop
+  onAvatarDelete?: () => void;
   isSaving?: boolean;
 }
 
@@ -24,7 +24,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   handleCancel,
   isViewOnly = false,
   onAvatarUpload,
-  onAvatarDelete,  // Add this prop
+  onAvatarDelete,
   isSaving = false
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -36,18 +36,18 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   };
 
   return (
-    <div className="p-4 md:p-8 flex flex-col md:flex-row items-center md:items-start justify-between border-b gap-4 md:gap-0">
-      <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 text-center md:text-left">
+    <div className="p-6 flex flex-col md:flex-row items-center md:items-start justify-between border-b border-[#BF4BF6]/20 gap-4 md:gap-0">
+      <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
         <div className="relative">
           {profileData.avatar ? (
             <img 
               src={profileData.avatar} 
               alt={profileData.name} 
-              className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl object-cover shadow-lg"
+              className="h-28 w-28 rounded-2xl object-cover shadow-lg border border-[#BF4BF6]/20"
             />
           ) : (
-            <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-gradient-to-br from-[#52007C] to-[#BF4BF6] flex items-center justify-center shadow-lg">
-              <span className="text-3xl sm:text-4xl font-bold text-white">
+            <div className="h-28 w-28 rounded-2xl bg-gradient-to-br from-[#52007C] to-[#BF4BF6] flex items-center justify-center shadow-lg">
+              <span className="text-4xl font-bold text-white">
                 {profileData.name.split(' ').map(n => n[0]).join('')}
               </span>
             </div>
@@ -63,17 +63,16 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               />
               <div className="absolute bottom-2 right-2 flex gap-2">
                 <button 
-                  className="p-2 bg-white rounded-lg shadow-lg"
+                  className="p-2 bg-white/90 backdrop-blur-md rounded-lg shadow-lg hover:bg-[#F6E6FF] transition-colors"
                   onClick={() => fileInputRef.current?.click()}
                   title="Upload new avatar"
                 >
                   <Camera className="h-4 w-4 text-[#52007C]" />
                 </button>
                 
-                {/* Add Delete Avatar button if avatar exists */}
                 {profileData.avatar && onAvatarDelete && (
                   <button 
-                    className="p-2 bg-white rounded-lg shadow-lg"
+                    className="p-2 bg-white/90 backdrop-blur-md rounded-lg shadow-lg hover:bg-red-100 transition-colors"
                     onClick={onAvatarDelete}
                     title="Remove avatar"
                   >
@@ -93,16 +92,16 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               type="text"
               value={profileData.role || ''}
               onChange={(e) => setProfileData({...profileData, role: e.target.value})}
-              className="text-lg text-[#52007C] bg-gray-100 border border-gray-300 rounded px-2 py-1 w-full md:w-64"
+              className="text-lg text-[#52007C] bg-[#F6E6FF]/50 border border-[#BF4BF6]/30 rounded-lg px-3 py-1.5 w-full md:w-64 focus:outline-none focus:border-[#BF4BF6]"
               placeholder="Enter job role"
             />
           ) : (
-            <p className="text-lg text-[#52007C]">{profileData.role || profileData.jobRole || 'Job Role'}</p>
+            <p className="text-lg text-[#52007C] font-medium">{profileData.role || profileData.jobRole || 'Job Role'}</p>
           )}
           
           {/* User ID with better placement and styling */}
           {!isEditing && (
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-gray-500 mt-1 bg-[#F6E6FF]/50 px-2 py-1 rounded-md inline-block">
               <span className="font-medium">ID:</span> {profileData.id}
             </div>
           )}
@@ -114,7 +113,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-4 sm:px-6 py-2.5 bg-[#BF4BF6] text-white rounded-lg inline-flex items-center gap-2 hover:bg-[#A030D6] transition-colors shadow-md disabled:opacity-70"
+              className="px-4 sm:px-6 py-2.5 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white rounded-lg inline-flex items-center gap-2 transition-colors shadow-md disabled:opacity-70 transform hover:-translate-y-0.5 transition-all duration-200"
             >
               {isSaving ? 'Saving...' : (
                 <>
@@ -126,7 +125,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             <button
               onClick={handleCancel}
               disabled={isSaving}
-              className="px-4 sm:px-6 py-2.5 bg-gray-100 text-gray-600 rounded-lg inline-flex items-center gap-2 hover:bg-gray-200 transition-colors disabled:opacity-70"
+              className="px-4 sm:px-6 py-2.5 bg-[#F6E6FF] text-[#52007C] rounded-lg inline-flex items-center gap-2 hover:bg-[#E6D0FF] transition-colors disabled:opacity-70"
             >
               <X className="h-4 w-4" />
               Cancel
@@ -140,15 +139,17 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 className="px-4 sm:px-6 py-2.5 bg-[#F6E6FF] text-[#52007C] rounded-lg inline-flex items-center gap-2 hover:bg-[#D68BF9] hover:text-white transition-colors shadow-md"
               >
                 <Edit2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Edit</span>
+                <span className="hidden sm:inline">Edit Profile</span>
+                <span className="sm:hidden">Edit</span>
               </button>
             )}
             
             <button
              onClick={() => window.location.href = '/cv'}
-             className="px-4 sm:px-6 py-2.5 bg-gradient-to-r from-[#7A00B8] to-[#BF4BF6] text-white rounded-lg inline-flex items-center gap-2 hover:from-[#52007C] hover:to-[#A030D6] transition-colors shadow-md">
+             className="px-4 sm:px-6 py-2.5 bg-gradient-to-r from-[#7A00B8] to-[#BF4BF6] text-white rounded-lg inline-flex items-center gap-2 hover:from-[#52007C] hover:to-[#A030D6] transition-colors shadow-md transform hover:-translate-y-0.5 transition-all duration-200">
               <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">CV</span>
+              <span className="hidden sm:inline">View CV</span>
+              <span className="sm:hidden">CV</span>
             </button>
           </>
         )}

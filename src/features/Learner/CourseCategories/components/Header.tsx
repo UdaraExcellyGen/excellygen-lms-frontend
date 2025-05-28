@@ -1,8 +1,9 @@
+// src/features/Learner/CourseCategories/components/Header.tsx
 import React from 'react';
 
 const Header: React.FC = () => {
   return (
-    <div className="text-center mb-12">
+    <div className="text-center mb-8">
       <h1 className="text-3xl md:text-4xl font-bold font-unbounded mb-4 text-white">
         Choose Your Course Category
       </h1>

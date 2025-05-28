@@ -13,16 +13,19 @@ const Bio: React.FC<BioProps> = ({
   setProfileData
 }) => {
   return (
-    <div className="p-4 sm:p-8 border-b">
-      <h2 className="text-xl font-semibold text-[#1B0A3F] mb-3">About</h2>
+    <div className="p-6 border-b border-[#BF4BF6]/20">
+      <h2 className="text-xl font-semibold text-[#1B0A3F] mb-4">About</h2>
       {isEditing ? (
         <textarea
           value={profileData.about || ''}
           onChange={(e) => setProfileData({ ...profileData, about: e.target.value })}
-          className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 h-32"
+          className="w-full bg-[#F6E6FF]/50 border border-[#BF4BF6]/30 rounded-xl px-4 py-3 h-36 focus:outline-none focus:border-[#BF4BF6]"
+          placeholder="Tell us about yourself..."
         />
       ) : (
-        <p className="text-[#1B0A3F] leading-relaxed">{profileData.about || 'No bio provided.'}</p>
+        <p className="text-[#1B0A3F] leading-relaxed bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-[#BF4BF6]/10 shadow-sm">
+          {profileData.about || 'No bio provided.'}
+        </p>
       )}
     </div>
   );
