@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useSidebar } from '../Sidebar/contexts/SidebarContext';
 import { useSearch } from '../Sidebar/contexts/SearchContext';
-import { useAuth } from '../../contexts/AuthContext';  // Import the AuthContext
+import { useAuth } from '../../contexts/AuthContext'; 
 
 interface MenuItem {
   title: string;
@@ -190,7 +190,7 @@ const Sidebar = () => {
           <Link
             key={index}
             to={item.path}
-            onClick={(e) => {
+            onClick={() => {
               if (item.onClick) item.onClick();
               handleMobileClick();
             }}

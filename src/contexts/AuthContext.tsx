@@ -6,7 +6,6 @@ import {
   logout as apiLogout, 
   selectRole as apiSelectRole, 
   resetPassword as apiResetPassword,
-  validateToken,
   refreshToken as apiRefreshToken,
   changePassword as apiChangePassword
 } from '../api/authApi';
@@ -125,11 +124,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Store password change requirement
       localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, tokenData.requirePasswordChange.toString());
       
-      setState(prevState => ({
-        ...prevState,
+      setState({
+        ...state,
         currentRole: tokenData.currentRole as UserRole,
         requirePasswordChange: tokenData.requirePasswordChange
-      }));
+      });
       
       // Check if password change is required after refresh
       if (tokenData.requirePasswordChange) {
@@ -146,11 +145,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!isInitializingRef.current) {
         // If refresh fails, reset auth state and redirect to login
         resetAuthState();
-        setState(prevState => ({
+        setState({
           ...initialState,
           initialized: true,
           error: 'Session expired. Please login again.'
-        }));
+        });
         
         if (location.pathname !== '/') {
           toast.error('Your session has expired. Please login again.');
@@ -160,7 +159,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       return false;
     }
-  }, [resetAuthState, navigate, location.pathname]);
+  }, [resetAuthState, navigate, location.pathname, state]);
 
   // Setup token refresh timer
   const setupRefreshTimer = useCallback(() => {
@@ -207,7 +206,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
         const token = localStorage.getItem(TOKEN_STORAGE_KEY);
         const currentRole = localStorage.getItem(CURRENT_ROLE_STORAGE_KEY);
-        const tokenExpiry = localStorage.getItem(TOKEN_EXPIRY_STORAGE_KEY);
         const requirePasswordChange = localStorage.getItem(REQUIRE_PASSWORD_CHANGE_KEY) === 'true';
 
         if (storedUser && token && currentRole) {
@@ -311,7 +309,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [resetAuthState, navigate]);
 
   const login = async (email: string, password: string) => {
-    setState(prevState => ({ ...prevState, loading: true, error: null }));
+    setState({ ...state, loading: true, error: null });
     
     try {
       console.log('Attempting login...');
@@ -339,14 +337,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       console.log('Login successful, tokens stored');
       
-      setState(prevState => ({
-        ...prevState,
+      setState({
+        ...state,
         user,
         currentRole: token.currentRole as UserRole,
         loading: false,
         error: null,
         requirePasswordChange
-      }));
+      });
 
       // Set up refresh timer after successful login
       setupRefreshTimer();
@@ -366,17 +364,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     } catch (error) {
       console.error('Login error:', error);
-      setState(prevState => ({
-        ...prevState,
+      setState({
+        ...state,
         loading: false,
         error: 'Invalid email or password'
-      }));
+      });
       toast.error('Invalid email or password');
     }
   };
 
   const logout = async () => {
-    setState(prevState => ({ ...prevState, loading: true }));
+    setState({ ...state, loading: true });
     
     try {
       console.log('Logging out...');
@@ -406,7 +404,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const selectRole = async (role: UserRole) => {
-    setState(prevState => ({ ...prevState, loading: true, error: null }));
+    setState({ ...state, loading: true, error: null });
     
     try {
       console.log(`Selecting role: ${role}`);
@@ -436,13 +434,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.setItem('userId', userId);
       }
       
-      setState(prevState => ({
-        ...prevState,
+      setState({
+        ...state,
         currentRole: tokenData.currentRole as UserRole,
         loading: false,
         error: null,
         requirePasswordChange: tokenData.requirePasswordChange
-      }));
+      });
       
       console.log('Role selection successful, tokens updated');
       
@@ -458,28 +456,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     } catch (error) {
       console.error('Role selection error:', error);
-      setState(prevState => ({
-        ...prevState,
+      setState({
+        ...state,
         loading: false,
         error: 'Failed to select role'
-      }));
+      });
       toast.error('Failed to select role');
     }
   };
 
   const resetPassword = async (email: string) => {
-    setState(prevState => ({ ...prevState, loading: true, error: null }));
+    setState({ ...state, loading: true, error: null });
     
     try {
       await apiResetPassword(email);
-      setState(prevState => ({ ...prevState, loading: false }));
+      setState({ ...state, loading: false });
     } catch (error) {
       console.error('Password reset error:', error);
-      setState(prevState => ({
-        ...prevState,
+      setState({
+        ...state,
         loading: false,
         error: 'Failed to send password reset email'
-      }));
+      });
       toast.error('Failed to send password reset email');
       throw error;
     }
@@ -505,10 +503,10 @@ const changePassword = async (currentPassword: string, newPassword: string) => {
     localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, 'false');
     
     // Update state
-    setState(prevState => ({
-      ...prevState,
+    setState({
+      ...state,
       requirePasswordChange: false
-    }));
+    });
     
     // Close modal
     setShowPasswordChangeModal(false);

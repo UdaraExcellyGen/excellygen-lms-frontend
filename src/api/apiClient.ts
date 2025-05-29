@@ -1,6 +1,4 @@
-// src/api/apiClient.ts
-
-import axios, { AxiosError, AxiosResponse } from 'axios';
+import axios from 'axios';
 
 // Create an axios instance with default config
 const apiClient = axios.create({
@@ -45,9 +43,8 @@ apiClient.interceptors.request.use(
     // Add active role header - IMPROVED to ensure role is correctly set
     const currentRole = localStorage.getItem('current_role');
     if (currentRole) {
-      // Ensure we're using the exact role name expected by the server
-      // For the backend, the role must match one of the authorized roles exactly
-      // We're mapping the display name to the actual role name
+      
+      // mapping the display name to the actual role name
       const roleMap: {[key: string]: string} = {
         'Admin': 'Admin',
         'Project Manager': 'ProjectManager',

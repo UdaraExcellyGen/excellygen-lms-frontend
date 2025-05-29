@@ -16,11 +16,6 @@ import { CourseProvider, useCourseContext } from './features/Coordinator/context
 // User Roles
 import { UserRole } from './types/auth.types';
 
-// Landing Page
-import LandingPage from './features/Landing/LandingPage';
-
-// Auth Components
-import RoleSelection from './features/Auth/RoleSelection';
 
 // Learner Components
 import LearnerDashboard from './features/Learner/LearnerDashboard/LearnerDashboard';
@@ -75,6 +70,8 @@ import SearchResults from './components/Sidebar/SearchResults';
 import ViewLearnerProfile from './components/Sidebar/ViewLearnerProfile';
 import CategoryCoursesPage from './features/Admin/CategoryCourses/CategoryCoursesPage';
 import ManageCourseCategory from './features/Admin/ManageCourseCategory/ManageCourseCategory';
+import LandingPage from './features/landing/LandingPage';
+import RoleSelection from './features/auth/RoleSelection';
 
 
 function AppWrapper() {

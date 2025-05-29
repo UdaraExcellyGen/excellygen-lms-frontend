@@ -77,7 +77,7 @@ export const addUserTechnology = async (userId: string, technologyName: string):
       // If we can't find the ID in the cache, fetch available technologies again
       // This handles cases where the cache might be stale
       console.log(`Technology ID not found in cache for: ${technologyName}, refreshing cache`);
-      const technologies = await getAvailableTechnologies(userId);
+      await getAvailableTechnologies(userId);
       
       // Try again after refreshing
       const refreshedTechId = technologyCache.get(technologyName.toLowerCase());

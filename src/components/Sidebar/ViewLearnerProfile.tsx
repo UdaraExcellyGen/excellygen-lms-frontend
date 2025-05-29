@@ -5,10 +5,15 @@ import { mockLearners } from '../../data/mockLearners';
 import { ProfileData } from '../../features/Learner/LearnerProfile/types/index';
 import { FileText, Mail, Phone, Briefcase, Award } from 'lucide-react';
 
+// Extended interface to handle missing properties in ProfileData
+interface ExtendedProfileData extends ProfileData {
+  bio?: string;
+}
+
 const ViewLearnerProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [profile, setProfile] = useState<ExtendedProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
@@ -20,7 +25,8 @@ const ViewLearnerProfile: React.FC = () => {
     
     if (learner) {
       console.log("Found learner:", learner.name);
-      setProfile(learner);
+      // Use type assertion with unknown to fix type compatibility issues
+      setProfile({ ...learner, id: learner.id || '' } as unknown as ExtendedProfileData);
     } else {
       console.error("Learner not found for ID:", id);
     }
@@ -130,7 +136,7 @@ const ViewLearnerProfile: React.FC = () => {
           {/* Bio */}
           <div className="p-4 sm:p-8 border-b">
             <h2 className="text-xl font-semibold text-[#1B0A3F] mb-3">About</h2>
-            <p className="text-[#1B0A3F] leading-relaxed">{profile.bio}</p>
+            <p className="text-[#1B0A3F] leading-relaxed">{profile.bio || 'No bio information available.'}</p>
           </div>
           
           {/* Skills */}

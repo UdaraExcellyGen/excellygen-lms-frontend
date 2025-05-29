@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AuthContainer from '../../features/Auth/AuthContainer';
+import AuthContainer from '../../features/auth/AuthContainer';
 
 const NavBar = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
