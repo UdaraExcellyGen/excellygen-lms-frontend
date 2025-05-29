@@ -157,7 +157,6 @@ const ProjectCRUD: React.FC = () => {
     const [technologyFormData, setTechnologyFormData] = useState({ name: "" });
 
     const [rolesLoaded, setRolesLoaded] = useState(false);
-    // Corrected type for roleNameMap
     const [roleNameMap, setRoleNameMap] = useState<Record<string | number, string>>({});
 
     useEffect(() => {
@@ -179,7 +178,6 @@ const ProjectCRUD: React.FC = () => {
     useEffect(() => {
         const persistRoleMap = () => {
             if (projectRoles.length > 0) {
-                // Corrected type for newRoleMap
                 const newRoleMap: Record<string | number, string> = {};
                 projectRoles.forEach(role => {
                     newRoleMap[String(role.id)] = role.name;
@@ -204,7 +202,6 @@ const ProjectCRUD: React.FC = () => {
         try {
             const storedRoleMap = localStorage.getItem('projectRoleNameMap');
             if (storedRoleMap) {
-                // Corrected type for parsedMap
                 const parsedMap: Record<string | number, string> = JSON.parse(storedRoleMap);
                 setRoleNameMap(parsedMap);
                 console.log('Loaded role name map from localStorage:', parsedMap);
@@ -221,12 +218,11 @@ const ProjectCRUD: React.FC = () => {
         console.log("Updating project role names with available roles:", 
             projectRoles.map(r => ({id: r.id, name: r.name})));
         
-        // Corrected type for roleMap
         const roleMap: Record<string | number, string> = {};
         projectRoles.forEach(role => {
             roleMap[String(role.id)] = role.name;
             const numId = parseInt(String(role.id), 10);
-            if (!isNaN(numId)) { // Ensure numId is a valid number before using as key
+            if (!isNaN(numId)) { 
                  roleMap[numId] = role.name;
             }
         });
@@ -264,7 +260,6 @@ const ProjectCRUD: React.FC = () => {
         try {
             const roles = await getAllRoles();
             console.log("Fetched roles:", roles);
-            // Corrected type for newRoleMap
             const newRoleMap: Record<string | number, string> = {};
             roles.forEach(role => {
                 newRoleMap[String(role.id)] = role.name;
@@ -375,7 +370,7 @@ const ProjectCRUD: React.FC = () => {
 
     useEffect(() => {
         updateProjectRoleNames();
-    }, [projectRoles, projects.length]); // projects.length dependency might be excessive, consider if only projectRoles is enough
+    }, [projectRoles, projects.length]); 
 
     const validateForm = () => {
         const errors = {
@@ -619,6 +614,23 @@ const ProjectCRUD: React.FC = () => {
         }
     };
 
+    // Helper function to check if technology is in use
+    const isTechnologyInUse = (technologyId: number | string): boolean => {
+        return projects.some(project => 
+            project.requiredSkills?.some(skill => skill.id === technologyId)
+        );
+    };
+
+    // Helper function to check if role is in use
+    const isRoleInUse = (roleId: number | string): boolean => {
+        return projects.some(project => 
+            project.requiredRoles?.some(role => 
+                String(role.roleId) === String(roleId)
+            )
+        );
+    };
+    
+    // Updated handleDeleteTechnologyConfirmation function
     const handleDeleteTechnologyConfirmation = (id: number | string) => {
         const technology = employeeTechnologies.find((tech) => tech.id === id);
         if (technology) {
@@ -630,16 +642,25 @@ const ProjectCRUD: React.FC = () => {
                 toast.error("Inactive technologies cannot be deleted");
                 return;
             }
+            
+            if (isTechnologyInUse(id)) {
+                toast.error("Cannot delete technology that is in use by projects");
+                return;
+            }
+            
             setTechnologyIdToDelete(id);
             setShowTechnologyDeleteConfirmation(true);
         }
     };
 
+    // Updated confirmDeleteTechnology function
     const confirmDeleteTechnology = async () => {
         if (!technologyIdToDelete) return;
         setIsLoading((prev) => ({ ...prev, technologies: true }));
         try {
             const technology = employeeTechnologies.find(tech => tech.id === technologyIdToDelete);
+            // These checks are technically redundant if handleDeleteTechnologyConfirmation does its job,
+            // but good for safety if confirmDeleteTechnology is ever called directly.
             if (technology && technology.creatorType !== 'project_manager') {
                 setError((prev) => ({ ...prev, technologies: "Admin-created technologies cannot be deleted" }));
                 toast.error("Admin-created technologies cannot be deleted");
@@ -656,6 +677,7 @@ const ProjectCRUD: React.FC = () => {
                 setIsLoading((prev) => ({ ...prev, technologies: false }));
                 return;
             }
+            
             await deleteTechnology(technologyIdToDelete.toString());
             setEmployeeTechnologies(employeeTechnologies.filter(tech => tech.id !== technologyIdToDelete));
             setAvailableTechnologies(availableTechnologies.filter(tech => tech.id !== technologyIdToDelete));
@@ -664,16 +686,44 @@ const ProjectCRUD: React.FC = () => {
             toast.success("Technology deleted successfully");
         } catch (err: any) {
             console.error('Error in deleteTechnology:', err);
-            if (err.response?.status === 403) {
-                setError((prev) => ({ ...prev, technologies: "You need Admin privileges to manage technologies" }));
-                toast.error("Admin privileges required to manage technologies");
-            } else if (err.response?.status === 400 && err.response?.data?.includes("in use")) {
-                setError((prev) => ({ ...prev, technologies: "Cannot delete technology that is in use by projects" }));
-                toast.error("Cannot delete technology that is in use by projects");
+            
+            let errorMessage = "Error deleting technology";
+            if (err.response) {
+                const status = err.response.status;
+                const data = err.response.data;
+                
+                if (status === 403) {
+                    errorMessage = "You need Admin privileges to manage technologies";
+                } else if (status === 400) {
+                    if (typeof data === 'string') {
+                        if (data.includes("in use") || data.includes("assigned") || data.includes("projects")) {
+                            errorMessage = "Cannot delete technology that is in use by projects";
+                        } else {
+                            errorMessage = data;
+                        }
+                    } else if (data?.message) {
+                        if (data.message.includes("in use") || data.message.includes("assigned") || data.message.includes("projects")) {
+                            errorMessage = "Cannot delete technology that is in use by projects";
+                        } else {
+                            errorMessage = data.message;
+                        }
+                    } else if (data?.error) {
+                        errorMessage = data.error;
+                    }
+                } else if (status === 409) {
+                    errorMessage = "Cannot delete technology that is in use by projects";
+                }
+            } else if (err.request) {
+                errorMessage = "No response from server. Please check your connection.";
             } else {
-                setError((prev) => ({ ...prev, technologies: err.message || "Error deleting technology" }));
-                toast.error(err.message || "Error deleting technology");
+                errorMessage = err.message || "Error deleting technology";
             }
+            
+            setError((prev) => ({ ...prev, technologies: errorMessage }));
+            toast.error(errorMessage);
+            
+            setShowTechnologyDeleteConfirmation(false);
+            setTechnologyIdToDelete(null);
         } finally {
             setIsLoading((prev) => ({ ...prev, technologies: false }));
         }
@@ -732,11 +782,18 @@ const ProjectCRUD: React.FC = () => {
         }
     };
 
+    // Updated handleDeleteRoleConfirmation function
     const handleDeleteRoleConfirmation = (id: number | string) => {
+        if (isRoleInUse(id)) {
+            toast.error("Cannot delete role that is in use by projects");
+            return;
+        }
+        
         setRoleIdToDelete(id);
         setShowRoleDeleteConfirmation(true);
     };
 
+    // Updated confirmDeleteRole function
     const confirmDeleteRole = async () => {
         if (!roleIdToDelete) return;
         setIsLoading((prev) => ({ ...prev, roles: true }));
@@ -746,9 +803,45 @@ const ProjectCRUD: React.FC = () => {
             setShowRoleDeleteConfirmation(false);
             setRoleIdToDelete(null);
             toast.success("Role deleted successfully");
-            fetchProjects();
+            fetchProjects(); 
         } catch (err: any) {
-            setError((prev) => ({ ...prev, roles: err.message || "Error deleting role" }));
+            console.error('Error in deleteRole:', err);
+            
+            let errorMessage = "Error deleting role";
+            if (err.response) {
+                const status = err.response.status;
+                const data = err.response.data;
+                
+                if (status === 403) {
+                    errorMessage = "You need Admin privileges to manage roles";
+                } else if (status === 400 || status === 409) { 
+                    if (typeof data === 'string') {
+                        if (data.includes("in use") || data.includes("assigned") || data.includes("projects")) {
+                            errorMessage = "Cannot delete role that is in use by projects";
+                        } else {
+                            errorMessage = data;
+                        }
+                    } else if (data?.message) {
+                        if (data.message.includes("in use") || data.message.includes("assigned") || data.message.includes("projects")) {
+                            errorMessage = "Cannot delete role that is in use by projects";
+                        } else {
+                            errorMessage = data.message;
+                        }
+                    } else if (data?.error) {
+                        errorMessage = data.error;
+                    }
+                }
+            } else if (err.request) {
+                errorMessage = "No response from server. Please check your connection.";
+            } else {
+                errorMessage = err.message || "Error deleting role";
+            }
+            
+            setError((prev) => ({ ...prev, roles: errorMessage }));
+            toast.error(errorMessage);
+            
+            setShowRoleDeleteConfirmation(false);
+            setRoleIdToDelete(null);
         } finally {
             setIsLoading((prev) => ({ ...prev, roles: false }));
         }
@@ -881,10 +974,10 @@ const ProjectCRUD: React.FC = () => {
     };
 
     const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>, index: number) => {
-        const roleIdStr = e.target.value; // This is string from select value
-        let roleNameValue: string | undefined = roleNameMap[roleIdStr]; // Try string key
+        const roleIdStr = e.target.value; 
+        let roleNameValue: string | undefined = roleNameMap[roleIdStr]; 
 
-        if (!roleNameValue) { // If not found by string key, try by number key if applicable
+        if (!roleNameValue) { 
             const numId = parseInt(roleIdStr, 10);
             if (!isNaN(numId)) {
                 roleNameValue = roleNameMap[numId];
@@ -896,14 +989,11 @@ const ProjectCRUD: React.FC = () => {
             roleNameValue = foundRole?.name;
         }
         
-        // Ensure roleNameValue is a string for formData
         const finalRoleName: string = roleNameValue || `Role ${roleIdStr}`;
 
         console.log(`Role selected: ID=${roleIdStr}, Name=${finalRoleName}`);
         setFormData((prevFormData) => {
             const updatedRoles = [...prevFormData.assignedRoles];
-            // Ensure roleId is stored as it came (string) or parsed if your backend expects number
-            // For consistency with CreateProjectRequest, roleId should be string.
             updatedRoles[index] = { ...updatedRoles[index], roleId: roleIdStr, roleName: finalRoleName };
             return { ...prevFormData, assignedRoles: updatedRoles };
         });
@@ -1082,7 +1172,7 @@ const ProjectCRUD: React.FC = () => {
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full md:w-auto">
                             <div className="relative w-full sm:w-auto">
                                 <button
-                                    data-status-dropdown  // Added for querySelector
+                                    data-status-dropdown 
                                     className="w-full sm:w-auto px-4 py-2 bg-white rounded-lg border border-gray-200 text-[#1B0A3F] hover:bg-pale-purple transition-all duration-300 focus-ring flex items-center justify-between"
                                     onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
                                 >
@@ -1257,7 +1347,7 @@ const ProjectCRUD: React.FC = () => {
                                                                     }
                                                                 }
                                                                 if (!tempRoleName) {
-                                                                    tempRoleName = role.roleName; // role.roleName can be undefined
+                                                                    tempRoleName = role.roleName; 
                                                                 }
                                                                 if (!tempRoleName) {
                                                                     const foundRole = projectRoles.find(r => 
@@ -1265,12 +1355,11 @@ const ProjectCRUD: React.FC = () => {
                                                                         (!isNaN(parseInt(roleIdStr, 10)) && 
                                                                          parseInt(String(r.id), 10) === parseInt(roleIdStr, 10)));
                                                                     if (foundRole) {
-                                                                        tempRoleName = foundRole.name; // ProjectRole.name is string
+                                                                        tempRoleName = foundRole.name; 
                                                                     }
                                                                 }
-                                                                // Ensure finalRoleName is a string
                                                                 const finalRoleName: string = tempRoleName || `Role ${roleIdStr}`;
-                                                                if (!tempRoleName) { // Log if we had to use the fallback
+                                                                if (!tempRoleName) { 
                                                                     console.log(`Unable to find name for role ID ${roleIdStr}, using fallback "${finalRoleName}"`);
                                                                 }
                                                                 return (
