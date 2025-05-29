@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     ArrowLeft, Search, Plus, Edit, Trash2,
-    Lock, ChevronDown, Menu, X as XIcon
+    ChevronDown, Menu, X as XIcon // Removed Lock
 } from 'lucide-react';
 import { toast } from 'react-hot-toast'; // Import toast for notifications
 
@@ -28,53 +28,36 @@ const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return '';
     
     try {
-        // Create a date object from the string (works with both ISO format and YYYY-MM-DD)
         const date = new Date(dateString);
-        
-        // Check if the date is valid
         if (isNaN(date.getTime())) {
-            return dateString; // Return original if parsing failed
+            return dateString; 
         }
-        
-        // Format the date in YYYY-MM-DD format using UTC to avoid timezone shifts
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
-        
         return `${year}-${month}-${day}`;
     } catch (error) {
         console.error("Error formatting date:", error);
-        return dateString; // Return original on error
+        return dateString; 
     }
 };
 
 const calculateRemainingDays = (deadlineStr: string | null | undefined): number | null => {
     if (!deadlineStr) return null;
-
     try {
-        // Get today's date at midnight in local timezone
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
-        // Create a date object directly from the string (handles both ISO and simple formats)
-        // For ISO format with timezone (from backend), this will convert to local time
         let deadlineDate = new Date(deadlineStr);
-        
-        // Reset the time portion to midnight to ensure we're comparing just dates
         deadlineDate = new Date(
             deadlineDate.getFullYear(),
             deadlineDate.getMonth(),
             deadlineDate.getDate(),
             0, 0, 0, 0
         );
-
-        // Calculate difference in days - using UTC methods to avoid timezone issues
         const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
         const deadlineUTC = Date.UTC(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate());
-        
         const differenceInTime = deadlineUTC - todayUTC;
         const differenceInDays = Math.ceil(differenceInTime / (1000 * 3600 * 24));
-
         return differenceInDays;
     } catch (error) {
         console.error("Error calculating remaining days:", error);
@@ -83,9 +66,7 @@ const calculateRemainingDays = (deadlineStr: string | null | undefined): number 
 };
 
 const renderCreatedBy = (technology: EmployeeTechnology) => {
-  // Check creator type directly instead of name prefix
   const isPMCreated = technology.creatorType === 'project_manager';
-  
   return (
     <>
       {isPMCreated ? (
@@ -175,11 +156,10 @@ const ProjectCRUD: React.FC = () => {
     });
     const [technologyFormData, setTechnologyFormData] = useState({ name: "" });
 
-    // NEW STATE FOR ROLE FIX
     const [rolesLoaded, setRolesLoaded] = useState(false);
-    const [roleNameMap, setRoleNameMap] = useState<{[key: string]: string}>({});
+    // Corrected type for roleNameMap
+    const [roleNameMap, setRoleNameMap] = useState<Record<string | number, string>>({});
 
-    // Set active view based on current URL
     useEffect(() => {
         if (pathname.includes('/technologies')) {
             setShowProjects(false);
@@ -196,26 +176,19 @@ const ProjectCRUD: React.FC = () => {
         }
     }, [pathname]);
 
-    // NEW EFFECT FOR ROLE FIX - Persist role names in localStorage
     useEffect(() => {
         const persistRoleMap = () => {
             if (projectRoles.length > 0) {
-                // Create the role map
-                const newRoleMap: {[key: string]: string} = {};
+                // Corrected type for newRoleMap
+                const newRoleMap: Record<string | number, string> = {};
                 projectRoles.forEach(role => {
-                    // Store by string ID
                     newRoleMap[String(role.id)] = role.name;
-                    // Also store by numeric ID if possible
                     const numId = parseInt(String(role.id), 10);
                     if (!isNaN(numId)) {
                         newRoleMap[numId] = role.name;
                     }
                 });
-                
-                // Store in component state
                 setRoleNameMap(newRoleMap);
-                
-                // Also persist in localStorage for redundancy
                 try {
                     localStorage.setItem('projectRoleNameMap', JSON.stringify(newRoleMap));
                     console.log('Role name map persisted to localStorage:', newRoleMap);
@@ -224,16 +197,15 @@ const ProjectCRUD: React.FC = () => {
                 }
             }
         };
-        
         persistRoleMap();
     }, [projectRoles]);
 
-    // NEW FUNCTION FOR ROLE FIX - Load role map from localStorage
     const loadPersistedRoleMap = () => {
         try {
             const storedRoleMap = localStorage.getItem('projectRoleNameMap');
             if (storedRoleMap) {
-                const parsedMap = JSON.parse(storedRoleMap);
+                // Corrected type for parsedMap
+                const parsedMap: Record<string | number, string> = JSON.parse(storedRoleMap);
                 setRoleNameMap(parsedMap);
                 console.log('Loaded role name map from localStorage:', parsedMap);
                 return parsedMap;
@@ -244,104 +216,72 @@ const ProjectCRUD: React.FC = () => {
         return {};
     };
 
-    // Function to update role names in projects
     const updateProjectRoleNames = () => {
-        // Only proceed if we have both projects and roles loaded
         if (projects.length === 0 || projectRoles.length === 0) return;
-        
         console.log("Updating project role names with available roles:", 
             projectRoles.map(r => ({id: r.id, name: r.name})));
         
-        // Create a lookup map for faster role lookups
-        const roleMap = {};
+        // Corrected type for roleMap
+        const roleMap: Record<string | number, string> = {};
         projectRoles.forEach(role => {
             roleMap[String(role.id)] = role.name;
-            // Also add numeric key for number IDs
-            roleMap[parseInt(String(role.id), 10)] = role.name;
+            const numId = parseInt(String(role.id), 10);
+            if (!isNaN(numId)) { // Ensure numId is a valid number before using as key
+                 roleMap[numId] = role.name;
+            }
         });
         
-        // Update all projects with role names
         const updatedProjects = projects.map(project => {
             if (!project.requiredRoles || project.requiredRoles.length === 0) {
                 return project;
             }
-            
-            // Update roles with names from the map
             const updatedRoles = project.requiredRoles.map(role => {
                 const stringId = String(role.roleId);
                 const numId = parseInt(stringId, 10);
-                
-                // Try to find the role name from our map
-                let roleName = role.roleName; // Use existing name if present
-                
-                // If no name yet, try string ID lookup
+                let roleName = role.roleName; 
                 if (!roleName && roleMap[stringId]) {
                     roleName = roleMap[stringId];
                 }
-                
-                // If still no name and ID is numeric, try numeric lookup
                 if (!roleName && !isNaN(numId) && roleMap[numId]) {
                     roleName = roleMap[numId];
                 }
-                
-                // If still no name, use generic "Role X" format
                 if (!roleName) {
                     roleName = `Role ${role.roleId}`;
                     console.log(`Could not find name for role ID ${role.roleId} in roleMap:`, roleMap);
                 }
-                
-                return {
-                    ...role,
-                    roleName
-                };
+                return { ...role, roleName };
             });
-            
-            return {
-                ...project,
-                requiredRoles: updatedRoles
-            };
+            return { ...project, requiredRoles: updatedRoles };
         });
-        
         setProjects(updatedProjects);
     };
 
-    // Fetch functions - MODIFIED FOR ROLE FIX
     const fetchRoles = async () => {
         console.log("Starting role fetch...");
         setIsLoading((prev) => ({ ...prev, roles: true }));
         setError((prev) => ({ ...prev, roles: null }));
-        
-        // Load persisted role map first for immediate use
         const persistedRoleMap = loadPersistedRoleMap();
-        
         try {
             const roles = await getAllRoles();
             console.log("Fetched roles:", roles);
-            
-            // Create a new lookup map
-            const newRoleMap: {[key: string]: string} = {};
+            // Corrected type for newRoleMap
+            const newRoleMap: Record<string | number, string> = {};
             roles.forEach(role => {
-                // Store by string ID
                 newRoleMap[String(role.id)] = role.name;
-                // Also store by numeric ID
                 const numId = parseInt(String(role.id), 10);
                 if (!isNaN(numId)) {
                     newRoleMap[numId] = role.name;
                 }
             });
-            
             console.log("Created role map:", newRoleMap);
             setRoleNameMap({...persistedRoleMap, ...newRoleMap});
             setProjectRoles(roles);
             setRolesLoaded(true);
-            
-            // Persist to localStorage
             try {
                 localStorage.setItem('projectRoleNameMap', JSON.stringify({...persistedRoleMap, ...newRoleMap}));
             } catch (err) {
                 console.error('Error saving updated role map to localStorage:', err);
             }
-            
             return roles;
         } catch (err: any) {
             console.error("Error fetching roles:", err);
@@ -368,56 +308,36 @@ const ProjectCRUD: React.FC = () => {
         }
     };
 
-    // MODIFIED FOR ROLE FIX
     const fetchProjects = async () => {
         console.log("Starting project fetch with role map:", roleNameMap);
         setIsLoading((prev) => ({ ...prev, projects: true }));
         setError((prev) => ({ ...prev, projects: null }));
-        
         try {
             const fetchedProjects = await getAllProjects(
                 projectStatusFilter !== 'All' ? projectStatusFilter : undefined
             );
             console.log("Fetched projects:", fetchedProjects);
-            
-            // Enhance projects with role names using our roleNameMap
             const enhancedProjects = fetchedProjects.map(project => {
                 if (project.requiredRoles && project.requiredRoles.length > 0) {
                     const rolesWithNames = project.requiredRoles.map(role => {
-                        // Get the string roleId
-                        const roleId = String(role.roleId);
-                        
-                        // Look up the name in our role map - try string ID first
-                        let roleName = roleNameMap[roleId];
-                        
-                        // If that fails, try numeric ID
-                        if (!roleName) {
-                            const numId = parseInt(roleId, 10);
+                        const roleIdStr = String(role.roleId);
+                        let roleNameValue = roleNameMap[roleIdStr];
+                        if (!roleNameValue) {
+                            const numId = parseInt(roleIdStr, 10);
                             if (!isNaN(numId)) {
-                                roleName = roleNameMap[numId];
+                                roleNameValue = roleNameMap[numId];
                             }
                         }
-                        
-                        // If we still don't have a name, use the original name or a fallback
-                        if (!roleName) {
-                            roleName = role.roleName || `Role ${role.roleId}`;
-                            console.log(`Warning: Unable to find role name for ID ${roleId} in role map:`, roleNameMap);
+                        if (!roleNameValue) {
+                            roleNameValue = role.roleName || `Role ${role.roleId}`;
+                            console.log(`Warning: Unable to find role name for ID ${roleIdStr} in role map:`, roleNameMap);
                         }
-                        
-                        return {
-                            ...role,
-                            roleName: roleName
-                        };
+                        return { ...role, roleName: roleNameValue };
                     });
-                    
-                    return {
-                        ...project,
-                        requiredRoles: rolesWithNames
-                    };
+                    return { ...project, requiredRoles: rolesWithNames };
                 }
                 return project;
             });
-            
             console.log("Enhanced projects with role names:", enhancedProjects);
             setProjects(enhancedProjects);
             return enhancedProjects;
@@ -430,55 +350,32 @@ const ProjectCRUD: React.FC = () => {
         }
     };
 
-    // Main data loading effect with proper sequencing - MODIFIED FOR ROLE FIX
     useEffect(() => {
         const loadData = async () => {
             try {
-                // Clear the rolesLoaded flag at the start
                 setRolesLoaded(false);
                 console.log("=== Starting data loading sequence ===");
-                
-                // Set loading flags
-                setIsLoading({
-                    projects: true,
-                    technologies: true,
-                    roles: true
-                });
-                
-                // First load roles as a separate step
+                setIsLoading({ projects: true, technologies: true, roles: true });
                 await fetchRoles();
                 console.log("Roles loaded and processed");
-                
-                // Then load technologies
                 await fetchTechnologies();
                 console.log("Technologies loaded");
-                
-                // Wait a moment to ensure state updates are processed
                 await new Promise(resolve => setTimeout(resolve, 100));
-                
-                // Finally load projects which depends on roles being available
                 await fetchProjects();
                 console.log("Projects loaded and processed");
-                
             } catch (err) {
                 console.error("Error in load sequence:", err);
             } finally {
-                setIsLoading({
-                    projects: false,
-                    technologies: false,
-                    roles: false
-                });
+                setIsLoading({ projects: false, technologies: false, roles: false });
                 console.log("=== Data loading sequence complete ===");
             }
         };
-        
         loadData();
     }, [projectStatusFilter]);
 
-    // Additional effect to update projects when roles change
     useEffect(() => {
         updateProjectRoleNames();
-    }, [projectRoles, projects.length]);
+    }, [projectRoles, projects.length]); // projects.length dependency might be excessive, consider if only projectRoles is enough
 
     const validateForm = () => {
         const errors = {
@@ -490,18 +387,11 @@ const ProjectCRUD: React.FC = () => {
         return !Object.values(errors).some((error) => error);
     };
 
-    // Project Management Functions - MODIFIED FOR ROLE FIX
     const handleCreate = async () => {
         setIsLoading((prev) => ({ ...prev, projects: true }));
-        
-        // Prevent multiple submissions
-        if (isSubmittingRef.current) {
-            return;
-        }
-        
+        if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
         setIsSubmitting(true);
-
         setError((prev) => ({ ...prev, form: null }));
         if (!validateForm()) {
             setError((prev) => ({ ...prev, form: "Please fill in all required fields" }));
@@ -509,7 +399,6 @@ const ProjectCRUD: React.FC = () => {
             setIsSubmitting(false);
             return;
         }
-
         try {
             const createProjectData: CreateProjectRequest = {
                 name: formData.name,
@@ -525,38 +414,26 @@ const ProjectCRUD: React.FC = () => {
                     count: role.amount
                 }))
             };
-
             const newProject = await createProject(createProjectData);
-            
-            // Enhance the new project with role names from our role map
             const enhancedProject = {
                 ...newProject,
                 requiredRoles: newProject.requiredRoles?.map(role => {
-                    const roleId = String(role.roleId);
-                    let roleName = roleNameMap[roleId];
-                    
-                    if (!roleName) {
-                        const numId = parseInt(roleId, 10);
+                    const roleIdStr = String(role.roleId);
+                    let roleNameValue = roleNameMap[roleIdStr];
+                    if (!roleNameValue) {
+                        const numId = parseInt(roleIdStr, 10);
                         if (!isNaN(numId)) {
-                            roleName = roleNameMap[numId];
+                            roleNameValue = roleNameMap[numId];
                         }
                     }
-                    
-                    if (!roleName) {
-                        // Use the original roleName if it exists, otherwise try to find in projectRoles
-                        const foundRole = projectRoles.find(r => String(r.id) === roleId || 
-                            parseInt(String(r.id), 10) === parseInt(roleId, 10));
-                        
-                        roleName = foundRole?.name || role.roleName || `Role ${role.roleId}`;
+                    if (!roleNameValue) {
+                        const foundRole = projectRoles.find(r => String(r.id) === roleIdStr || 
+                            (!isNaN(parseInt(roleIdStr, 10)) && parseInt(String(r.id), 10) === parseInt(roleIdStr, 10)));
+                        roleNameValue = foundRole?.name || role.roleName || `Role ${role.roleId}`;
                     }
-                    
-                    return {
-                        ...role,
-                        roleName: roleName
-                    };
+                    return { ...role, roleName: roleNameValue };
                 }) || []
             };
-            
             setProjects([...projects, enhancedProject]);
             setShowForm(false);
             resetForm();
@@ -565,7 +442,6 @@ const ProjectCRUD: React.FC = () => {
             setError((prev) => ({ ...prev, form: err.message || "Error creating project" }));
         } finally {
             setIsLoading((prev) => ({ ...prev, projects: false }));
-            // Reset submission state after a delay
             setTimeout(() => {
                 isSubmittingRef.current = false;
                 setIsSubmitting(false);
@@ -573,20 +449,12 @@ const ProjectCRUD: React.FC = () => {
         }
     };
 
-    // MODIFIED FOR ROLE FIX
     const handleUpdate = async () => {
         if (!editingId) return;
-        
         setIsLoading((prev) => ({ ...prev, projects: true }));
-        
-        // Prevent multiple submissions
-        if (isSubmittingRef.current) {
-            return;
-        }
-        
+        if (isSubmittingRef.current) return;
         isSubmittingRef.current = true;
         setIsSubmitting(true);
-
         setError((prev) => ({ ...prev, form: null }));
         if (!validateForm()) {
             setError((prev) => ({ ...prev, form: "Please fill in all required fields" }));
@@ -594,7 +462,6 @@ const ProjectCRUD: React.FC = () => {
             setIsSubmitting(false);
             return;
         }
-
         try {
             const updateProjectData: UpdateProjectRequest = {
                 name: formData.name,
@@ -610,42 +477,29 @@ const ProjectCRUD: React.FC = () => {
                     count: role.amount
                 }))
             };
-
             const updatedProject = await updateProject(editingId.toString(), updateProjectData);
-            
-            // Enhance the updated project with role names using our role map
             const enhancedProject = {
                 ...updatedProject,
                 requiredRoles: updatedProject.requiredRoles?.map(role => {
-                    const roleId = String(role.roleId);
-                    let roleName = roleNameMap[roleId];
-                    
-                    if (!roleName) {
-                        const numId = parseInt(roleId, 10);
+                    const roleIdStr = String(role.roleId);
+                    let roleNameValue = roleNameMap[roleIdStr];
+                    if (!roleNameValue) {
+                        const numId = parseInt(roleIdStr, 10);
                         if (!isNaN(numId)) {
-                            roleName = roleNameMap[numId];
+                            roleNameValue = roleNameMap[numId];
                         }
                     }
-                    
-                    if (!roleName) {
-                        // Use the original roleName if it exists, otherwise try to find in projectRoles
-                        const foundRole = projectRoles.find(r => String(r.id) === roleId || 
-                            parseInt(String(r.id), 10) === parseInt(roleId, 10));
-                        
-                        roleName = foundRole?.name || role.roleName || `Role ${role.roleId}`;
+                    if (!roleNameValue) {
+                        const foundRole = projectRoles.find(r => String(r.id) === roleIdStr || 
+                            (!isNaN(parseInt(roleIdStr, 10)) && parseInt(String(r.id), 10) === parseInt(roleIdStr, 10)));
+                        roleNameValue = foundRole?.name || role.roleName || `Role ${role.roleId}`;
                     }
-                    
-                    return {
-                        ...role,
-                        roleName: roleName
-                    };
+                    return { ...role, roleName: roleNameValue };
                 }) || []
             };
-            
             setProjects(projects.map(project => 
                 project.id === editingId ? enhancedProject : project
             ));
-            
             setEditingId(null);
             setShowForm(false);
             resetForm();
@@ -654,7 +508,6 @@ const ProjectCRUD: React.FC = () => {
             setError((prev) => ({ ...prev, form: err.message || "Error updating project" }));
         } finally {
             setIsLoading((prev) => ({ ...prev, projects: false }));
-            // Reset submission state after a delay
             setTimeout(() => {
                 isSubmittingRef.current = false;
                 setIsSubmitting(false);
@@ -669,7 +522,6 @@ const ProjectCRUD: React.FC = () => {
 
     const confirmDeleteProject = async () => {
         if (!projectIdToDelete) return;
-        
         setIsLoading((prev) => ({ ...prev, projects: true }));
         try {
             await deleteProject(projectIdToDelete.toString());
@@ -689,29 +541,22 @@ const ProjectCRUD: React.FC = () => {
         setProjectIdToDelete(null);
     };
 
-    // Technology Management Functions - UPDATED to not use [PM] prefix
     const handleCreateTechnology = async () => {
         setError((prev) => ({ ...prev, form: null }));
         if (!technologyFormData.name.trim()) {
             setError((prev) => ({ ...prev, form: "Technology name is required" }));
             return;
         }
-        
         setIsLoading((prev) => ({ ...prev, technologies: true }));
         try {
-            // No longer adding [PM] prefix
             const techName = technologyFormData.name.trim();
             const newTechnology = await createTechnology({ name: techName });
-            
-            // Add the new technology to both local lists
             setEmployeeTechnologies([...employeeTechnologies, newTechnology]);
             setAvailableTechnologies([...availableTechnologies, newTechnology]);
-            
             setIsTechnologyFormOpen(false);
             resetTechnologyForm();
             toast.success("Technology created successfully");
         } catch (err: any) {
-            // Check if it's a permission error
             if (err.response?.status === 403) {
                 setError((prev) => ({ ...prev, form: "You need Admin privileges to manage technologies" }));
                 toast.error("Admin privileges required to manage technologies");
@@ -726,54 +571,42 @@ const ProjectCRUD: React.FC = () => {
 
     const handleUpdateTechnology = async () => {
         if (!editingTechnologyId) return;
-        
         setError((prev) => ({ ...prev, form: null }));
         if (!technologyFormData.name.trim()) {
             setError((prev) => ({ ...prev, form: "Technology name is required" }));
             return;
         }
-        
         setIsLoading((prev) => ({ ...prev, technologies: true }));
         try {
             const technology = employeeTechnologies.find(tech => tech.id === editingTechnologyId);
-            
-            // Check if it's admin-created using creatorType
             if (technology && technology.creatorType !== 'project_manager') {
                 setError((prev) => ({ ...prev, form: "Admin-created technologies cannot be modified" }));
                 toast.error("Admin-created technologies cannot be modified");
                 setIsLoading((prev) => ({ ...prev, technologies: false }));
                 return;
             }
-            
-            // Check if it's inactive
             if (technology?.status !== 'active') {
                 setError((prev) => ({ ...prev, form: "Inactive technologies cannot be modified" }));
                 toast.error("Inactive technologies cannot be modified");
                 setIsLoading((prev) => ({ ...prev, technologies: false }));
                 return;
             }
-            
-            // No PM prefix
             const techName = technologyFormData.name.trim();
             const updatedTechnology = await updateTechnology(
                 editingTechnologyId.toString(), 
                 { name: techName }
             );
-            
-            // Update both local lists with the updated technology
             setEmployeeTechnologies(employeeTechnologies.map(tech => 
                 tech.id === editingTechnologyId ? updatedTechnology : tech
             ));
             setAvailableTechnologies(availableTechnologies.map(tech => 
                 tech.id === editingTechnologyId ? updatedTechnology : tech
             ));
-            
             setEditingTechnologyId(null);
             setIsTechnologyFormOpen(false);
             resetTechnologyForm();
             toast.success("Technology updated successfully");
         } catch (err: any) {
-            // Check if it's a permission error
             if (err.response?.status === 403) {
                 setError((prev) => ({ ...prev, form: "You need Admin privileges to manage technologies" }));
                 toast.error("Admin privileges required to manage technologies");
@@ -789,17 +622,14 @@ const ProjectCRUD: React.FC = () => {
     const handleDeleteTechnologyConfirmation = (id: number | string) => {
         const technology = employeeTechnologies.find((tech) => tech.id === id);
         if (technology) {
-            // Check if technology is admin-created using creatorType
             if (technology.creatorType !== 'project_manager') {
                 toast.error("Admin-created technologies cannot be deleted");
                 return;
             }
-            
             if (technology.status !== 'active') {
                 toast.error("Inactive technologies cannot be deleted");
                 return;
             }
-            
             setTechnologyIdToDelete(id);
             setShowTechnologyDeleteConfirmation(true);
         }
@@ -807,12 +637,9 @@ const ProjectCRUD: React.FC = () => {
 
     const confirmDeleteTechnology = async () => {
         if (!technologyIdToDelete) return;
-        
         setIsLoading((prev) => ({ ...prev, technologies: true }));
         try {
             const technology = employeeTechnologies.find(tech => tech.id === technologyIdToDelete);
-            
-            // Final check before deletion using creatorType
             if (technology && technology.creatorType !== 'project_manager') {
                 setError((prev) => ({ ...prev, technologies: "Admin-created technologies cannot be deleted" }));
                 toast.error("Admin-created technologies cannot be deleted");
@@ -821,7 +648,6 @@ const ProjectCRUD: React.FC = () => {
                 setIsLoading((prev) => ({ ...prev, technologies: false }));
                 return;
             }
-            
             if (technology?.status !== 'active') {
                 setError((prev) => ({ ...prev, technologies: "Inactive technologies cannot be deleted" }));
                 toast.error("Inactive technologies cannot be deleted");
@@ -830,20 +656,14 @@ const ProjectCRUD: React.FC = () => {
                 setIsLoading((prev) => ({ ...prev, technologies: false }));
                 return;
             }
-            
             await deleteTechnology(technologyIdToDelete.toString());
-            
-            // Remove the technology from local lists
             setEmployeeTechnologies(employeeTechnologies.filter(tech => tech.id !== technologyIdToDelete));
             setAvailableTechnologies(availableTechnologies.filter(tech => tech.id !== technologyIdToDelete));
-            
             setShowTechnologyDeleteConfirmation(false);
             setTechnologyIdToDelete(null);
             toast.success("Technology deleted successfully");
         } catch (err: any) {
             console.error('Error in deleteTechnology:', err);
-            
-            // Handle different error cases
             if (err.response?.status === 403) {
                 setError((prev) => ({ ...prev, technologies: "You need Admin privileges to manage technologies" }));
                 toast.error("Admin privileges required to manage technologies");
@@ -864,7 +684,6 @@ const ProjectCRUD: React.FC = () => {
         setTechnologyIdToDelete(null);
     };
 
-    // Role Management Functions
     const handleCreateRole = async () => {
         setError((prev) => ({ ...prev, form: null }));
         if (!validateRoleForm()) {
@@ -873,17 +692,12 @@ const ProjectCRUD: React.FC = () => {
         }
         setIsLoading((prev) => ({ ...prev, roles: true }));
         try {
-            const createRoleData: CreateRoleRequest = {
-                name: roleFormData.name.trim()
-            };
-            
+            const createRoleData: CreateRoleRequest = { name: roleFormData.name.trim() };
             const newRole = await createRole(createRoleData);
             setProjectRoles([...projectRoles, newRole]);
             setShowRoleForm(false);
             resetRoleForm();
             toast.success("Role created successfully");
-            
-            // Refresh projects to update any roles
             fetchProjects();
         } catch (err: any) {
             setError((prev) => ({ ...prev, form: err.message || "Error creating role" }));
@@ -894,7 +708,6 @@ const ProjectCRUD: React.FC = () => {
 
     const handleUpdateRole = async () => {
         if (!editingRoleId) return;
-        
         setError((prev) => ({ ...prev, form: null }));
         if (!validateRoleForm()) {
             setError((prev) => ({ ...prev, form: "Role name is required" }));
@@ -902,22 +715,15 @@ const ProjectCRUD: React.FC = () => {
         }
         setIsLoading((prev) => ({ ...prev, roles: true }));
         try {
-            const updateRoleData: UpdateRoleRequest = {
-                name: roleFormData.name.trim()
-            };
-            
+            const updateRoleData: UpdateRoleRequest = { name: roleFormData.name.trim() };
             const updatedRole = await updateRole(editingRoleId.toString(), updateRoleData);
-            
             setProjectRoles(projectRoles.map(role => 
                 role.id === editingRoleId ? updatedRole : role
             ));
-            
             setShowRoleForm(false);
             setEditingRoleId(null);
             resetRoleForm();
             toast.success("Role updated successfully");
-            
-            // Refresh projects to update any roles
             fetchProjects();
         } catch (err: any) {
             setError((prev) => ({ ...prev, form: err.message || "Error updating role" }));
@@ -933,7 +739,6 @@ const ProjectCRUD: React.FC = () => {
 
     const confirmDeleteRole = async () => {
         if (!roleIdToDelete) return;
-        
         setIsLoading((prev) => ({ ...prev, roles: true }));
         try {
             await deleteRole(roleIdToDelete.toString());
@@ -941,8 +746,6 @@ const ProjectCRUD: React.FC = () => {
             setShowRoleDeleteConfirmation(false);
             setRoleIdToDelete(null);
             toast.success("Role deleted successfully");
-            
-            // Refresh projects to update any roles
             fetchProjects();
         } catch (err: any) {
             setError((prev) => ({ ...prev, roles: err.message || "Error deleting role" }));
@@ -956,25 +759,14 @@ const ProjectCRUD: React.FC = () => {
         setRoleIdToDelete(null);
     };
 
-    // Reset Form Functions
     const resetForm = () => {
         setFormData({
-            name: "",
-            status: "Active",
-            deadline: "",
-            description: "",
-            shortDescription: "",
-            requiredTechnologies: [],
-            progress: 0,
-            startDate: "",
-            assignedRoles: [],
+            name: "", status: "Active", deadline: "", description: "",
+            shortDescription: "", requiredTechnologies: [], progress: 0,
+            startDate: "", assignedRoles: [],
         });
         setSelectedTechnologiesDisplay([]);
-        setFormErrors({
-            name: false,
-            deadline: false,
-            startDate: false
-        });
+        setFormErrors({ name: false, deadline: false, startDate: false });
         setError((prev) => ({ ...prev, form: null }));
     };
 
@@ -988,96 +780,60 @@ const ProjectCRUD: React.FC = () => {
         setError((prev) => ({ ...prev, form: null }));
     };
 
-    // Edit Functions - MODIFIED FOR ROLE FIX
     const startEdit = async (id: number | string) => {
         try {
             const project = await getProjectById(id.toString());
             if (project) {
-                // Format dates for form input with improved handling of timezone
                 const formatDateForInput = (dateString: string | null | undefined) => {
                     if (!dateString) return '';
                     try {
                         const date = new Date(dateString);
-                        
-                        // Check if the date is valid
-                        if (isNaN(date.getTime())) {
-                            return ''; // Return empty string if parsing failed
-                        }
-                        
-                        // Format as YYYY-MM-DD for input field
+                        if (isNaN(date.getTime())) return '';
                         const year = date.getFullYear();
                         const month = String(date.getMonth() + 1).padStart(2, '0');
                         const day = String(date.getDate()).padStart(2, '0');
-                        
                         return `${year}-${month}-${day}`;
                     } catch (error) {
                         console.error("Error formatting date for input:", error);
                         return '';
                     }
                 };
-
-                // Handle required technologies
                 const requiredTechnologiesObjects = (project.requiredSkills || []).map((tech) => ({
-                    id: tech.id,
-                    name: tech.name
+                    id: tech.id, name: tech.name
                 }));
-
                 const selectedTechnologies = requiredTechnologiesObjects.map((tech) => tech.name);
-
-                // Prepare role assignments - with improved role name lookup
                 let assignedRoles: { roleId: number | string, roleName: string, amount: number }[] = [];
-
                 if (project.requiredRoles && project.requiredRoles.length > 0) {
                     console.log("Project requiredRoles:", project.requiredRoles);
-                    
                     assignedRoles = project.requiredRoles.map((role) => {
-                        // Get role name with better fallback
-                        const roleId = String(role.roleId);
-                        
-                        // Use our role map first
-                        let roleName = roleNameMap[roleId];
-                        
-                        if (!roleName) {
-                            const numId = parseInt(roleId, 10);
+                        const roleIdStr = String(role.roleId);
+                        let roleNameValue = roleNameMap[roleIdStr];
+                        if (!roleNameValue) {
+                            const numId = parseInt(roleIdStr, 10);
                             if (!isNaN(numId)) {
-                                roleName = roleNameMap[numId];
+                                roleNameValue = roleNameMap[numId];
                             }
                         }
-                        
-                        if (!roleName) {
-                            // Try to find the role
+                        if (!roleNameValue) {
                             const foundRole = projectRoles.find(r => 
-                                String(r.id) === roleId || 
-                                (!isNaN(parseInt(roleId, 10)) && parseInt(String(r.id), 10) === parseInt(roleId, 10))
+                                String(r.id) === roleIdStr || 
+                                (!isNaN(parseInt(roleIdStr, 10)) && parseInt(String(r.id), 10) === parseInt(roleIdStr, 10))
                             );
-                            
-                            roleName = role.roleName || (foundRole ? foundRole.name : `Role ${role.roleId}`);
+                            roleNameValue = role.roleName || (foundRole ? foundRole.name : `Role ${role.roleId}`);
                         }
-                        
-                        console.log(`Role ${roleId} mapped to name: ${roleName}`);
-                        
-                        return {
-                            roleId: role.roleId, // Ensure we're using the actual ID value
-                            roleName: roleName,
-                            amount: role.count
-                        };
+                        console.log(`Role ${roleIdStr} mapped to name: ${roleNameValue}`);
+                        return { roleId: role.roleId, roleName: roleNameValue, amount: role.count };
                     });
                 }
-
                 console.log("Setting form with assignedRoles:", assignedRoles);
-
                 setFormData({
-                    name: project.name || '',
-                    status: project.status || 'Active',
+                    name: project.name || '', status: project.status || 'Active',
                     deadline: formatDateForInput(project.deadline),
-                    description: project.description || '',
-                    shortDescription: project.shortDescription || '',
+                    description: project.description || '', shortDescription: project.shortDescription || '',
                     requiredTechnologies: requiredTechnologiesObjects,
-                    progress: project.progress || 0,
-                    startDate: formatDateForInput(project.startDate),
+                    progress: project.progress || 0, startDate: formatDateForInput(project.startDate),
                     assignedRoles: assignedRoles,
                 });
-
                 setSelectedTechnologiesDisplay(selectedTechnologies);
                 setEditingId(id);
                 setShowForm(true);
@@ -1090,18 +846,14 @@ const ProjectCRUD: React.FC = () => {
     const startEditTechnology = (id: number | string) => {
         const technology = employeeTechnologies.find((tech) => tech.id === id);
         if (technology) {
-            // Check if technology is admin-created or inactive
             if (technology.creatorType !== 'project_manager') {
                 toast.error("Admin-created technologies cannot be edited");
                 return;
             }
-            
             if (technology.status !== 'active') {
                 toast.error("Inactive technologies cannot be edited");
                 return;
             }
-            
-            // Use the name directly, no need to remove prefix
             setTechnologyFormData({ name: technology.name });
             setEditingTechnologyId(id);
             setIsTechnologyFormOpen(true);
@@ -1117,43 +869,42 @@ const ProjectCRUD: React.FC = () => {
         }
     };
 
-    // Form Change Handlers - MODIFIED FOR ROLE FIX
     const handleTechnologyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedTechnologyNames = Array.from(e.target.selectedOptions, (option) => option.value);
-
         const selectedTechnologyObjects = availableTechnologies
             .filter((tech) => selectedTechnologyNames.includes(tech.name))
-            .map((tech) => ({
-                id: tech.id,
-                name: tech.name
-            }));
-
+            .map((tech) => ({ id: tech.id, name: tech.name }));
         setFormData((prevFormData) => ({
-            ...prevFormData,
-            requiredTechnologies: selectedTechnologyObjects
+            ...prevFormData, requiredTechnologies: selectedTechnologyObjects
         }));
-
         setSelectedTechnologiesDisplay(selectedTechnologyNames);
     };
 
-    // MODIFIED FOR ROLE FIX
     const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>, index: number) => {
-        const roleId = e.target.value;
-        
-        // Get role name from map or project roles
-        let roleName = roleNameMap[roleId];
-        
-        if (!roleName) {
-            // If not in map, try to find in projectRoles
-            const foundRole = projectRoles.find(r => String(r.id) === roleId);
-            roleName = foundRole?.name || `Role ${roleId}`;
+        const roleIdStr = e.target.value; // This is string from select value
+        let roleNameValue: string | undefined = roleNameMap[roleIdStr]; // Try string key
+
+        if (!roleNameValue) { // If not found by string key, try by number key if applicable
+            const numId = parseInt(roleIdStr, 10);
+            if (!isNaN(numId)) {
+                roleNameValue = roleNameMap[numId];
+            }
         }
         
-        console.log(`Role selected: ID=${roleId}, Name=${roleName}`);
+        if (!roleNameValue) {
+            const foundRole = projectRoles.find(r => String(r.id) === roleIdStr);
+            roleNameValue = foundRole?.name;
+        }
+        
+        // Ensure roleNameValue is a string for formData
+        const finalRoleName: string = roleNameValue || `Role ${roleIdStr}`;
 
+        console.log(`Role selected: ID=${roleIdStr}, Name=${finalRoleName}`);
         setFormData((prevFormData) => {
             const updatedRoles = [...prevFormData.assignedRoles];
-            updatedRoles[index] = { ...updatedRoles[index], roleId, roleName };
+            // Ensure roleId is stored as it came (string) or parsed if your backend expects number
+            // For consistency with CreateProjectRequest, roleId should be string.
+            updatedRoles[index] = { ...updatedRoles[index], roleId: roleIdStr, roleName: finalRoleName };
             return { ...prevFormData, assignedRoles: updatedRoles };
         });
     };
@@ -1184,38 +935,26 @@ const ProjectCRUD: React.FC = () => {
     const removeTechnology = (techName: string) => {
         const updatedTechs = formData.requiredTechnologies.filter((t) => t.name !== techName);
         setFormData((prevFormData) => ({
-            ...prevFormData,
-            requiredTechnologies: updatedTechs
+            ...prevFormData, requiredTechnologies: updatedTechs
         }));
         setSelectedTechnologiesDisplay(updatedTechs.map((t) => t.name));
     };
 
     const handleFormInputChange = (field: string, value: string | number) => {
-        setFormData((prevFormData) => ({
-            ...prevFormData,
-            [field]: value
-        }));
-        
+        setFormData((prevFormData) => ({ ...prevFormData, [field]: value }));
         if (field === 'name' || field === 'deadline' || field === 'startDate') {
-            setFormErrors((prevErrors) => ({
-                ...prevErrors,
-                [field]: false
-            }));
+            setFormErrors((prevErrors) => ({ ...prevErrors, [field]: false }));
         }
     };
 
     const validateRoleForm = () => {
-        const errors = {
-            name: !roleFormData.name.trim(),
-        };
+        const errors = { name: !roleFormData.name.trim() };
         setRoleFormErrors(errors);
         return !Object.values(errors).some((error) => error);
     };
 
-    // Filtered data for displays
     const filteredProjects = projects.filter((project) => {
         const searchLower = searchTerm.toLowerCase();
-        // Only search by name
         const searchMatch = project.name.toLowerCase().includes(searchLower);
         const statusMatch = projectStatusFilter === 'All' || project.status === projectStatusFilter;
         return searchMatch && statusMatch;
@@ -1223,7 +962,6 @@ const ProjectCRUD: React.FC = () => {
 
     const filteredTechnologies = employeeTechnologies.filter((tech) => {
         const searchLower = searchTerm.toLowerCase();
-        // Search in the name without needing to handle any prefix
         const matchesSearch = tech.name.toLowerCase().includes(searchLower);
         const matchesStatus = techStatusFilter === 'all' || tech.status === techStatusFilter;
         return matchesSearch && matchesStatus;
@@ -1234,7 +972,6 @@ const ProjectCRUD: React.FC = () => {
         return role.name.toLowerCase().includes(searchLower);
     });
 
-    // Navigation
     const toggleSection = (section: 'projects' | 'technologies' | 'roles') => {
         if (section === 'projects') {
             navigate('/project-manager/project-cruds');
@@ -1243,15 +980,15 @@ const ProjectCRUD: React.FC = () => {
         } else if (section === 'roles') {
             navigate('/project-manager/project-cruds/roles');
         }
-        setMobileMenuOpen(false); // Close menu after selection on mobile
+        setMobileMenuOpen(false);
     };
 
     return (
         <div className="min-h-screen bg-[#52007C] p-2 sm:p-4 md:p-6 lg:p-8 font-['Nunito_Sans']">
-            {/* Header */}
             <div className="bg-white rounded-2xl shadow-sm mb-4 md:mb-6">
                 <div className="p-4 md:p-6">
-                    <div className="flex items-center gap-2 md:gap-4">                        <button
+                    <div className="flex items-center gap-2 md:gap-4">                        
+                        <button
                             onClick={() => navigate('/project-manager/dashboard')}
                             className="p-2 hover:bg-pale-purple rounded-full transition-all duration-300"
                            title="Go back to dashboard" 
@@ -1265,8 +1002,6 @@ const ProjectCRUD: React.FC = () => {
                                     isTechnologySectionActive ? 'Technology Management' :
                                         showRoles ? 'Role Management' : 'Management Dashboard'}
                             </h1>
-                            
-                            {/* Mobile menu toggle */}
                             <div className="sm:hidden ml-auto">
                                 <button 
                                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -1275,8 +1010,6 @@ const ProjectCRUD: React.FC = () => {
                                     {mobileMenuOpen ? <XIcon size={24} /> : <Menu size={24} />}
                                 </button>
                             </div>
-                            
-                            {/* Desktop nav */}
                             <div className="hidden sm:flex flex-wrap gap-2">
                                 <button
                                     onClick={() => toggleSection('projects')}
@@ -1299,8 +1032,6 @@ const ProjectCRUD: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    
-                    {/* Mobile nav menu */}
                     {mobileMenuOpen && (
                         <div className="sm:hidden mt-4 flex flex-col space-y-2 bg-[#F6E6FF] p-3 rounded-xl animate-modalEnter">
                             <button
@@ -1326,53 +1057,51 @@ const ProjectCRUD: React.FC = () => {
                 </div>
             </div>
 
-            {/* Loading/Error Indicators */}
             {(isLoading.projects || isLoading.technologies || isLoading.roles) && (
                 <div className="fixed top-4 right-4 bg-white p-4 rounded-xl shadow-lg z-50">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#BF4BF6]"></div>
                 </div>
             )}
-
             {(error.projects || error.technologies || error.roles || error.form) && (
                 <div className="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl z-50">
                     <p>{error.projects || error.technologies || error.roles || error.form}</p>
                 </div>
             )}
 
-            {/* Search and Actions Bar */}
             <div className="bg-white rounded-2xl shadow-sm mb-4 md:mb-6 p-4 md:p-6">
                 {showProjects ? (
                     <div className="flex flex-col md:flex-row gap-4 items-start md:items-center md:justify-between">
                         <div className="relative w-full md:w-auto md:flex-grow md:max-w-md">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                             <input
-                                type="text"
-                                placeholder="Search projects..."
-                                value={searchTerm}
+                                type="text" placeholder="Search projects..." value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus-ring focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] transition-all duration-200"
                             />
                         </div>
-
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full md:w-auto">
                             <div className="relative w-full sm:w-auto">
                                 <button
+                                    data-status-dropdown  // Added for querySelector
                                     className="w-full sm:w-auto px-4 py-2 bg-white rounded-lg border border-gray-200 text-[#1B0A3F] hover:bg-pale-purple transition-all duration-300 focus-ring flex items-center justify-between"
                                     onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
                                 >
                                     <span>{projectStatusFilter} Statuses</span>
                                     <ChevronDown size={16} className="ml-2" />
                                 </button>
-
                                 {isStatusDropdownOpen && (
                                     <div className="fixed inset-0 z-[9999]" onClick={() => setIsStatusDropdownOpen(false)}>
                                         <div
                                             className="absolute bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden animate-modalEnter w-full max-w-[200px] sm:w-auto"
-                                            style={{
-                                                top: document.querySelector('[data-status-dropdown]')?.getBoundingClientRect().bottom + window.scrollY + 5 || 0,
-                                                left: document.querySelector('[data-status-dropdown]')?.getBoundingClientRect().left + window.scrollX || 0,
-                                                width: (document.querySelector('[data-status-dropdown]') as HTMLElement)?.offsetWidth || 200
-                                            }}
+                                            style={(() => {
+                                                const triggerElement = document.querySelector('[data-status-dropdown]');
+                                                const rect = triggerElement?.getBoundingClientRect();
+                                                return {
+                                                    top: rect ? rect.bottom + window.scrollY + 5 : 5,
+                                                    left: rect ? rect.left + window.scrollX : 0,
+                                                    width: rect ? rect.width : 200,
+                                                };
+                                            })()}
                                             onClick={(e) => e.stopPropagation()}
                                         >
                                             {['All', 'Active', 'Completed'].map((status) => (
@@ -1391,7 +1120,6 @@ const ProjectCRUD: React.FC = () => {
                                     </div>
                                 )}
                             </div>
-
                             <button
                                 onClick={() => { setShowForm(true); setEditingId(null); resetForm(); }}
                                 className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-primary text-white rounded-full hover:bg-pale-purple transition-all duration-300 flex items-center justify-center gap-2 shadow-soft"
@@ -1406,30 +1134,21 @@ const ProjectCRUD: React.FC = () => {
                         <div className="relative w-full sm:flex-grow sm:max-w-md">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                             <input
-                                type="text"
-                                placeholder="Search technologies..."
-                                value={searchTerm}
+                                type="text" placeholder="Search technologies..." value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-10 py-2 border border-gray-200 rounded-lg focus-ring focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] transition-all duration-200"
                             />
                         </div>
-                        
                         <select
-                            value={techStatusFilter}
-                            onChange={(e) => setTechStatusFilter(e.target.value)}
+                            value={techStatusFilter} onChange={(e) => setTechStatusFilter(e.target.value)}
                             className="px-4 py-2 border border-gray-200 rounded-lg focus-ring focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] transition-all duration-200"
                         >
                             <option value="all">All Status</option>
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
                         </select>
-                        
                         <button
-                            onClick={() => {
-                                setIsTechnologyFormOpen(true);
-                                setEditingTechnologyId(null);
-                                resetTechnologyForm();
-                            }}
+                            onClick={() => { setIsTechnologyFormOpen(true); setEditingTechnologyId(null); resetTechnologyForm(); }}
                             className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-primary text-white rounded-full hover:bg-pale-purple transition-all duration-300 flex items-center justify-center gap-2 shadow-soft"
                         >
                             <Plus size={18} />
@@ -1441,9 +1160,7 @@ const ProjectCRUD: React.FC = () => {
                         <div className="relative w-full sm:flex-grow sm:max-w-md">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                             <input
-                                type="text"
-                                placeholder="Search roles..."
-                                value={searchTerm}
+                                type="text" placeholder="Search roles..." value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-10 py-2 border border-gray-200 rounded-lg focus-ring focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] transition-all duration-200"
                             />
@@ -1459,10 +1176,8 @@ const ProjectCRUD: React.FC = () => {
                 ) : null}
             </div>
 
-            {/* Main Content Area */}
             {showProjects ? (
                 <div className="bg-white rounded-2xl shadow-sm p-3 sm:p-4 md:p-6">
-                    {/* MODIFIED FOR ROLE FIX - Updated loading state display */}
                     {isLoading.projects || !rolesLoaded ? (
                         <div className="flex justify-center items-center h-32">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#BF4BF6]"></div>
@@ -1507,14 +1222,9 @@ const ProjectCRUD: React.FC = () => {
                                                             {(() => {
                                                                 const remainingDays = calculateRemainingDays(project.deadline);
                                                                 if (remainingDays === null) return null;
-                                                                
                                                                 return (
                                                                     <span className={`text-xs font-medium ${remainingDays < 0 ? 'text-red-500' : remainingDays <= 7 ? 'text-orange-500' : 'text-green-600'}`}>
-                                                                        {remainingDays < 0 
-                                                                            ? `${Math.abs(remainingDays)} days overdue` 
-                                                                            : remainingDays === 0 
-                                                                                ? 'Due today' 
-                                                                                : `${remainingDays} days left`}
+                                                                        {remainingDays < 0 ? `${Math.abs(remainingDays)} days overdue` : remainingDays === 0 ? 'Due today' : `${remainingDays} days left`}
                                                                     </span>
                                                                 );
                                                             })()}
@@ -1538,44 +1248,34 @@ const ProjectCRUD: React.FC = () => {
                                                     {project.requiredRoles && project.requiredRoles.length > 0 ? (
                                                         <div className="flex flex-wrap gap-1">
                                                             {project.requiredRoles.map((role, idx) => {
-                                                                // Improved role name lookup - MODIFIED FOR ROLE FIX
-                                                                const roleId = String(role.roleId); // Ensure string comparison
-                                                                
-                                                                // Use our role map first
-                                                                let roleName = roleNameMap[roleId];
-                                                                
-                                                                if (!roleName) {
-                                                                    const numId = parseInt(roleId, 10);
+                                                                const roleIdStr = String(role.roleId);
+                                                                let tempRoleName: string | undefined = roleNameMap[roleIdStr];
+                                                                if (!tempRoleName) {
+                                                                    const numId = parseInt(roleIdStr, 10);
                                                                     if (!isNaN(numId)) {
-                                                                        roleName = roleNameMap[numId];
+                                                                        tempRoleName = roleNameMap[numId];
                                                                     }
                                                                 }
-                                                                
-                                                                // If not in map, try to use existing name
-                                                                if (!roleName) {
-                                                                    roleName = role.roleName;
+                                                                if (!tempRoleName) {
+                                                                    tempRoleName = role.roleName; // role.roleName can be undefined
                                                                 }
-                                                                
-                                                                // If still no name, try to find in projectRoles
-                                                                if (!roleName) {
+                                                                if (!tempRoleName) {
                                                                     const foundRole = projectRoles.find(r => 
-                                                                        String(r.id) === roleId || 
-                                                                        (!isNaN(parseInt(roleId, 10)) && 
-                                                                         parseInt(String(r.id), 10) === parseInt(roleId, 10)));
+                                                                        String(r.id) === roleIdStr || 
+                                                                        (!isNaN(parseInt(roleIdStr, 10)) && 
+                                                                         parseInt(String(r.id), 10) === parseInt(roleIdStr, 10)));
                                                                     if (foundRole) {
-                                                                        roleName = foundRole.name;
+                                                                        tempRoleName = foundRole.name; // ProjectRole.name is string
                                                                     }
                                                                 }
-                                                                
-                                                                // If we still don't have a name, use the ID
-                                                                if (!roleName) {
-                                                                    roleName = `Role ${roleId}`;
-                                                                    console.log(`Unable to find name for role ID ${roleId}`);
+                                                                // Ensure finalRoleName is a string
+                                                                const finalRoleName: string = tempRoleName || `Role ${roleIdStr}`;
+                                                                if (!tempRoleName) { // Log if we had to use the fallback
+                                                                    console.log(`Unable to find name for role ID ${roleIdStr}, using fallback "${finalRoleName}"`);
                                                                 }
-                                                                
                                                                 return (
                                                                     <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
-                                                                        <span className="font-bold mr-1">{role.count}×</span> {roleName}
+                                                                        <span className="font-bold mr-1">{role.count}×</span> {finalRoleName}
                                                                     </span>
                                                                 );
                                                             })}
@@ -1758,7 +1458,6 @@ const ProjectCRUD: React.FC = () => {
                 </div>
             ) : null}
 
-            {/* Forms and Dialogs */}
             {showForm && showProjects && (
                 <ProjectForm 
                     isOpen={showForm}
@@ -1811,7 +1510,6 @@ const ProjectCRUD: React.FC = () => {
                 />
             )}
 
-            {/* Delete Confirmation Dialogs */}
             {showDeleteConfirmation && (
                 <DeleteConfirmationDialog
                     isOpen={showDeleteConfirmation}
