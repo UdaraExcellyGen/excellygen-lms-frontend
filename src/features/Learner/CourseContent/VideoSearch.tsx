@@ -1,7 +1,8 @@
 // VideoSearch.tsx
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { FaArrowLeft, FaSearch, FaPlay } from 'react-icons/fa';
-import { Loader2, Play } from 'lucide-react';
+// import { Loader2, Play } from 'lucide-react'; // Removed Play from lucide-react
+import { Loader2 } from 'lucide-react'; // Keep Loader2
 import VideoPlayer, { VideoData, TranscriptSegment } from './VideoPlayer';
 
 interface VideoSearchProps {
@@ -9,7 +10,6 @@ interface VideoSearchProps {
 }
 
 const VideoSearch: React.FC<VideoSearchProps> = ({ onClose }) => {
-  // State management
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<VideoData[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -17,7 +17,6 @@ const VideoSearch: React.FC<VideoSearchProps> = ({ onClose }) => {
   const [videoStartTime, setVideoStartTime] = useState<number>(0);
   const debouncedSearch = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sample video database focused on HTML5 Structure and Elements
   const videoDatabase: VideoData[] = useMemo(() => [
     {
       videoId: 'HTML5-001',
@@ -127,7 +126,6 @@ const VideoSearch: React.FC<VideoSearchProps> = ({ onClose }) => {
     },
   ], []);
 
-  // Search functionality
   const performSearch = useCallback((query: string) => {
     if (!query.trim()) {
       setSearchResults([]);
@@ -137,7 +135,6 @@ const VideoSearch: React.FC<VideoSearchProps> = ({ onClose }) => {
     setIsLoading(true);
     const lowerCaseSearchQuery = query.toLowerCase();
 
-    // Simulate API call with setTimeout
     setTimeout(() => {
       const results = videoDatabase
         .map((video) => {
@@ -156,7 +153,6 @@ const VideoSearch: React.FC<VideoSearchProps> = ({ onClose }) => {
     }, 300);
   }, [videoDatabase]);
 
-  // Handle input changes with debounce
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newQuery = e.target.value;
     setSearchQuery(newQuery);
@@ -170,7 +166,6 @@ const VideoSearch: React.FC<VideoSearchProps> = ({ onClose }) => {
     }, 300);
   };
 
-  // Video playback handlers
   const handlePlayVideo = (video: VideoData) => {
     setPlayingVideoData(video);
     setVideoStartTime(0);
@@ -185,7 +180,6 @@ const VideoSearch: React.FC<VideoSearchProps> = ({ onClose }) => {
     setPlayingVideoData(null);
   };
 
-  // Format timestamp to MM:SS
   const formatTime = (timestamp: number): string => {
     const minutes = Math.floor(timestamp / 60);
     const seconds = timestamp % 60;
@@ -203,7 +197,6 @@ const VideoSearch: React.FC<VideoSearchProps> = ({ onClose }) => {
       ) : (
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-6xl mx-auto">
-            {/* Header Section */}
             <div className="bg-white dark:bg-primary rounded-t-2xl shadow-lg p-6">
               <div className="flex items-center justify-center relative mb-8">
                 <button
@@ -218,7 +211,6 @@ const VideoSearch: React.FC<VideoSearchProps> = ({ onClose }) => {
                 </h1>
               </div>
 
-              {/* Search Input */}
               <div className="relative">
                 <input
                   type="text"
@@ -239,7 +231,6 @@ const VideoSearch: React.FC<VideoSearchProps> = ({ onClose }) => {
               </div>
             </div>
 
-            {/* Results Section */}
             <div className="bg-white dark:bg-primary rounded-b-2xl shadow-lg p-6 space-y-6">
               {isLoading ? (
                 <div className="flex justify-center items-center py-12">
@@ -251,7 +242,6 @@ const VideoSearch: React.FC<VideoSearchProps> = ({ onClose }) => {
                     key={result.videoId}
                     className="bg-secondary-lighter dark:bg-primary-light/20 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg"
                   >
-                    {/* Video Card Header */}
                     <div className="bg-gradient-to-r from-primary-light to-primary p-6">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex-1">
@@ -272,13 +262,12 @@ const VideoSearch: React.FC<VideoSearchProps> = ({ onClose }) => {
                       </div>
                     </div>
 
-                    {/* Transcript Results */}
                     <div className="p-6 space-y-4">
                       <h4 className="font-semibold text-primary dark:text-white/90">
                         Matching Transcript Segments:
                       </h4>
                       {result.matches?.map((match, idx) => (
-                        <TranscriptItem
+                        <LocalTranscriptItem // Renamed to avoid conflict if imported
                           key={idx}
                           item={match}
                           videoData={result}
@@ -314,15 +303,14 @@ const VideoSearch: React.FC<VideoSearchProps> = ({ onClose }) => {
   );
 };
 
-// TranscriptItem Component
-interface TranscriptItemProps {
+interface LocalTranscriptItemProps { // Renamed interface to avoid conflict
   item: TranscriptSegment;
   videoData: VideoData;
   formatTime: (time: number) => string;
   onTranscriptPlay: (video: VideoData, timestamp: number) => void;
 }
 
-const TranscriptItem: React.FC<TranscriptItemProps> = ({ 
+const LocalTranscriptItem: React.FC<LocalTranscriptItemProps> = ({ // Renamed component
   item, 
   videoData, 
   formatTime, 
