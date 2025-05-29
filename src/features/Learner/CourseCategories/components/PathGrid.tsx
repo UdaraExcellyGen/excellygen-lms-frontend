@@ -10,7 +10,7 @@ interface PathGridProps {
 
 const PathGrid: React.FC<PathGridProps> = ({ paths, onExplore }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {paths.map((path) => ( 
         <PathCard
           key={path.id} 

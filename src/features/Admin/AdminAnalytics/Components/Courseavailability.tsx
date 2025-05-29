@@ -36,7 +36,8 @@ const CourseAvailability: React.FC = () => {
       const formattedData = (response.availabilityData || []).map(item => ({
         ...item,
         originalName: item.name, // Keep original name for tooltip
-        name: formatCategoryName(item.name) // Format for display
+        name: formatCategoryName(item.name), // Format for display
+        color: '#BF4BF6' // Update color to match theme
       }));
       
       setData(formattedData);
@@ -49,42 +50,42 @@ const CourseAvailability: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="bg-white rounded-2xl p-6">Loading course availability data...</div>;
-  if (error) return <div className="bg-white rounded-2xl p-6 text-red-500">Error: {error}</div>;
-  if (!data || data.length === 0) return <div className="bg-white rounded-2xl p-6">No course availability data available</div>;
+  if (loading) return <div className="p-6">Loading course availability data...</div>;
+  if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
+  if (!data || data.length === 0) return <div className="p-6">No course availability data available</div>;
 
   return (
-    <div className="bg-white rounded-2xl p-6">
-      <h2 className="text-xl font-['Unbounded'] mb-6">Course Availability</h2>
+    <div className="p-6">
+      <h2 className="text-xl font-['Unbounded'] mb-6 text-[#1B0A3F]">Course Availability</h2>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
             margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
           >
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#F6E6FF" />
             <XAxis 
               dataKey="name" 
-              tick={{ fontSize: 10 }}  // Slightly smaller font
+              tick={{ fontSize: 10, fill: "#1B0A3F" }}  // Updated font color
               interval={0}
               tickMargin={8}
-              label={{ value: "Categories", position: "bottom", offset: 10 }}
+              label={{ value: "Categories", position: "bottom", offset: 10, fill: "#1B0A3F" }}
             />
             <YAxis 
               allowDecimals={false}
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 12, fill: "#1B0A3F" }}
               tickMargin={10}
-              label={{ value: "Count", angle: -90, position: "insideLeft" }}
+              label={{ value: "Count", angle: -90, position: "insideLeft", fill: "#1B0A3F" }}
             />
             <Tooltip
-              cursor={{ fill: 'rgba(82, 0, 124, 0.1)' }}
+              cursor={{ fill: 'rgba(191, 75, 246, 0.1)' }} // Updated cursor color
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
                   const data = payload[0].payload;
                   return (
-                    <div className="bg-white p-2 rounded shadow-lg border border-gray-100">
-                      <p className="text-sm font-semibold">{data.originalName || data.name}</p>
-                      <p className="text-sm" style={{ color: data.color || '#52007C' }}>
+                    <div className="bg-white p-2 rounded shadow-lg border border-[#BF4BF6]/20">
+                      <p className="text-sm font-semibold text-[#1B0A3F]">{data.originalName || data.name}</p>
+                      <p className="text-sm text-[#BF4BF6]">
                         Courses: {data.value}
                       </p>
                     </div>

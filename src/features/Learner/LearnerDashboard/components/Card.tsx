@@ -2,7 +2,7 @@ import React from 'react';
 import { CardProps, CardHeaderProps, CardTitleProps, CardContentProps } from '../types/types';
 
 export const Card: React.FC<CardProps> = ({ children, className = '' }) => (
-  <div className={`bg-white rounded-xl shadow-lg ${className}`}>
+  <div className={`bg-white/90 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg overflow-hidden ${className}`}>
     {children}
   </div>
 );

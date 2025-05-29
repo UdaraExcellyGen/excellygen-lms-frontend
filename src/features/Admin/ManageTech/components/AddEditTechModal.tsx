@@ -51,31 +51,38 @@ export const AddEditTechModal: React.FC<AddEditTechModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+      <div 
+        className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md relative animate-fadeIn"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl text-[#1B0A3F] font-['Unbounded']">
+          <h2 className="text-xl text-[#1B0A3F] font-bold">
             {editingTech ? 'Edit Technology' : 'Add New Technology'}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-[#BF4BF6]"
+            className="text-gray-500 hover:text-[#BF4BF6] transition-colors p-2 rounded-full hover:bg-gray-100"
             aria-label="Close modal"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
+            <label htmlFor="tech-name" className="block text-sm font-medium text-gray-700 mb-1">
+              Technology Name
+            </label>
             <input
+              id="tech-name"
               type="text"
               name="name"
-              placeholder="Technology Name"
+              placeholder="Enter technology name"
               value={formValues.name}
               onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none 
-                       focus:ring-2 focus:ring-[#BF4BF6] font-['Nunito_Sans']"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none 
+                       focus:ring-2 focus:ring-[#BF4BF6] focus:border-[#BF4BF6]"
               required
               autoFocus
               disabled={isLoading}
@@ -86,21 +93,22 @@ export const AddEditTechModal: React.FC<AddEditTechModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-500 hover:text-[#BF4BF6] font-['Nunito_Sans']"
+              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               disabled={isLoading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-[#BF4BF6] text-white rounded-full font-['Nunito_Sans'] 
-                       hover:bg-[#7A00B8] transition-all duration-300 flex items-center gap-2"
+              className="px-6 py-2 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] 
+                       text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 
+                       flex items-center gap-2 transform hover:-translate-y-0.5"
               disabled={isLoading}
             >
               {isLoading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
               ) : (
-                <Check size={20} />
+                <Check size={18} />
               )}
               {editingTech ? 'Update' : 'Add'} Technology
             </button>

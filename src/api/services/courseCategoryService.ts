@@ -1,8 +1,7 @@
 // src/api/services/courseCategoryService.ts
 import apiClient from '../apiClient'; 
 
-// Interface matching the backend DTO (from ExcellyGenLMS.Application.DTOs.Admin.CourseCategoryDtos.cs)
-// This is what the backend's /CourseCategories endpoint returns.
+// Interface matching the backend DTO
 export interface CourseCategoryDtoBackend {
   id: string;
   title: string;
@@ -11,11 +10,10 @@ export interface CourseCategoryDtoBackend {
   status: string;
   totalCourses: number; 
   activeLearnersCount: number; 
-  avgDuration: string; // ADDED: Matches backend DTO
+  avgDuration: string;
 }
 
-// Get all active course categories
-// This function strictly returns data as provided by the backend API.
+// Get all course categories (works for both Admin and Learner roles)
 export const getCategories = async (): Promise<CourseCategoryDtoBackend[]> => {
   try {
     console.log('Fetching categories from API...');
@@ -27,7 +25,8 @@ export const getCategories = async (): Promise<CourseCategoryDtoBackend[]> => {
       throw new Error('Invalid API response format for categories');
     }
     
-    return response.data.filter(category => category.status === 'active');
+    // Backend now handles role-based filtering automatically
+    return response.data;
     
   } catch (error) {
     console.error('Error fetching course categories:', error);
@@ -35,7 +34,7 @@ export const getCategories = async (): Promise<CourseCategoryDtoBackend[]> => {
   }
 };
 
-// Get courses by category ID (retained from your original file)
+// Get courses by category ID (works for both Admin and Learner roles)
 export const getCoursesByCategory = async (categoryId: string) => {
   try {
     const response = await apiClient.get(`/CourseCategories/${categoryId}/courses`);

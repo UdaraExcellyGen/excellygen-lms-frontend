@@ -369,7 +369,7 @@ const CoursesDisplayPage: React.FC = () => {
                             className="flex items-center text-[#D68BF9] hover:text-white transition-colors"
                         >
                             <ArrowLeft className="w-5 h-5 mr-2" />
-                            Back to Dashboard
+                           
                         </button>
                         <h1 className="text-2xl font-bold text-white">My Courses</h1>
                     </div>

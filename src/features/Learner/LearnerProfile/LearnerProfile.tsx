@@ -462,123 +462,114 @@ const LearnerProfile = () => {
     }
   }, [id, profileData]);
 
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 my-8">
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden p-8">
-            <p className="text-center">Loading profile data...</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-  
-  if (!profileData) {
-    return (
-      <Layout>
-        <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 my-8">
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden p-8">
-            <p className="text-center text-red-500">Failed to load profile data. Please try again.</p>
-            <div className="flex justify-center mt-4">
-              <button 
-                onClick={fetchProfileData}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg"
-              >
-                Retry
-              </button>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
   return (
     <Layout>
-      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 my-8">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          {/* Error Notifications */}
-          {Object.keys(loadingErrors).length > 0 && (
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-              <div className="flex">
-                <div className="ml-3">
-                  <p className="text-sm text-yellow-700">
-                    Some profile data couldn't be loaded. You may see partial information.
-                  </p>
-                  <button
-                    onClick={fetchProfileData}
-                    className="mt-2 text-sm font-medium text-yellow-700 hover:text-yellow-600 underline"
-                  >
-                    Retry Loading
-                  </button>
-                </div>
+      <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
+        <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+          {/* Page Title */}
+          <div className="flex items-center space-x-4">
+            <h1 className="text-2xl font-bold text-white">Learner Profile</h1>
+          </div>
+
+          {/* Loading State */}
+          {isLoading ? (
+            <div className="bg-white/90 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 shadow-lg p-8">
+              <div className="flex flex-col items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#BF4BF6] mb-4"></div>
+                <p className="text-[#52007C] text-lg">Loading profile data...</p>
               </div>
             </div>
-          )}
+          ) : !profileData ? (
+            <div className="bg-white/90 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 shadow-lg p-8">
+              <div className="flex flex-col items-center justify-center h-64 text-center">
+                <p className="text-center text-red-500 mb-6">Failed to load profile data. Please try again.</p>
+                <button 
+                  onClick={fetchProfileData}
+                  className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white/90 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 shadow-lg">
+              {/* Error Notifications */}
+              {Object.keys(loadingErrors).length > 0 && (
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                  <div className="flex">
+                    <div className="ml-3">
+                      <p className="text-sm text-yellow-700">
+                        Some profile data couldn't be loaded. You may see partial information.
+                      </p>
+                      <button
+                        onClick={fetchProfileData}
+                        className="mt-2 text-sm font-medium text-yellow-700 hover:text-yellow-600 underline"
+                      >
+                        Retry Loading
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-          {/* Profile Header */}
-          <ProfileHeader 
-            profileData={profileData}
-            isEditing={isEditing}
-            setProfileData={setProfileData}
-            handleEdit={handleEdit}
-            handleSave={handleSave}
-            handleCancel={handleCancel}
-            isViewOnly={isViewOnly}
-            onAvatarUpload={handleAvatarUpload}
-            onAvatarDelete={handleAvatarDelete}
-            isSaving={isSaving}
-          />
+              {/* Profile Components */}
+              <ProfileHeader 
+                profileData={profileData}
+                isEditing={isEditing}
+                setProfileData={setProfileData}
+                handleEdit={handleEdit}
+                handleSave={handleSave}
+                handleCancel={handleCancel}
+                isViewOnly={isViewOnly}
+                onAvatarUpload={handleAvatarUpload}
+                onAvatarDelete={handleAvatarDelete}
+                isSaving={isSaving}
+              />
 
-          {/* Contact Information */}
-          <ContactInfo 
-            profileData={profileData}
-            isEditing={isEditing && !isViewOnly}
-            setProfileData={setProfileData}
-          />
+              <ContactInfo 
+                profileData={profileData}
+                isEditing={isEditing && !isViewOnly}
+                setProfileData={setProfileData}
+              />
 
-          {/* Bio */}
-          <Bio 
-            profileData={profileData}
-            isEditing={isEditing && !isViewOnly}
-            setProfileData={setProfileData}
-          />
+              <Bio 
+                profileData={profileData}
+                isEditing={isEditing && !isViewOnly}
+                setProfileData={setProfileData}
+              />
 
-          {/* Rewards & Badges */}
-          <RewardsBadges profileData={profileData} />
+              <RewardsBadges profileData={profileData} />
 
-          {/* Skills Section */}
-          <TechnologyStack 
-            profileData={profileData}
-            setProfileData={setProfileData}
-            viewOnly={isViewOnly}
-            availableTechnologies={availableTechnologies}
-            onSkillAdd={handleSkillAdd}
-            onSkillRemove={handleSkillRemove}
-          />
+              <TechnologyStack 
+                profileData={profileData}
+                setProfileData={setProfileData}
+                viewOnly={isViewOnly}
+                availableTechnologies={availableTechnologies}
+                onSkillAdd={handleSkillAdd}
+                onSkillRemove={handleSkillRemove}
+              />
 
-          {/* Projects Section */}
-          <ProjectsList 
-            profileData={profileData} 
-            viewOnly={isViewOnly}
-          />
+              <ProjectsList 
+                profileData={profileData} 
+                viewOnly={isViewOnly}
+              />
 
-          {/* Certifications */}
-          <CertificationsList 
-            profileData={profileData} 
-            viewOnly={isViewOnly}
-          />
+              <CertificationsList 
+                profileData={profileData} 
+                viewOnly={isViewOnly}
+              />
 
-          {/* Back button (only shown in view-only mode) */}
-          {isViewOnly && (
-            <div className="p-4 sm:p-8 border-t">
-              <button
-                onClick={() => window.history.back()}
-                className="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg inline-flex items-center gap-2 hover:bg-gray-200 transition-colors"
-              >
-                Back to Search Results
-              </button>
+              {/* Back button (only shown in view-only mode) */}
+              {isViewOnly && (
+                <div className="p-6 border-t">
+                  <button
+                    onClick={() => window.history.back()}
+                    className="bg-gradient-to-r from-[#7A00B8] to-[#BF4BF6] text-white px-4 py-2.5 rounded-lg inline-flex items-center gap-2 hover:from-[#52007C] hover:to-[#A030D6] transition-colors shadow-md"
+                  >
+                    Back to Search Results
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

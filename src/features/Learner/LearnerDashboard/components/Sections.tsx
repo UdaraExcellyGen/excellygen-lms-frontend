@@ -45,8 +45,10 @@ export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses }) => {
     <Card className="lg:col-span-2">
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle className="text-[#1B0A3F] font-unbounded flex items-center gap-2">
-            <Book className="text-[#BF4BF6]" />
+          <CardTitle className="text-[#1B0A3F] font-['Unbounded'] flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-[#F6E6FF]">
+              <Book className="text-[#BF4BF6]" />
+            </div>
             Active Courses
           </CardTitle>
           <Link to="/active-courses" className="text-sm text-[#52007C] hover:text-[#BF4BF6] transition-colors">
@@ -59,7 +61,7 @@ export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses }) => {
           {courses.map(course => (
             <div 
               key={course.id} 
-              className="bg-[#F6E6FF] rounded-xl p-4 hover:bg-[#F0D6FF] transition-colors cursor-pointer"
+              className="bg-[#F6E6FF] rounded-xl p-4 hover:bg-[#F0D6FF] transition-colors cursor-pointer shadow-sm hover:shadow"
               onClick={() => handleCourseClick(getCourseId(course.title))}
               role="button"
               tabIndex={0}
@@ -96,15 +98,17 @@ export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses }) => {
 export const RecentActivities: React.FC<RecentActivitiesProps> = ({ activities }) => (
   <Card>
     <CardHeader>
-      <CardTitle className="text-[#1B0A3F] font-unbounded flex items-center gap-2">
-        <Clock className="text-[#BF4BF6]" />
+      <CardTitle className="text-[#1B0A3F] font-['Unbounded'] flex items-center gap-2">
+        <div className="p-2 rounded-lg bg-[#F6E6FF]">
+          <Clock className="text-[#BF4BF6]" />
+        </div>
         Recent Activities
       </CardTitle>
     </CardHeader>
     <CardContent>
       <div className="space-y-4">
         {activities.map(activity => (
-          <div key={activity.id} className="border-l-4 border-[#BF4BF6] pl-4 py-2">
+          <div key={activity.id} className="border-l-4 border-[#BF4BF6] pl-4 py-2 hover:bg-[#F6E6FF]/50 rounded-r-lg transition-colors">
             <p className="font-medium text-[#1B0A3F]">{activity.type}</p>
             <p className="text-sm text-[#52007C]">{activity.course}</p>
             {activity.time && <p className="text-xs text-[#7A00B8]">{activity.time}</p>}
@@ -118,8 +122,10 @@ export const RecentActivities: React.FC<RecentActivitiesProps> = ({ activities }
 export const LearningActivityChart: React.FC<LearningActivityChartProps> = ({ data }) => (
   <Card className="lg:col-span-3">
     <CardHeader>
-      <CardTitle className="text-[#1B0A3F] font-unbounded flex items-center gap-2">
-        <Clock className="text-[#BF4BF6]" />
+      <CardTitle className="text-[#1B0A3F] font-['Unbounded'] flex items-center gap-2">
+        <div className="p-2 rounded-lg bg-[#F6E6FF]">
+          <BarChart2 className="text-[#BF4BF6]" />
+        </div>
         Learning Activity
       </CardTitle>
     </CardHeader>
@@ -141,23 +147,18 @@ export const LearningActivityChart: React.FC<LearningActivityChartProps> = ({ da
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#F6E6FF',
-                border: 'none',
+                backgroundColor: 'white',
+                border: '1px solid rgba(191, 75, 246, 0.2)',
                 borderRadius: '8px',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
               }}
+              cursor={{ fill: 'rgba(191, 75, 246, 0.1)' }}
             />
             <Bar 
               dataKey="hours" 
-              fill="url(#colorGradient)"
+              fill="#52007C"
               radius={[4, 4, 0, 0]}
             />
-            <defs>
-              <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#BF4BF6" />
-                <stop offset="100%" stopColor="#52007C" />
-              </linearGradient>
-            </defs>
           </BarChart>
         </ResponsiveContainer>
       </div>
