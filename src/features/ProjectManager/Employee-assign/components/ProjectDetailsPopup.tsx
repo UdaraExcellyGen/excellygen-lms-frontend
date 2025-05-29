@@ -8,12 +8,18 @@ import { Project, Employee } from '../types/types';
 interface ProjectDetailsPopupProps {
   project: Project | null;
   onClose: () => void;
-  darkMode: boolean;
+  // darkMode: boolean; // Removed darkMode from props
   employees: Employee[];
 }
 
-const ProjectDetailsPopup: React.FC<ProjectDetailsPopupProps> = ({ project, onClose, darkMode, employees }) => {
+const ProjectDetailsPopup: React.FC<ProjectDetailsPopupProps> = ({ project, onClose, /* darkMode, */ employees }) => { // Removed darkMode from destructuring
     if (!project) return null;
+
+    // Since darkMode is removed, any logic that depended on it would need to be adjusted.
+    // However, in the provided snippet, darkMode was not actively used for conditional styling
+    // that would change based on its value (dark: styles are Tailwind's way of handling dark mode via a parent class).
+    // If there were specific styles like className={darkMode ? 'dark-class' : 'light-class'},
+    // those would need to be re-evaluated. For now, removing it as it's unused.
 
     return createPortal(
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[99999]">
@@ -43,7 +49,7 @@ const ProjectDetailsPopup: React.FC<ProjectDetailsPopupProps> = ({ project, onCl
                                 <span
                                     key={skill.id}
                                     className="px-3 py-1 text-xs rounded-full bg-white
-                                    text-[#52007C] dark:text-[#D68BF9] flex items-center gap-1"
+                                    text-[#52007C] dark:text-[#D68BF9] flex items-center gap-1" // Tailwind handles dark mode based on a parent class
                                 >
                                     <FaLaptopCode className="w-3 h-3" />
                                     {skill.name}
