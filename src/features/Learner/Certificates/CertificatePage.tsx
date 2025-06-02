@@ -12,7 +12,7 @@ import Layout from '../../../components/Sidebar/Layout';
 import { CertificateCard } from './components/CertificateCard'; // This will handle backend CertificateDto
 import { DeleteConfirmationModal } from './components/DeleteConfirmationModal'; // For deleting *internal* certificates
 import { SuccessNotification } from './components/SuccessNotification'; // Re-use for success toasts
-import { CertificateDto, LearnerCourseDto, GenerateCertificatePayload } from '../../../types/course.types'; // Use backend DTOs
+import { CertificateDto, LearnerCourseDto } from '../../../types/course.types'; // Use backend DTOs
 import { getUserCertificates, generateCertificate } from '../../../api/services/Course/certificateService'; // New API service
 import { getEnrolledCoursesForLearner } from '../../../api/services/Course/learnerCourseService'; // To get courses for generation dropdown
 import { useAuth } from '../../../contexts/AuthContext';
