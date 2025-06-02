@@ -1,9 +1,8 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Book, Clock, Trophy, BarChart2 } from 'lucide-react';
+import { Book, Clock, BarChart2 } from 'lucide-react'; // Removed Trophy
 import { 
-  LineChart, 
-  Line, 
+  // Removed LineChart, Line
   BarChart, 
   Bar, 
   XAxis, 
@@ -17,22 +16,22 @@ import {
   ActiveCoursesProps, 
   RecentActivitiesProps, 
   LearningActivityChartProps,
-  RecentAchievementsProps 
+  // Removed RecentAchievementsProps
 } from '../types/types';
 
 export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses }) => {
   const navigate = useNavigate();
 
   // Function to handle course click and navigation
-  const handleCourseClick = (courseId) => {
+  const handleCourseClick = (courseId: number) => { // Added type for courseId
     // Navigate to the course overview page
     navigate(`/course/${courseId}`);
   };
 
   // Function to determine the course ID based on course title
-  const getCourseId = (title) => {
+  const getCourseId = (title: string): number => { // Added type for title and return type
     // Map course titles to IDs
-    const courseIdMap = {
+    const courseIdMap: Record<string, number> = { // Added explicit type for courseIdMap
       "Web Development Fundamentals": 4,
       "Machine Learning Fundamentals": 2,
       "Cloud Architecture": 3
