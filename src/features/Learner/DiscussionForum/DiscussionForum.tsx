@@ -1,8 +1,7 @@
-// src/pages/DiscussionForum/DiscussionForum.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Select, { SingleValue, StylesConfig } from 'react-select';
 import { 
-    MessageSquare, Search, Plus, Clock, MessageCircle, Edit2, Trash2, Eye, 
+    MessageSquare, Search, Plus, Clock, MessageCircle, Edit2, Trash2, // Removed Eye
     RefreshCw, AlertCircle, ChevronLeft, ChevronRight 
 } from 'lucide-react';
 import Layout from '../../../components/Sidebar/Layout';
@@ -14,7 +13,7 @@ import CommentSection from './components/CommentSection';
 import * as forumApi from '../../../api/forumApi'; // Assumes this uses your global apiClient from apiClient.ts
 // No need for local attemptTokenRefresh import if apiClient handles it globally
 import { 
-    ThreadFormData, ForumThreadDto, ForumQueryParams, PagedResult, 
+    ThreadFormData, ForumThreadDto, ForumQueryParams, // Removed PagedResult
     CreateForumThreadDto, UpdateForumThreadDto, CategorySelectOption 
 } from './types/dto'; 
 import { useAuth } from '../../../contexts/AuthContext'; 
@@ -63,7 +62,7 @@ const DiscussionForum: React.FC = () => {
                 const categoriesData = await fetchAllCourseCategoriesFromAdminApi(); 
                 setCourseCategories(categoriesData.filter(cat => cat.status === 'active')); 
             } catch (err: any) { 
-                const msg = forumApi.isAxiosError(err) ? err.response?.data?.message || err.message : err.message || "Could not load categories";
+                const msg = forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message || "Could not load categories";
                 setErrorCategories(msg); toast.error(`Categories Error: ${msg}`); 
             } finally { setIsLoadingCategories(false); }
         };
@@ -88,12 +87,12 @@ const DiscussionForum: React.FC = () => {
                 MyThreads: showMyThreads || undefined,
             };
             const result = await forumApi.getThreads(params); // Direct API call
-            setThreads(result.items.map(t => ({ ...t, showComments: t.showComments || false }))); 
+            setThreads(result.items.map((t: ForumThreadDto) => ({ ...t, showComments: t.showComments || false }))); 
             setTotalPages(result.totalPages); setCurrentPage(result.pageNumber); setTotalThreads(result.totalCount);
         } catch (err: any) { 
             // Global apiClient should handle 401/refresh. This catch is for other errors.
-            const errorMessage = forumApi.isAxiosError(err) && err.response?.data?.message 
-                ? err.response.data.message 
+            const errorMessage = forumApi.isAxiosError(err) && (err.response?.data as { message?: string })?.message 
+                ? (err.response.data as { message?: string }).message 
                 : err.message || 'Could not load threads.';
             setError(errorMessage); toast.error(`Threads Error: ${errorMessage}`); 
             setThreads([]); setTotalPages(0); setTotalThreads(0); 
@@ -140,7 +139,7 @@ const handleCreateThread = async (formDataFromModal: ThreadFormData) => {
         if (currentPage !== 1) setCurrentPage(1); else fetchThreads(1);
     } catch (err: any) { 
         console.error('Thread creation error:', err);
-        toast.error(`Create thread failed: ${forumApi.isAxiosError(err) && err.response?.data?.message ? err.response.data.message : err.message}`); 
+        toast.error(`Create thread failed: ${forumApi.isAxiosError(err) && (err.response?.data as { message?: string })?.message ? (err.response.data as { message?: string }).message : err.message}`); 
     } 
     finally { setIsActionLoading(false); }
 };
@@ -186,7 +185,7 @@ const handleUpdateThread = async (formDataFromModal: ThreadFormData) => {
         setThreadToEdit(null);
     } catch (err: any) { 
         console.error('Thread update error:', err);
-        toast.error(`Update thread failed: ${forumApi.isAxiosError(err) && err.response?.data?.message ? err.response.data.message : err.message}`); 
+        toast.error(`Update thread failed: ${forumApi.isAxiosError(err) && (err.response?.data as { message?: string })?.message ? (err.response.data as { message?: string }).message : err.message}`); 
     } 
     finally { 
         setIsActionLoading(false); 
@@ -206,7 +205,7 @@ const handleUpdateThread = async (formDataFromModal: ThreadFormData) => {
             
             if (pageToFetch !== currentPage) setCurrentPage(pageToFetch); else fetchThreads(pageToFetch);
         } catch (err: any) { 
-            toast.error(`Delete thread failed: ${forumApi.isAxiosError(err) && err.response?.data?.message ? err.response.data.message : err.message}`); 
+            toast.error(`Delete thread failed: ${forumApi.isAxiosError(err) && (err.response?.data as { message?: string })?.message ? (err.response.data as { message?: string }).message : err.message}`); 
         } 
         finally { setIsActionLoading(false); setIsDeleteDialogOpen(false); setThreadToDelete(null); }
     };
@@ -216,8 +215,12 @@ const handleUpdateThread = async (formDataFromModal: ThreadFormData) => {
     const formatRelativeTime = (dateStringISO?: string): string => { if (!dateStringISO) return 'just now'; try { return formatDistanceToNow(parseISO(dateStringISO), { addSuffix: true }); } catch { return dateStringISO; } };
     
     const editModalInitialData: ThreadFormData | undefined = threadToEdit ? {
-        title: threadToEdit.title, content: threadToEdit.content, category: threadToEdit.category,
-        image: null, imagePreview: threadToEdit.imageUrl, imageUrl: threadToEdit.imageUrl,
+        title: threadToEdit.title, 
+        content: threadToEdit.content, 
+        category: threadToEdit.category,
+        image: null, 
+        imagePreview: threadToEdit.imageUrl ?? undefined, // FIX: Handle null
+        imageUrl: threadToEdit.imageUrl ?? undefined, // FIX: Handle null
         currentRelativePath: threadToEdit.imageUrl && threadToEdit.imageUrl.includes("/uploads/") 
             ? threadToEdit.imageUrl.substring(threadToEdit.imageUrl.indexOf("/uploads/")) 
             : undefined
