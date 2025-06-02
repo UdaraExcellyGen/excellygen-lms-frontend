@@ -5,7 +5,7 @@ import { Search, Briefcase, ChevronLeft, ChevronRight } from 'lucide-react';
 import Layout from '../../../components/Sidebar/Layout';
 import { ProjectCard } from './components/ProjectCard';
 import { ProjectStats } from './components/ProjectStats';
-import { Project, ProjectStatus } from './types/Project';
+import { Project } from './types/Project'; // Removed ProjectStatus
 import { useAuth } from '../../../contexts/AuthContext';
 import { learnerProjectApi } from '../../../api/services/learnerProjectService';
 import { toast } from 'react-hot-toast';
