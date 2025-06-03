@@ -147,7 +147,13 @@ const CreateThreadModal: React.FC<CreateThreadModalProps> = ({
                 toast.success("Uploaded image removed."); 
             }
             catch (err: any) { 
-                toast.error(isFileAxiosError(err) && (err.response?.data as { message?: string })?.message ? (err.response.data as { message?: string }).message : "Could not remove server image."); 
+                let errorMessage = "Could not remove server image.";
+                if (isFileAxiosError(err)) {
+                    errorMessage = (err.response?.data as { message?: string })?.message || err.message || errorMessage;
+                } else if (err instanceof Error) {
+                    errorMessage = err.message || errorMessage;
+                }
+                toast.error(errorMessage);
             }
             finally { setIsProcessingImage(false); }
         }
@@ -176,13 +182,19 @@ const CreateThreadModal: React.FC<CreateThreadModalProps> = ({
                 console.log('Upload successful, response data:', uploadData);
                 
                 finalImageUrlForParent = uploadData.imageUrl;
-                finalRelativePathForParent = uploadData.relativePath ?? undefined; // FIX: Handle null from relativePath
+                finalRelativePathForParent = uploadData.relativePath ?? undefined;
                 
                 setSessionUploadedImageUrl(finalImageUrlForParent);
                 setSessionUploadedRelativePath(finalRelativePathForParent);
             } catch (err: any) {
                 setIsProcessingImage(false); setIsSubmittingForm(false);
-                toast.error(isFileAxiosError(err) && (err.response?.data as { message?: string })?.message ? (err.response.data as { message?: string }).message : "Image upload failed."); 
+                let errorMessage = "Image upload failed.";
+                if (isFileAxiosError(err)) {
+                    errorMessage = (err.response?.data as { message?: string })?.message || err.message || errorMessage;
+                } else if (err instanceof Error) {
+                    errorMessage = err.message || errorMessage;
+                }
+                toast.error(errorMessage); 
                 return;
             }
             setIsProcessingImage(false);
@@ -207,8 +219,8 @@ const CreateThreadModal: React.FC<CreateThreadModalProps> = ({
             if (imageFile && finalRelativePathForParent && finalRelativePathForParent === sessionUploadedRelativePath) {
                 setIsProcessingImage(true);
                 try {
-                    await callFileApiWithRetry(() => deleteUploadedFile(finalRelativePathForParent));
-                    toast("Cleaned up uploaded image due to creation error."); // FIX: Changed from toast.info
+                    await callFileApiWithRetry(() => deleteUploadedFile(finalRelativePathForParent!)); // Added non-null assertion as we check finalRelativePathForParent
+                    toast("Cleaned up uploaded image due to creation error.");
                 } catch(delErr) {
                     console.error("Image cleanup on parent error failed:", delErr);
                     toast.error("Thread not created & image cleanup failed.");

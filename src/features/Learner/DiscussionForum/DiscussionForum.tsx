@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Select, { SingleValue, StylesConfig } from 'react-select';
 import { 
-    MessageSquare, Search, Plus, Clock, MessageCircle, Edit2, Trash2, // Removed Eye
+    MessageSquare, Search, Plus, Clock, MessageCircle, Edit2, Trash2,
     RefreshCw, AlertCircle, ChevronLeft, ChevronRight 
 } from 'lucide-react';
 import Layout from '../../../components/Sidebar/Layout';
@@ -10,10 +10,9 @@ import EditThreadModal from './components/EditThreadModal';
 import DeleteItemDialog from './components/DeleteItemDialog';
 import MyThreadsButton from './components/MyThreadsButton';
 import CommentSection from './components/CommentSection';
-import * as forumApi from '../../../api/forumApi'; // Assumes this uses your global apiClient from apiClient.ts
-// No need for local attemptTokenRefresh import if apiClient handles it globally
+import * as forumApi from '../../../api/forumApi'; 
 import { 
-    ThreadFormData, ForumThreadDto, ForumQueryParams, // Removed PagedResult
+    ThreadFormData, ForumThreadDto, ForumQueryParams, 
     CreateForumThreadDto, UpdateForumThreadDto, CategorySelectOption 
 } from './types/dto'; 
 import { useAuth } from '../../../contexts/AuthContext'; 
@@ -24,8 +23,21 @@ import { Category as AdminCourseCategoryType } from '../../../features/Admin/Man
 
 const DEFAULT_PAGE_SIZE = 10;
 
+// Helper function for consistent error message extraction
+const getErrorMessage = (err: any, defaultMessage: string): string => {
+    if (forumApi.isAxiosError(err)) {
+        // Check if err.response exists before trying to access err.response.data
+        const backendMessage = err.response?.data as { message?: string };
+        return backendMessage?.message || err.message || defaultMessage;
+    } else if (err instanceof Error) {
+        return err.message || defaultMessage;
+    }
+    return defaultMessage;
+};
+
+
 const DiscussionForum: React.FC = () => {
-    const { user } = useAuth(); // Removed triggerAuthContextLogout if global apiClient handles logout event
+    const { user } = useAuth(); 
     const [threads, setThreads] = useState<ForumThreadDto[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isActionLoading, setIsActionLoading] = useState(false);
@@ -52,24 +64,22 @@ const DiscussionForum: React.FC = () => {
 
     const searchInputRef = useRef<HTMLInputElement>(null);
 
-    // Removed local callApiWithRetry helper function
 
     useEffect(() => {
         const loadCategories = async () => { 
             setIsLoadingCategories(true); setErrorCategories(null);
             try { 
-                // Assuming fetchAllCourseCategoriesFromAdminApi uses an apiClient that also handles auth
                 const categoriesData = await fetchAllCourseCategoriesFromAdminApi(); 
                 setCourseCategories(categoriesData.filter(cat => cat.status === 'active')); 
             } catch (err: any) { 
-                const msg = forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message || "Could not load categories";
+                const msg = getErrorMessage(err, "Could not load categories");
                 setErrorCategories(msg); toast.error(`Categories Error: ${msg}`); 
             } finally { setIsLoadingCategories(false); }
         };
         loadCategories();
     }, []);
 
-    useEffect(() => { // Debounce search input
+    useEffect(() => { 
         const timerId = setTimeout(() => { setDebouncedSearchQuery(searchInput); }, 500); 
         return () => clearTimeout(timerId);
     }, [searchInput]);
@@ -86,20 +96,17 @@ const DiscussionForum: React.FC = () => {
                 Category: (selectedCategoryFilterOption && selectedCategoryFilterOption.value !== 'all') ? selectedCategoryFilterOption.value : undefined, 
                 MyThreads: showMyThreads || undefined,
             };
-            const result = await forumApi.getThreads(params); // Direct API call
+            const result = await forumApi.getThreads(params); 
             setThreads(result.items.map((t: ForumThreadDto) => ({ ...t, showComments: t.showComments || false }))); 
             setTotalPages(result.totalPages); setCurrentPage(result.pageNumber); setTotalThreads(result.totalCount);
         } catch (err: any) { 
-            // Global apiClient should handle 401/refresh. This catch is for other errors.
-            const errorMessage = forumApi.isAxiosError(err) && (err.response?.data as { message?: string })?.message 
-                ? (err.response.data as { message?: string }).message 
-                : err.message || 'Could not load threads.';
-            setError(errorMessage); toast.error(`Threads Error: ${errorMessage}`); 
+            const errorMessageText = getErrorMessage(err, 'Could not load threads.');
+            setError(errorMessageText); toast.error(`Threads Error: ${errorMessageText}`); 
             setThreads([]); setTotalPages(0); setTotalThreads(0); 
         } 
         finally { setIsLoading(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps 
-    }, [debouncedSearchQuery, selectedCategoryFilterOption?.value, showMyThreads]); // Depend on primitive value
+    }, [debouncedSearchQuery, selectedCategoryFilterOption?.value, showMyThreads]); 
 
     useEffect(() => { fetchThreads(currentPage); }, [fetchThreads, currentPage]);
     useEffect(() => { 
@@ -109,22 +116,15 @@ const DiscussionForum: React.FC = () => {
     }, [debouncedSearchQuery, selectedCategoryFilterOption?.value, showMyThreads]);
 
 
-// Update this function in your DiscussionForum.tsx
-
-// Updated handleCreateThread method for DiscussionForum.tsx
-// This method should match the backend DTO property names
-
 const handleCreateThread = async (formDataFromModal: ThreadFormData) => { 
     setIsActionLoading(true);
     try {
         console.log('Creating thread with data:', formDataFromModal);
         
-        // Create DTO that matches backend property names exactly
         const createDto: CreateForumThreadDto = {
             title: formDataFromModal.title, 
             content: formDataFromModal.content, 
             category: formDataFromModal.category, 
-            // Use imageUrl property to match the backend
             imageUrl: formDataFromModal.imageUrl
         };
         
@@ -139,7 +139,7 @@ const handleCreateThread = async (formDataFromModal: ThreadFormData) => {
         if (currentPage !== 1) setCurrentPage(1); else fetchThreads(1);
     } catch (err: any) { 
         console.error('Thread creation error:', err);
-        toast.error(`Create thread failed: ${forumApi.isAxiosError(err) && (err.response?.data as { message?: string })?.message ? (err.response.data as { message?: string }).message : err.message}`); 
+        toast.error(`Create thread failed: ${getErrorMessage(err, 'An unknown error occurred during creation.')}`); 
     } 
     finally { setIsActionLoading(false); }
 };
@@ -148,24 +148,18 @@ const handleCreateThread = async (formDataFromModal: ThreadFormData) => {
         setThreadToEdit(thread); setIsEditModalOpen(true);
     };
 
-// Update this method in your DiscussionForum.tsx component
-// This ensures the imageUrl is correctly passed to the backend
-
 const handleUpdateThread = async (formDataFromModal: ThreadFormData) => { 
     if (!threadToEdit) return; 
     setIsActionLoading(true);
     
     try {
-        // Log received form data
         console.log('Updating thread with data:', formDataFromModal);
         
         const updateDto: UpdateForumThreadDto = {
             title: formDataFromModal.title, 
             content: formDataFromModal.content, 
             category: formDataFromModal.category,
-            // Use imageUrl property to match the backend
             imageUrl: formDataFromModal.imageUrl,
-            // Add a flag to indicate if the image should be removed
             removeCurrentImage: !formDataFromModal.imageUrl && !!threadToEdit.imageUrl
         };
         
@@ -174,7 +168,6 @@ const handleUpdateThread = async (formDataFromModal: ThreadFormData) => {
         const updatedThread = await forumApi.updateThread(threadToEdit.id, updateDto);
         toast.success('Thread updated successfully!');
         
-        // Update the thread in the state
         setThreads(prev => prev.map(t => 
             t.id === updatedThread.id 
                 ? { ...t, ...updatedThread, showComments: t.showComments } 
@@ -185,7 +178,7 @@ const handleUpdateThread = async (formDataFromModal: ThreadFormData) => {
         setThreadToEdit(null);
     } catch (err: any) { 
         console.error('Thread update error:', err);
-        toast.error(`Update thread failed: ${forumApi.isAxiosError(err) && (err.response?.data as { message?: string })?.message ? (err.response.data as { message?: string }).message : err.message}`); 
+        toast.error(`Update thread failed: ${getErrorMessage(err, 'An unknown error occurred during update.')}`); 
     } 
     finally { 
         setIsActionLoading(false); 
@@ -205,7 +198,7 @@ const handleUpdateThread = async (formDataFromModal: ThreadFormData) => {
             
             if (pageToFetch !== currentPage) setCurrentPage(pageToFetch); else fetchThreads(pageToFetch);
         } catch (err: any) { 
-            toast.error(`Delete thread failed: ${forumApi.isAxiosError(err) && (err.response?.data as { message?: string })?.message ? (err.response.data as { message?: string }).message : err.message}`); 
+            toast.error(`Delete thread failed: ${getErrorMessage(err, 'An unknown error occurred during deletion.')}`); 
         } 
         finally { setIsActionLoading(false); setIsDeleteDialogOpen(false); setThreadToDelete(null); }
     };
@@ -219,8 +212,8 @@ const handleUpdateThread = async (formDataFromModal: ThreadFormData) => {
         content: threadToEdit.content, 
         category: threadToEdit.category,
         image: null, 
-        imagePreview: threadToEdit.imageUrl ?? undefined, // FIX: Handle null
-        imageUrl: threadToEdit.imageUrl ?? undefined, // FIX: Handle null
+        imagePreview: threadToEdit.imageUrl ?? undefined, 
+        imageUrl: threadToEdit.imageUrl ?? undefined, 
         currentRelativePath: threadToEdit.imageUrl && threadToEdit.imageUrl.includes("/uploads/") 
             ? threadToEdit.imageUrl.substring(threadToEdit.imageUrl.indexOf("/uploads/")) 
             : undefined
@@ -405,7 +398,6 @@ const handleUpdateThread = async (formDataFromModal: ThreadFormData) => {
                                                     </span>
                                                     <button onClick={() => toggleShowComments(thread.id)} className="flex items-center gap-1 text-sm text-purple-600 hover:text-purple-800 font-medium" aria-label={thread.showComments ? "Hide comments" : "Show comments"}>
                                                         <MessageCircle size={16} className={thread.showComments ? 'text-purple-700 fill-purple-100' : ''} />
-                                                        {/* Displaying direct comments count based on backend DTO */}
                                                         <span>{thread.commentsCount} Comment{thread.commentsCount !== 1 ? 's' : ''}</span>
                                                     </button>
                                                 </div>
@@ -417,13 +409,11 @@ const handleUpdateThread = async (formDataFromModal: ThreadFormData) => {
                             ))}
                         </div>
                         
-                        {/* Pagination Controls */}
                         {totalPages > 1 && ( <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-3"> <button onClick={handlePreviousPage} disabled={currentPage <= 1 || isLoading || isActionLoading} className="w-full sm:w-auto px-4 py-2 bg-white/90 text-[#52007C] rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center sm:justify-start gap-1 font-nunito transition-colors"><ChevronLeft className="h-4 w-4" /> Previous</button><span className="text-sm text-white/80 font-nunito order-first sm:order-none">Page {currentPage} of {totalPages} <span className='hidden sm:inline'> ({totalThreads} threads)</span></span><button onClick={handleNextPage} disabled={currentPage >= totalPages || isLoading || isActionLoading} className="w-full sm:w-auto px-4 py-2 bg-white/90 text-[#52007C] rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center sm:justify-start gap-1 font-nunito transition-colors">Next <ChevronRight className="h-4 w-4" /></button></div> )}
                      </>
                    )}
                 </div>
 
-                {/* Modals */}
                 <CreateThreadModal 
                     isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} 
                     onSubmit={handleCreateThread} 
