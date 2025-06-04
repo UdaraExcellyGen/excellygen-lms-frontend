@@ -1,5 +1,5 @@
 // src/pages/DiscussionForum/components/EditThreadModal.tsx
-import React, { useState, useRef, useEffect, useCallback, FormEvent } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react'; // Removed FormEvent
 import { X, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import Select, { SingleValue, StylesConfig } from 'react-select';
 import { ThreadFormData, CategorySelectOption } from '../types/dto';
@@ -78,9 +78,9 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
             setContent(initialData.content);
             
             setImageFile(null); // Clear any previously selected local file
-            setImagePreview(initialData.imageUrl); // Display the current server image (if any)
-            setEffectiveImageUrl(initialData.imageUrl); // Track current server image URL
-            setEffectiveRelativePath(initialData.currentRelativePath); // Track its relative path for deletion
+            setImagePreview(initialData.imageUrl ?? undefined); // Display the current server image (if any)
+            setEffectiveImageUrl(initialData.imageUrl ?? undefined); // Track current server image URL
+            setEffectiveRelativePath(initialData.currentRelativePath ?? undefined); // Track its relative path for deletion
             
             setIsProcessingImage(false);
             setIsSubmittingForm(false);
@@ -153,7 +153,7 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
                 
                 console.log("EditModal: New image uploaded successfully:", uploadData);
                 finalImageUrlForParent = uploadData.imageUrl;
-                finalRelativePathForParent = uploadData.relativePath || uploadData.imageUrl;
+                finalRelativePathForParent = uploadData.relativePath ?? uploadData.imageUrl; // Use ?? to ensure undefined if null
             } 
             // Scenario 2: No new file, but preview is cleared (imagePreview is undefined) AND there WAS an image originally (initialData.currentRelativePath)
             // This means the user clicked 'X' to remove the existing image.
@@ -183,7 +183,7 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
             // This catch block will primarily handle errors from the parent onSubmit,
             // or from delete/upload calls if callFileApiWithRetry re-threw them (non-401 errors)
             console.error("EditThreadModal handleSubmit error:", err);
-            toast.error(isFileAxiosError(err) ? (err.response?.data?.message || err.message) : err.message || "Failed to update thread.");
+            toast.error(isFileAxiosError(err) ? ((err.response?.data as { message?: string })?.message || err.message) : err.message || "Failed to update thread.");
         } finally {
              setIsSubmittingForm(false); 
              setIsProcessingImage(false); // Ensure all processing flags are reset

@@ -6,13 +6,14 @@ import {
   Clock,
   CheckCircle2,
   Plus,
-  X
+  X,
+  AlertCircle // Added for error display
 } from 'lucide-react';
 import Layout from '../../../components/Sidebar/Layout';
 import { CertificateCard } from './components/CertificateCard'; // This will handle backend CertificateDto
 import { DeleteConfirmationModal } from './components/DeleteConfirmationModal'; // For deleting *internal* certificates
 import { SuccessNotification } from './components/SuccessNotification'; // Re-use for success toasts
-import { CertificateDto, LearnerCourseDto, GenerateCertificatePayload } from '../../../types/course.types'; // Use backend DTOs
+import { CertificateDto, LearnerCourseDto } from '../../../types/course.types'; // Use backend DTOs
 import { getUserCertificates, generateCertificate } from '../../../api/services/Course/certificateService'; // New API service
 import { getEnrolledCoursesForLearner } from '../../../api/services/Course/learnerCourseService'; // To get courses for generation dropdown
 import { useAuth } from '../../../contexts/AuthContext';
@@ -42,7 +43,7 @@ const GenerateCertificateModal: React.FC<GenerateCertificateModalProps> = ({
             // Find the first 100% completed course that doesn't already have a certificate
             const completedCoursesWithoutCert = enrolledCourses.filter(course => 
                 course.progressPercentage === 100 && course.enrollmentStatus === 'active' && // Check enrollment status
-                (!course.certificateFileUrl) // Assuming LearnerCourseDto would eventually have certificateFileUrl if already generated
+                (!(course as LearnerCourseDto & { certificateFileUrl?: string | null }).certificateFileUrl) // FIX: Added type assertion
             );
             if (completedCoursesWithoutCert.length > 0) {
                 setSelectedCourseId(completedCoursesWithoutCert[0].id);
@@ -121,7 +122,7 @@ const CertificatesPage = () => {
   const [internalCertificates, setInternalCertificates] = useState<CertificateDto[]>([]); // Backend certificates
   const [enrolledCourses, setEnrolledCourses] = useState<LearnerCourseDto[]>([]); // To populate course dropdown
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null); // This state will now be used
 
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false); // For new generate modal
   const [isGeneratingCertificate, setIsGeneratingCertificate] = useState(false);
@@ -149,7 +150,7 @@ const CertificatesPage = () => {
         setEnrolledCourses(courses);
     } catch (err) {
         console.error("Failed to fetch certificates or courses:", err);
-        setError("Failed to load certificates or course data.");
+        setError("Failed to load certificates or course data."); // Sets error state
         toast.error("Failed to load certificates.");
     } finally {
         setLoading(false);
@@ -234,6 +235,24 @@ const CertificatesPage = () => {
             <SuccessNotification message={successMessage} />
           )}
 
+          {/* FIX: Display error message if 'error' state is set */}
+          {error && !loading && ( // Show error only if not loading to avoid flicker
+            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md mb-6 flex items-center gap-3" role="alert">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <div>
+                <p className="font-bold">Error</p>
+                <p>{error}</p>
+              </div>
+              <button 
+                onClick={fetchCertificatesAndCourses} 
+                className="ml-auto px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             {[
@@ -310,11 +329,13 @@ const CertificatesPage = () => {
           {/* Earned Certificates Section */}
           <div className="space-y-8">
             <h2 className="text-2xl font-semibold text-white">Earned Certificates</h2>
-            {loading && internalCertificates.length === 0 ? (
+            {loading && internalCertificates.length === 0 && !error ? ( // Show loader only if no error
                 <div className="flex justify-center items-center h-40">
                     <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white"></div>
                 </div>
-            ) : filteredCertificates.length > 0 ? (
+            ) : !loading && !error && filteredCertificates.length === 0 ? ( // Show no certificates message if not loading and no error
+                <p className="text-gray-300 text-center py-8">No certificates earned yet. Complete courses to earn them!</p>
+            ) : filteredCertificates.length > 0 ? ( // Show certificates if they exist
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredCertificates.map(certificate => (
                     <CertificateCard 
@@ -324,9 +345,9 @@ const CertificatesPage = () => {
                     />
                 ))}
                 </div>
-            ) : (
-                <p className="text-gray-300 text-center py-8">No certificates earned yet. Complete courses to earn them!</p>
-            )}
+            ) : null}
+            {/* If loading is true and there's an error, the error message above will be displayed */}
+            {/* If loading is false, and there's an error, and no certs, the error message above will be displayed */}
           </div>
 
           {/* Generate Certificate Modal */}

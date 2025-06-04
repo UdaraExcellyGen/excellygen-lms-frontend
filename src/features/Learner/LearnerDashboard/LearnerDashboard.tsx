@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, FileText, Users, ChevronDown, Check } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom'; // Removed unused import
 import Layout from '../../../components/Sidebar/Layout';
 import { useAuth } from '../../../contexts/AuthContext';
 import { UserRole } from '../../../types/auth.types';
@@ -13,7 +13,7 @@ import { courses, activities, weeklyTimeData } from './data/mockData';
 import LearnerHeaderImage from '../../../assets/LearnerHeader.svg';
 
 const LearnerDashboard: React.FC = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate(); // Removed unused variable
   const { user, currentRole, selectRole, navigateToRoleSelection } = useAuth();
   const [currentDate, setCurrentDate] = useState('');
   const [currentDay, setCurrentDay] = useState('');

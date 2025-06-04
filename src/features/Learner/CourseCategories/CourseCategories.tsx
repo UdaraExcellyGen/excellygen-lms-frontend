@@ -1,4 +1,3 @@
-// src/pages/learner/CourseCategories/CourseCategories.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -7,8 +6,8 @@ import Header from './components/Header';
 import StatsOverview from './components/StatsOverview'; 
 import SearchBar from './components/SearchBar';
 import PathGrid from './components/PathGrid';
-// FIXED: Removed alias and local interface declaration for CourseCategoryDtoBackend - the alias was 'CourseCategoryDtoBackend', removed local 'interface CourseCategoryDtoBackend'
-import { getCategories as getCategoriesApi, CourseCategoryDtoBackend } from '../../../api/services/courseCategoryService'; 
+// FIXED: Removed CourseCategoryDtoBackend from import as it's unused
+import { getCategories as getCategoriesApi } from '../../../api/services/courseCategoryService'; 
 import { PathCard } from './types/PathCard'; 
 import { getOverallLmsStatsForLearner } from '../../../api/services/LearnerDashboard/learnerOverallStatsService'; 
 import { OverallLmsStatsDto } from '../../../types/course.types'; 

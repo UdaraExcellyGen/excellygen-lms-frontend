@@ -1,4 +1,4 @@
-import { Badge } from '../types/BadgeTypes';
+import { Badge } from '../types/Badge';
 
 export const calculateProgressPercentage = (badge: Badge): number => {
   return (badge.currentProgress / badge.targetProgress) * 100;

@@ -1,10 +1,11 @@
-// src/pages/DiscussionForum/components/CommentSection.tsx
+// src/features/Learner/DiscussionForum/components/CommentSection.tsx
 import React, { useState, useEffect, useCallback, FormEvent } from 'react';
 import { RefreshCw, Send, MessageCircle, AlertCircle, Edit2, Trash2 } from 'lucide-react';
 import * as forumApi from '../../../../api/forumApi'; // Adjust path to your forumApi.ts
 import { 
-    ThreadCommentDto, ThreadReplyDto, CreateThreadCommentDto, UpdateThreadCommentDto,
-    CreateThreadReplyDto, UpdateThreadReplyDto 
+    ThreadCommentDto, ThreadReplyDto, 
+    // Removed CreateThreadCommentDto, UpdateThreadCommentDto
+    // Removed CreateThreadReplyDto, UpdateThreadReplyDto
 } from '../types/dto'; // Adjust path to your dto.ts
 import { useAuth } from '../../../../contexts/AuthContext'; // Adjust path
 import { toast } from 'react-hot-toast';
@@ -150,7 +151,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
             const fetchedData = await forumApi.getComments(threadId);
             setComments(fetchedData.map(c => ({ ...c, showReplies: false, replies: [], isLoadingReplies: false, isPostingReply: false, replyError: null })));
         } catch (err: any) { 
-            const msg = forumApi.isAxiosError(err) ? err.response?.data?.message || err.message : err.message || "Could not load comments.";
+            const msg = forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message || "Could not load comments.";
             setErrorComments(msg); toast.error(`Comments: ${msg}`); 
         } 
         finally { setIsLoadingComments(false); }
@@ -166,7 +167,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
             const newCommentData = await forumApi.createComment(threadId, { content: newCommentText });
             setComments(prev => [{ ...newCommentData, showReplies: false, replies: [], isLoadingReplies: false, isPostingReply: false, replyError: null }, ...prev]);
             setNewCommentText(''); toast.success("Comment posted!");
-        } catch (err: any) { toast.error(`Post comment failed: ${forumApi.isAxiosError(err) ? err.response?.data?.message || err.message : err.message}`); } 
+        } catch (err: any) { toast.error(`Post comment failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`); } 
         finally { setIsPostingComment(false); }
     };
     
@@ -177,7 +178,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
             const fetchedData = await forumApi.getReplies(commentId);
             setComments(prev => prev.map(c => c.id === commentId ? { ...c, replies: fetchedData, isLoadingReplies: false } : c));
         } catch (err: any) {
-            toast.error(`Load replies failed: ${forumApi.isAxiosError(err) ? err.response?.data?.message || err.message : err.message}`);
+            toast.error(`Load replies failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`);
             setComments(prev => prev.map(c => c.id === commentId ? { ...c, isLoadingReplies: false, replyError: err.message } : c));
         }
     };
@@ -200,7 +201,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
             const newReplyData = await forumApi.createReply(commentId, { content: newReplyText });
             setComments(prev => prev.map(c => c.id === commentId ? { ...c, replies: [...c.replies, newReplyData], isPostingReply: false, repliesCount: (c.repliesCount || 0) + 1 } : c));
             setNewReplyText(''); setReplyingToCommentId(null); toast.success("Reply posted!");
-        } catch (err: any) { toast.error(`Post reply failed: ${forumApi.isAxiosError(err) ? err.response?.data?.message || err.message : err.message}`);} 
+        } catch (err: any) { toast.error(`Post reply failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`);} 
         finally { setComments(prev => prev.map(c => c.id === commentId ? { ...c, isPostingReply: false } : c));}
     };
 
@@ -210,7 +211,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
             const updatedCommentData = await forumApi.updateComment(editingComment.id, { content: newContent });
             setComments(prev => prev.map(c => c.id === updatedCommentData.id ? { ...c, ...updatedCommentData, replies: c.replies, showReplies: c.showReplies } : c));
             toast.success("Comment updated!"); setEditingComment(null);
-        } catch (err:any) { toast.error(`Update comment failed: ${forumApi.isAxiosError(err) ? err.response?.data?.message || err.message : err.message}`); }
+        } catch (err:any) { toast.error(`Update comment failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`); }
         finally { setIsActionLoading(false); }
     };
     const handleDeleteCommentConfirm = async () => { 
@@ -219,7 +220,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
             await forumApi.deleteComment(deletingComment.id);
             setComments(prev => prev.filter(c => c.id !== deletingComment.id));
             toast.success("Comment deleted!"); setDeletingComment(null);
-        } catch (err:any) { toast.error(`Delete comment failed: ${forumApi.isAxiosError(err) ? err.response?.data?.message || err.message : err.message}`); }
+        } catch (err:any) { toast.error(`Delete comment failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`); }
         finally { setIsActionLoading(false); }
     };
     const handleEditReplySubmit = async (newContent: string) => { 
@@ -228,7 +229,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
             const updatedReplyData = await forumApi.updateReply(editingReply.id, { content: newContent });
             setComments(prev => prev.map(c => c.id === parentCommentForReplyAction.id ? { ...c, replies: c.replies.map(r => r.id === updatedReplyData.id ? updatedReplyData : r) } : c));
             toast.success("Reply updated!"); setEditingReply(null); setParentCommentForReplyAction(null);
-        } catch (err:any) { toast.error(`Update reply failed: ${forumApi.isAxiosError(err) ? err.response?.data?.message || err.message : err.message}`); }
+        } catch (err:any) { toast.error(`Update reply failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`); }
         finally { setIsActionLoading(false); }
     };
     const handleDeleteReplyConfirm = async () => { 
@@ -237,7 +238,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
             await forumApi.deleteReply(deletingReply.id);
              setComments(prev => prev.map(c => c.id === parentCommentForReplyAction.id ? { ...c, replies: c.replies.filter(r => r.id !== deletingReply.id), repliesCount: Math.max(0, c.repliesCount - 1) } : c));
             toast.success("Reply deleted!"); setDeletingReply(null); setParentCommentForReplyAction(null);
-        } catch (err:any) { toast.error(`Delete reply failed: ${forumApi.isAxiosError(err) ? err.response?.data?.message || err.message : err.message}`); }
+        } catch (err:any) { toast.error(`Delete reply failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`); }
         finally { setIsActionLoading(false); }
     };
 
@@ -256,7 +257,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
             {currentUserId && (
                 <div className="flex gap-3 sm:gap-4">
                     <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#BF4BF6] to-[#7A00B8] flex items-center justify-center text-white font-bold shadow-md text-base" title={user?.name}>
-                         {user?.avatar ? <img src={user.avatar} alt={user.name} className="w-full h-full rounded-xl object-cover"/> : user?.name?.charAt(0)?.toUpperCase() || 'Me'}
+                         {user?.avatar ? <img src={user.avatar} alt={user.name || ''} className="w-full h-full rounded-xl object-cover"/> : user?.name?.charAt(0)?.toUpperCase() || 'Me'}
                     </div>
                     <div className="flex-1">
                         <textarea value={newCommentText} onChange={(e) => setNewCommentText(e.target.value)} placeholder="Add a comment..." 
