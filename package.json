@@ -31,6 +31,7 @@
     "react-lottie": "^1.2.10",
     "react-router-dom": "^6.28.1",
     "react-select": "^5.10.1",
+    "react-toastify": "^11.0.5",
     "recharts": "^2.15.1"
   },
   "devDependencies": {
