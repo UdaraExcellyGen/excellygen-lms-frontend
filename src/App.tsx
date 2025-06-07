@@ -1,14 +1,9 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 // Auth Provider
 import { AuthProvider } from './contexts/AuthContext';
-
-// Loading Provider and Book Loader
-import { LoadingProvider, useLoading } from './contexts/LoadingContext';
-import BookLoader from './components/common/BookLoader';
-import { setupLoaderFunctions } from './api/apiClient';
 
 // Protected Route
 import ProtectedRoute from './components/routing/ProtectedRoute';
@@ -21,6 +16,12 @@ import { CourseProvider, useCourseContext } from './features/Coordinator/context
 // User Roles
 import { UserRole } from './types/auth.types';
 
+// Landing Page
+import LandingPage from './features/landing/AnimatedLandingPage';
+
+// Auth Components
+import RoleSelection from './features/auth/RoleSelection';
+
 // Learner Components
 import LearnerDashboard from './features/Learner/LearnerDashboard/LearnerDashboard';
 import LearnerProfile from './features/Learner/LearnerProfile/LearnerProfile';
@@ -32,9 +33,10 @@ import LearnerNotifications from './features/Learner/LearnerNotifications/Learne
 import Leaderboard from './features/Learner/Leaderboard/Leaderboard';
 import CourseCategories from './features/Learner/CourseCategories/CourseCategories';
 import CourseContent from './features/Learner/CourseContent/CourseContent';
-import LearnerCourseOverview from './features/Learner/CourseContent/LearnerCourseOverview';
+import LearnerCourseOverview from './features/Learner/CourseContent/LearnerCourseOverview'; // Import the new component
 import TakeQuiz from './features/Learner/TakeQuiz/TakeQuiz';
 import QuizResults from './features/Learner/QuizResults/QuizResults';
+import CvPage from '../src/features/Learner/LearnerCv/Cv'; // <--- IMPORT CV PAGE HERE
 
 // Admin Components
 import AdminDashboard from './features/Admin/AdminDashboard/AdminDashboard';
@@ -57,10 +59,11 @@ import CourseDetails from './features/Coordinator/CreateNewCourse/BasicCourseDet
 import CoordinatorCourseOverview from './features/Coordinator/coordinatorCourseView/CoordinatorCourseOverview/CoordinatorCourseOverview';
 import AssignLearners from './features/Coordinator/coordinatorCourseView/AssignLearners/AssignLearners';
 import CreateQuiz from './features/Coordinator/QuizManagement/CreateQuiz';
-import EditQuiz from './features/Coordinator/QuizManagement/EditQuiz';
+import EditQuiz from './features/Coordinator/QuizManagement/EditQuiz'; // Import the EditQuiz component
 
 import QuizList from './features/Coordinator/LessonQuizzes/QuizList';
 import QuizResultsCoordinator from './features/Coordinator/LessonQuizzes/QuizResultsCoordinator';
+
 
 // Project Manager Components
 import ProjectManagerDashboard from './features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard';
@@ -73,32 +76,15 @@ import SearchResults from './components/Sidebar/SearchResults';
 import ViewLearnerProfile from './components/Sidebar/ViewLearnerProfile';
 import CategoryCoursesPage from './features/Admin/CategoryCourses/CategoryCoursesPage';
 import ManageCourseCategory from './features/Admin/ManageCourseCategory/ManageCourseCategory';
-import LandingPage from './features/landing/AnimatedLandingPage';
-import RoleSelection from './features/auth/RoleSelection';
 
-// API Loading Interceptor Component
-const ApiLoadingInterceptor: React.FC = () => {
-  const { startLoading, stopLoading } = useLoading();
-  
-  useEffect(() => {
-    // Setup the loader functions for API client
-    setupLoaderFunctions(startLoading, stopLoading);
-  }, [startLoading, stopLoading]);
-  
-  return null; 
-};
 
 function AppWrapper() {
   return (
     <BrowserRouter>
-      <LoadingProvider>
-        <AuthProvider>
-          <ApiLoadingInterceptor />
-          <BookLoader />
-          <App />
-          <Toaster position="top-right" />
-        </AuthProvider>
-      </LoadingProvider>
+      <AuthProvider>
+        <App />
+        <Toaster position="top-right" />
+      </AuthProvider>
     </BrowserRouter>
   );
 }
@@ -131,6 +117,19 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LandingPage />} />
+
+        {/* CV Page Route - Protected, accessible after login */}
+        {/* This route is placed here so it's not nested under role-specific base paths like /learner or /admin */}
+        {/* It also doesn't need the sidebar/search context by default */}
+        <Route
+          path="/cv"
+          element={
+            <ProtectedRoute> {/* Ensures user is logged in */}
+              <CvPage />
+            </ProtectedRoute>
+          }
+        />
+        
         
         {/* Auth Routes */}
         <Route 
