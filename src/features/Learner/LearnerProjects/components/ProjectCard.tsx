@@ -1,12 +1,11 @@
-import React from 'react'; 
-import { 
+import {
   CheckCircle2,
   Calendar,
   Users,
   Briefcase,
-  Clock 
-} from 'lucide-react'; 
-import { Project } from '../types/Project';  
+  Clock
+} from 'lucide-react';
+import { Project } from '../types/Project';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -22,13 +21,15 @@ const getStatusColor = (status: string) => {
 export const ProjectCard = ({ project }: { project: Project }) => {
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-      <div className="relative h-48 bg-gradient-to-br from-[#52007C] to-[#BF4BF6] p-6">
+      {/* Reduced height from h-48 to h-32 */}
+      <div className="relative h-25 bg-gradient-to-br from-[#52007C] to-[#BF4BF6] p-6">
         <div className="absolute inset-0 flex items-center justify-center">
-          <Briefcase className="h-20 w-20 text-white/20" />
+          {/* Adjusted icon size slightly to fit the new height better, if needed, but keeping it as is first */}
+          <Briefcase className="h-16 w-16 text-white/20" />
         </div>
         <div className="relative">
           <h3 className="text-lg font-semibold text-white">{project.title}</h3>
-          <p className="text-[#D68BF9] mt-1">{project.description}</p>
+          <p className="text-[#D68BF9] mt-1 text-sm">{project.description}</p> {/* Optionally make description text smaller if it overflows */}
         </div>
       </div>
 
@@ -46,7 +47,7 @@ export const ProjectCard = ({ project }: { project: Project }) => {
             <Calendar className="h-4 w-4" />
             <span>Started: {project.startDate}</span>
           </div>
-          
+
           <div className="flex items-center gap-2 text-sm text-gray-500">
             {project.status === 'Completed' ? (
               <>
@@ -65,18 +66,18 @@ export const ProjectCard = ({ project }: { project: Project }) => {
             <Users className="h-4 w-4" />
             <span>Team: {project.team.join(', ')}</span>
           </div>
-          
+
           {project.role && (
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Briefcase className="h-4 w-4" />
               <span>Your Role: {project.role}</span>
             </div>
           )}
-          
+
           {project.technologies && (
             <div className="flex flex-wrap gap-2 mt-3">
               {project.technologies.map((tech, index) => (
-                <span 
+                <span
                   key={index}
                   className="px-2 py-1 bg-[#F6E6FF] text-[#52007C] text-xs rounded-lg"
                 >
