@@ -131,3 +131,22 @@ export const searchUsers = async (
     throw error;
   }
 };
+
+// Promote user to SuperAdmin
+export const promoteToSuperAdmin = async (userId: string): Promise<User> => {
+  try {
+    const response = await apiClient.post('/auth/promote-to-superadmin', { userId });
+    return response.data;
+  } catch (error) {
+    console.error(`Error promoting user ${userId} to SuperAdmin:`, error);
+    throw error;
+  }
+};
+
+export enum UserRole {
+  Admin = 'Admin',
+  Learner = 'Learner',
+  CourseCoordinator = 'CourseCoordinator',
+  ProjectManager = 'ProjectManager',
+  SuperAdmin = 'SuperAdmin' // Added SuperAdmin role
+}

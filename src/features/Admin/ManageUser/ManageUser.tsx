@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Plus, X, ArrowLeft, AlertCircle, Mail, Phone, Building2, 
   Pencil, Trash2, ShieldAlert, ChevronLeft, ChevronRight, Users, 
-  UserCheck, UserX, UserCog
+  UserCheck, UserX, UserCog, Shield
 } from 'lucide-react';
 import { useUsers } from './data/useUsers';
 import FilterBar from './components/FilterBar';
@@ -48,14 +48,25 @@ const ManageUser: React.FC = () => {
     setShowAddModal,
     setShowDeleteModal,
     setUserToDelete,
-    handleSubmitUser, // Use the new submit function instead of handleAddUser
+    handleSubmitUser,
     handleToggleStatus,
+    handleDeleteUser,
+    handleEditUser,
     confirmDelete,
     resetForm,
     setError,
     isUserLoading,
-    generateTempPassword, // Include the new state
-    setGenerateTempPassword // Include the state setter
+    generateTempPassword,
+    setGenerateTempPassword,
+    // SuperAdmin related
+    isSuperAdmin,
+    isRegularAdmin,
+    canDeleteUser,
+    canEditUser,
+    formatRoleName,
+    getRoleColor,
+    handlePromoteToSuperAdmin,
+    isPromotingToSuperAdmin
   } = useUsers();
 
   // Reset to first page when users list changes
@@ -63,62 +74,10 @@ const ManageUser: React.FC = () => {
     setCurrentPage(1);
   }, [debouncedSearchTerm, filterState.selectedRoles, filterState.filterStatus]);
 
-  // Utility functions
-  const getRoleColor = (role: string) => {
-    switch (role.toLowerCase()) {
-      case 'admin': return 'bg-red-100 text-red-800';
-      case 'coordinator': 
-      case 'course coordinator': 
-      case 'course_coordinator': return 'bg-blue-100 text-blue-800';
-      case 'learner': return 'bg-green-100 text-green-800';
-      case 'project_manager': 
-      case 'project manager': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-  
-  const formatRoleName = (role: string) => {
-    switch (role.toLowerCase()) {
-      case 'coursecoordinator': 
-      case 'coordinator': 
-      case 'course coordinator': 
-      case 'course_coordinator': 
-        return 'Course Coordinator';
-      case 'projectmanager': 
-      case 'project_manager': 
-      case 'project manager': 
-        return 'Project Manager';
-      case 'learner': 
-        return 'Learner';
-      case 'admin': 
-        return 'Admin';
-      default: 
-        return role.charAt(0).toUpperCase() + role.slice(1);
-    }
-  };
-
-  const handleEditUser = (user: User) => {
-    setEditingUser(user);
-    setNewUser({
-      name: user.name,
-      email: user.email,
-      phone: user.phone || '',
-      roles: [...user.roles],
-      department: user.department || '',
-      password: '' // Clear password when editing
-    });
-    setShowAddModal(true);
-  };
-
-  const handleDeleteUser = (id: string) => {
-    if (id === currentUser?.id) {
-      // Prevent deleting their own account
-      return;
-    }
-    setUserToDelete(id);
-    setShowDeleteModal(true);
-  };
-
+  useEffect(() => {
+  console.log('All users:', users);
+  console.log('Current user:', currentUser);
+  }, [users, currentUser]);
   // Pagination calculations
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
@@ -137,6 +96,51 @@ const ManageUser: React.FC = () => {
   // Generate empty rows if needed to fill the table with 10 rows
   const emptyRows = usersPerPage - currentUsers.length;
 
+  // Render SuperAdmin badge
+  const renderSuperAdminBadge = (user: User) => {
+    if (user.roles.includes('SuperAdmin')) {
+      return (
+        <span 
+          className="inline-flex items-center px-2 py-0.5 ml-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800"
+          title="Super Admin has extended privileges"
+        >
+          <Shield size={10} className="mr-1" />
+          Super Admin
+        </span>
+      );
+    }
+    return null;
+  };
+
+  // Render SuperAdmin promotion button
+  const renderPromoteToSuperAdminButton = (user: User) => {
+    // Only show for SuperAdmin users and only for users who aren't already SuperAdmin
+    if (!isSuperAdmin || user.roles.includes('SuperAdmin') || user.id === currentUser?.id) {
+      return null;
+    }
+    
+    return (
+      <button
+        onClick={() => handlePromoteToSuperAdmin(user.id)}
+        disabled={isUserLoading(user.id) || isPromotingToSuperAdmin}
+        className="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded-md flex items-center gap-1 transition-colors"
+        title="Promote to Super Admin"
+      >
+        {isUserLoading(user.id) ? (
+          <>
+            <div className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full"></div>
+            <span>Promoting...</span>
+          </>
+        ) : (
+          <>
+            <Shield size={12} />
+            <span>Make Super Admin</span>
+          </>
+        )}
+      </button>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
       <div className="w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8 relative">
@@ -151,6 +155,12 @@ const ManageUser: React.FC = () => {
               
             </button>
             <h1 className="text-xl sm:text-2xl font-bold text-white">User Management</h1>
+            {isSuperAdmin && (
+              <span className="bg-purple-500 text-white px-2 py-0.5 rounded text-xs flex items-center">
+                <Shield size={12} className="mr-1" />
+                Super Admin
+              </span>
+            )}
           </div>
           
           <button
@@ -209,6 +219,7 @@ const ManageUser: React.FC = () => {
             formatRoleName={formatRoleName}
             getRoleColor={getRoleColor}
             isFetchingFilteredData={isFetchingFilteredData}
+            isSuperAdmin={isSuperAdmin}
           />
         </div>
 
@@ -256,7 +267,10 @@ const ManageUser: React.FC = () => {
                     return (
                       <tr 
                         key={user.id} 
-                        className={`border-b border-gray-200 hover:bg-[#F6E6FF]/30 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/80'} ${isCurrentUser ? 'border-l-4 border-l-[#BF4BF6]' : ''}`}
+                        className={`border-b border-gray-200 hover:bg-[#F6E6FF]/30 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/80'} ${
+                          isCurrentUser ? 'border-l-4 border-l-[#BF4BF6]' : 
+                          user.roles.includes('SuperAdmin') ? 'border-l-4 border-l-purple-500' : ''
+                        }`}
                       >
                         {/* User Column */}
                         <td className="px-3 py-3">
@@ -266,20 +280,29 @@ const ManageUser: React.FC = () => {
                                 <img 
                                   src={user.avatar}
                                   alt={`${user.name}'s avatar`}
-                                  className="h-10 w-10 rounded-full object-cover border-2 border-[#BF4BF6]"
+                                  className={`h-10 w-10 rounded-full object-cover border-2 ${
+                                    user.roles.includes('SuperAdmin') ? 'border-purple-500' : 'border-[#BF4BF6]'
+                                  }`}
                                 />
                               ) : (
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#52007C] to-[#BF4BF6] flex items-center justify-center text-white font-bold">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                                  user.roles.includes('SuperAdmin') 
+                                    ? 'bg-gradient-to-br from-purple-700 to-purple-500' 
+                                    : 'bg-gradient-to-br from-[#52007C] to-[#BF4BF6]'
+                                }`}>
                                   {getInitials(user.name)}
                                 </div>
                               )}
                             </div>
                             <div className="ml-3">
                               <div 
-                                className="text-[#1B0A3F] font-semibold cursor-pointer hover:text-[#BF4BF6] transition-colors"
+                                className="text-[#1B0A3F] font-semibold cursor-pointer hover:text-[#BF4BF6] transition-colors flex items-center"
                                 onClick={() => navigate(`/admin/view-profile/${user.id}`)}
                               >
-                                {user.name} {isCurrentUser && <span className="text-[#BF4BF6] text-xs">(you)</span>}
+                                {user.name} {isCurrentUser && <span className="text-[#BF4BF6] text-xs ml-1">(you)</span>}
+                                {user.roles.includes('SuperAdmin') && (
+                                  <Shield size={14} className="ml-1 text-purple-600" title="Super Admin" />
+                                )}
                               </div>
                               <div className="text-xs text-gray-500 font-mono truncate max-w-[150px]">ID: {user.id}</div>
                             </div>
@@ -304,49 +327,28 @@ const ManageUser: React.FC = () => {
                         <td className="px-3 py-3">
                           <div className="flex flex-wrap gap-2" style={{ minWidth: '240px' }}>
                             {user.roles.map((role, idx) => {
-                              // Customize role colors for modern look
-                              let bgColor, textColor;
-                              switch(role.toLowerCase()) {
-                                case 'admin':
-                                  bgColor = 'bg-red-100';
-                                  textColor = 'text-red-800';
-                                  break;
-                                case 'learner':
-                                  bgColor = 'bg-green-100';
-                                  textColor = 'text-green-800';
-                                  break;
-                                case 'coursecoordinator':
-                                case 'course coordinator':
-                                case 'course_coordinator':
-                                  bgColor = 'bg-blue-100';
-                                  textColor = 'text-blue-800';
-                                  break;
-                                case 'projectmanager':
-                                case 'project manager':
-                                case 'project_manager':
-                                  bgColor = 'bg-purple-100';
-                                  textColor = 'text-purple-800';
-                                  break;
-                                default:
-                                  bgColor = 'bg-gray-100';
-                                  textColor = 'text-gray-800';
-                              }
-                              
                               return (
                                 <span 
                                   key={idx} 
-                                  className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium ${bgColor} ${textColor} whitespace-nowrap`}
+                                  className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(role)} whitespace-nowrap`}
                                   style={{ 
                                     maxWidth: '110px', 
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis'
                                   }}
                                 >
+                                  {role.toLowerCase() === 'superadmin' && <Shield size={10} className="mr-1" />}
                                   {formatRoleName(role)}
                                 </span>
                               );
                             })}
                           </div>
+                          {/* SuperAdmin promotion button */}
+                          {!user.roles.includes('SuperAdmin') && isSuperAdmin && !isCurrentUser && (
+                            <div className="mt-2">
+                              {renderPromoteToSuperAdminButton(user)}
+                            </div>
+                          )}
                         </td>
                         
                         {/* Department Column */}
@@ -367,14 +369,24 @@ const ManageUser: React.FC = () => {
                               ${user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                               {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
                             </span>
-                            <label className={`relative inline-flex items-center ${isCurrentUser ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`} 
-                                  title={isCurrentUser ? "You cannot change your own account status" : ""}>
+                            <label className={`relative inline-flex items-center ${
+                              isCurrentUser || !canEditUser(user) 
+                                ? 'cursor-not-allowed opacity-70' 
+                                : 'cursor-pointer'
+                            }`} 
+                                  title={
+                                    isCurrentUser 
+                                      ? "You cannot change your own account status" 
+                                      : !canEditUser(user)
+                                        ? "You don't have permission to change this user's status"
+                                        : ""
+                                  }>
                               <input 
                                 type="checkbox" 
                                 checked={user.status === 'active'}
-                                onChange={() => !isCurrentUser && handleToggleStatus(user.id)}
+                                onChange={() => canEditUser(user) && !isCurrentUser && handleToggleStatus(user.id)}
                                 className="sr-only peer"
-                                disabled={isUserLoading(user.id) || isCurrentUser}
+                                disabled={isUserLoading(user.id) || isCurrentUser || !canEditUser(user)}
                               />
                               <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer 
                                   peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full 
@@ -390,18 +402,36 @@ const ManageUser: React.FC = () => {
                         <td className="px-3 py-3">
                           <div className="flex items-center space-x-1">
                             <button
-                              onClick={() => handleEditUser(user)}
-                              className="p-2 text-[#BF4BF6] hover:bg-[#F6E6FF] rounded-full transition-colors"
-                              disabled={isUserLoading(user.id)}
-                              title="Edit User"
+                              onClick={() => canEditUser(user) && handleEditUser(user)}
+                              className={`p-2 rounded-full transition-colors ${
+                                canEditUser(user)
+                                  ? 'text-[#BF4BF6] hover:bg-[#F6E6FF]' 
+                                  : 'text-gray-300 cursor-not-allowed'
+                              }`}
+                              disabled={isUserLoading(user.id) || !canEditUser(user)}
+                              title={
+                                canEditUser(user) 
+                                  ? "Edit User" 
+                                  : "You don't have permission to edit this user"
+                              }
                             >
                               <Pencil size={16} />
                             </button>
                             <button
-                              onClick={() => !isCurrentUser && handleDeleteUser(user.id)}
-                              className={`p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors ${isCurrentUser ? 'opacity-50 cursor-not-allowed' : ''}`}
-                              disabled={isUserLoading(user.id) || isCurrentUser}
-                              title={isCurrentUser ? "Cannot delete your own account" : "Delete User"}
+                              onClick={() => canDeleteUser(user) && handleDeleteUser(user.id)}
+                              className={`p-2 rounded-full transition-colors ${
+                                canDeleteUser(user)
+                                  ? 'text-red-500 hover:bg-red-50' 
+                                  : 'text-gray-300 cursor-not-allowed'
+                              }`}
+                              disabled={isUserLoading(user.id) || !canDeleteUser(user)}
+                              title={
+                                isCurrentUser 
+                                  ? "You cannot delete your own account" 
+                                  : !canDeleteUser(user)
+                                    ? "You don't have permission to delete this user"
+                                    : "Delete User"
+                              }
                             >
                               <Trash2 size={16} />
                             </button>
@@ -476,7 +506,7 @@ const ManageUser: React.FC = () => {
 
         {/* User statistics summary */}
         {!isPageLoading && users.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center">
               <div className="p-3 rounded-full bg-[#F6E6FF] text-[#BF4BF6] mr-4">
                 <Users size={24} />
@@ -510,6 +540,18 @@ const ManageUser: React.FC = () => {
                 </p>
               </div>
             </div>
+            
+            <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center">
+              <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
+                <Shield size={24} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Super Admins</p>
+                <p className="text-xl font-semibold text-[#1B0A3F]">
+                  {users.filter(user => user.roles.includes('SuperAdmin')).length}
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -521,13 +563,13 @@ const ManageUser: React.FC = () => {
         editingUser={editingUser}
         newUser={newUser}
         setNewUser={setNewUser}
-        handleAddUser={handleSubmitUser} // Use handleSubmitUser instead of handleAddUser
+        handleAddUser={handleSubmitUser}
         isSubmitting={isSubmitting}
         updateNewUserRoles={updateNewUserRoles}
         resetForm={resetForm}
         formatRoleName={formatRoleName}
-        generateTempPassword={generateTempPassword} // Pass the generateTempPassword state
-        setGenerateTempPassword={setGenerateTempPassword} // Pass the setter function
+        generateTempPassword={generateTempPassword}
+        setGenerateTempPassword={setGenerateTempPassword}
       />
 
       {/* Delete Confirmation Modal */}
