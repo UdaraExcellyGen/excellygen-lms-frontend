@@ -1,6 +1,4 @@
-// src/api/apiClient.ts
-
-import axios, { AxiosError, AxiosResponse } from 'axios';
+import axios from 'axios';
 
 // Create an axios instance with default config
 const apiClient = axios.create({
@@ -20,6 +18,22 @@ let failedQueue: {
   config: any;
 }[] = [];
 
+// Active request counter - used to manage loading state
+let activeRequests = 0;
+
+// Functions for loader management that will be injected
+let startLoading: () => void = () => {};
+let stopLoading: () => void = () => {};
+
+// Set up the loading functions
+export const setupLoaderFunctions = (
+  start: () => void,
+  stop: () => void
+) => {
+  startLoading = start;
+  stopLoading = stop;
+};
+
 // Process the queue of failed requests
 const processQueue = (error: any = null, token: string | null = null) => {
   failedQueue.forEach(promise => {
@@ -37,6 +51,14 @@ const processQueue = (error: any = null, token: string | null = null) => {
 // Request interceptor to add authorization header and active role
 apiClient.interceptors.request.use(
   (config) => {
+    // Increment active requests counter
+    activeRequests++;
+    
+    // Show loader when first request starts
+    if (activeRequests === 1) {
+      startLoading();
+    }
+    
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
@@ -45,9 +67,8 @@ apiClient.interceptors.request.use(
     // Add active role header - IMPROVED to ensure role is correctly set
     const currentRole = localStorage.getItem('current_role');
     if (currentRole) {
-      // Ensure we're using the exact role name expected by the server
-      // For the backend, the role must match one of the authorized roles exactly
-      // We're mapping the display name to the actual role name
+      
+      // mapping the display name to the actual role name
       const roleMap: {[key: string]: string} = {
         'Admin': 'Admin',
         'Project Manager': 'ProjectManager',
@@ -69,6 +90,14 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error) => {
+    // Decrement active requests counter
+    activeRequests--;
+    
+    // Hide loader if no active requests
+    if (activeRequests === 0) {
+      stopLoading();
+    }
+    
     return Promise.reject(error);
   }
 );
@@ -76,9 +105,25 @@ apiClient.interceptors.request.use(
 // Response interceptor to handle common errors and token refresh
 apiClient.interceptors.response.use(
   (response) => {
+    // Decrement active requests counter
+    activeRequests--;
+    
+    // Hide loader if no active requests
+    if (activeRequests === 0) {
+      stopLoading();
+    }
+    
     return response;
   },
   async (error) => {
+    // Decrement active requests counter
+    activeRequests--;
+    
+    // Hide loader if no active requests
+    if (activeRequests === 0) {
+      stopLoading();
+    }
+    
     const originalRequest = error.config;
     
     // Prevent infinite loops when refreshing token

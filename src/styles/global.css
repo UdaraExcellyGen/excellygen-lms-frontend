@@ -164,3 +164,383 @@
 .status-offline {
   @apply status-dot bg-gray-400;
 }
+
+
+/* These are the scroll animation classes to add to global.css */
+
+/* Scroll animation keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes clipRevealDown {
+  from {
+    clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+  }
+  to {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+}
+
+@keyframes clipRevealUp {
+  from {
+    clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%);
+  }
+  to {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+}
+
+/* Animation utility classes */
+.animate-hidden {
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.animate-fade-up {
+  animation: fadeInUp cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-fade-down {
+  animation: fadeInDown cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-fade-left {
+  animation: fadeInLeft cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-fade-right {
+  animation: fadeInRight cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-scale {
+  animation: scaleIn cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-clip-down {
+  animation: clipRevealDown cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-clip-up {
+  animation: clipRevealUp cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Animation durations */
+.duration-300 {
+  animation-duration: 300ms;
+}
+
+.duration-500 {
+  animation-duration: 500ms;
+}
+
+.duration-700 {
+  animation-duration: 700ms;
+}
+
+.duration-1000 {
+  animation-duration: 1000ms;
+}
+
+/* Animation delays */
+.delay-0 {
+  animation-delay: 0ms;
+}
+
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+.delay-400 {
+  animation-delay: 400ms;
+}
+
+.delay-500 {
+  animation-delay: 500ms;
+}
+
+/* Staggered animation for children */
+.stagger-children > *:nth-child(1) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 400ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 500ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 600ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 700ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 800ms; }
+.stagger-children > *:nth-child(9) { animation-delay: 900ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 1000ms; }
+
+
+/* These are the scroll animation classes to add to global.css */
+
+/* Scroll animation keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes clipRevealDown {
+  from {
+    clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+  }
+  to {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+}
+
+@keyframes clipRevealUp {
+  from {
+    clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%);
+  }
+  to {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+}
+
+/* Hero section background animation */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradientShift 15s ease infinite;
+}
+
+/* Floating animation for decorative elements */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delay {
+  animation: float 5s ease-in-out 2s infinite;
+}
+
+/* Animation utility classes */
+.animate-hidden {
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.animate-fade-up {
+  animation: fadeInUp cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-fade-down {
+  animation: fadeInDown cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-fade-left {
+  animation: fadeInLeft cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-fade-right {
+  animation: fadeInRight cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-scale {
+  animation: scaleIn cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-clip-down {
+  animation: clipRevealDown cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-clip-up {
+  animation: clipRevealUp cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Animation durations */
+.duration-300 {
+  animation-duration: 300ms;
+}
+
+.duration-500 {
+  animation-duration: 500ms;
+}
+
+.duration-700 {
+  animation-duration: 700ms;
+}
+
+.duration-1000 {
+  animation-duration: 1000ms;
+}
+
+/* Animation delays */
+.delay-0 {
+  animation-delay: 0ms;
+}
+
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+.delay-400 {
+  animation-delay: 400ms;
+}
+
+.delay-500 {
+  animation-delay: 500ms;
+}
+
+/* Staggered animation for children */
+.stagger-children > *:nth-child(1) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 400ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 500ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 600ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 700ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 800ms; }
+.stagger-children > *:nth-child(9) { animation-delay: 900ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 1000ms; }
+
+
+@keyframes progress {
+  0% { width: 0%; }
+  50% { width: 70%; }
+  100% { width: 100%; }
+}
+
+.animate-progress {
+  animation: progress 1.5s ease-in-out infinite;
+}

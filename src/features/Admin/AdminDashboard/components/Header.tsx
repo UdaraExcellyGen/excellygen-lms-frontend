@@ -174,8 +174,12 @@ const Header: React.FC<HeaderProps> = ({
             <p className="text-sm sm:text-base text-gray-500 font-['Nunito_Sans']">{role}</p>
           </div>
         </div>
-                
+
+        
+
+        
         <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto justify-end">
+         
           {/* Notification Bell */}
           <button 
             onClick={navigateToNotifications}

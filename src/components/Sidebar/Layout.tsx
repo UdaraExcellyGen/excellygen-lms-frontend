@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
 import Sidebar from './SideBar';
 import { useSidebar } from '../Sidebar/contexts/SidebarContext';
 
@@ -9,7 +8,6 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { isCollapsed, setIsCollapsed } = useSidebar();
-  const location = useLocation();
   const [isMobile, setIsMobile] = useState(false);
 
   // Check for mobile viewport

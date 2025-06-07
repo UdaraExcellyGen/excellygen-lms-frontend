@@ -392,7 +392,7 @@ const CategoryCoursesPage: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-2">
                           <BookMarked size={16} className="text-gray-400" />
-                          <p className="text-sm text-gray-600">{course.lessons} lessons</p>
+                          <p className="text-sm text-gray-600">{Array.isArray(course.lessons) ? course.lessons.length : 0} lessons</p>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">

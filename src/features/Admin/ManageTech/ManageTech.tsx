@@ -12,7 +12,7 @@ import { DeleteConfirmationModal } from './components/DeleteConfirmationModal';
 
 const ManageTech: React.FC = () => {
   const navigate = useNavigate();
-  const { currentFirebaseUser } = useAuth();
+  const { user } = useAuth();
   
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -46,11 +46,11 @@ const ManageTech: React.FC = () => {
 
   // Check if user is authenticated
   useEffect(() => {
-    if (!currentFirebaseUser) {
+    if (!user) {
       console.log('User not authenticated, redirecting to login');
       // You might want to redirect to login or show a message
     }
-  }, [currentFirebaseUser]);
+  }, [user]);
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -296,10 +296,39 @@ const ManageTech: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <div className="text-sm font-medium text-gray-700">
-                            {new Date(tech.createdAt).toLocaleDateString()}
+                            {(() => {
+                              // Get the date from the backend
+                              const utcDate = new Date(tech.createdAt);
+                              
+                              // Convert to Sri Lanka time by adding the offset (UTC+5:30)
+                              const sriLankaTime = new Date(utcDate.getTime() + (5.5 * 60 * 60 * 1000));
+                              
+                              // Format as M/D/YYYY
+                              const month = sriLankaTime.getMonth() + 1;
+                              const day = sriLankaTime.getDate();
+                              const year = sriLankaTime.getFullYear();
+                              
+                              return `${month}/${day}/${year}`;
+                            })()}
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
-                            {new Date(tech.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            {(() => {
+                              // Get the date from the backend
+                              const utcDate = new Date(tech.createdAt);
+                              
+                              // Convert to Sri Lanka time by adding the offset (UTC+5:30)
+                              const sriLankaTime = new Date(utcDate.getTime() + (5.5 * 60 * 60 * 1000));
+                              
+                              // Format time as h:mm AM/PM
+                              let hours = sriLankaTime.getHours();
+                              const ampm = hours >= 12 ? 'PM' : 'AM';
+                              hours = hours % 12;
+                              hours = hours ? hours : 12; // the hour '0' should be '12'
+                              
+                              const minutes = sriLankaTime.getMinutes().toString().padStart(2, '0');
+                              
+                              return `${hours}:${minutes} ${ampm}`;
+                            })()}
                           </div>
                         </div>
                       </td>

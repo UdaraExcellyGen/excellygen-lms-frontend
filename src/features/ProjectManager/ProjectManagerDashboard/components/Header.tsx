@@ -1,7 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react'; 
-import { Bell, LogOut, Users, ChevronDown, Check, FileText, Calendar, FolderKanban } from 'lucide-react';  
-import { useNavigate } from 'react-router-dom'; 
-import { HeaderProps } from '../types/types';  
+// Path: src/features/ProjectManager/ProjectManagerDashboard/components/Header.tsx
+
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Bell, 
+  LogOut, 
+  Users, 
+  ChevronDown, 
+  Check, 
+  FileText, 
+  Calendar,
+  FolderKanban
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { HeaderProps } from '../types/types';
+import { useAuth } from '../../../../contexts/AuthContext';
+import { UserRole } from '../../../../types/auth.types';
 
 // Role icon mapping
 const roleIcons: Record<string, React.ReactNode> = {
@@ -11,28 +24,21 @@ const roleIcons: Record<string, React.ReactNode> = {
   ProjectManager: <FolderKanban size={16} />
 };
 
-const Header: React.FC<HeaderProps> = ({  
+// Define base URL for assets - make sure this matches your backend URL
+const BASE_URL = 'http://localhost:5177';
+
+const Header: React.FC<HeaderProps> = ({
   notifications = [],
   adminName = "Project Manager",
-  role = "Project Manager" 
+  role = "Project Manager",
+  avatar = null
 }) => {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { user, currentRole, selectRole, navigateToRoleSelection } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
-  // Check if there are any unread notifications
-  const hasUnreadNotifications = notifications.some((notification) => notification.isNew);
-  
-  useEffect(() => {
-    // Get user data from localStorage
-    const userDataString = localStorage.getItem('user');
-    if (userDataString) {
-      setCurrentUser(JSON.parse(userDataString));
-    }
-  }, []);
+  const [avatarError, setAvatarError] = useState(false);
 
-  // Handle click outside to close dropdown
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -47,6 +53,13 @@ const Header: React.FC<HeaderProps> = ({
   }, [dropdownRef]);
 
   const handleLogout = () => {
+    // Clear auth data
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('token_expiry');
+    localStorage.removeItem('current_role');
+    localStorage.removeItem('user');
+    
     navigate('/login');
   };
 
@@ -55,28 +68,8 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   const navigateToNotifications = () => {
-    // Navigate to the ManageNotification page when bell icon is clicked
+    // Navigate to the PM Notification page when bell icon is clicked
     navigate('/manager/notifications');
-  };
-
-  const switchToRole = (role: string) => {
-    // Navigate to appropriate dashboard
-    switch(role) {
-      case 'Admin':
-        navigate('/admin/dashboard');
-        break;
-      case 'Learner':
-        navigate('/student-dashboard');
-        break;
-      case 'CourseCoordinator':
-        navigate('/coordinator/dashboard');
-        break;
-      case 'ProjectManager':
-        navigate('/manager/dashboard');
-        break;
-      default:
-        navigate('/role-selection');
-    }
   };
 
   // Format role name for display
@@ -86,99 +79,187 @@ const Header: React.FC<HeaderProps> = ({
     return role;
   };
 
+  const handleSwitchRole = async (role: UserRole) => {
+    try {
+      console.log(`Attempting to switch to role: ${role}`);
+      if (role === currentRole) {
+        // If already in this role, just close dropdown
+        setDropdownOpen(false);
+        return;
+      }
+      
+      // Call the selectRole function from auth context
+      setDropdownOpen(false);
+      await selectRole(role);
+    } catch (error) {
+      console.error('Error switching role:', error);
+    }
+  };
+
+  // Use the direct navigation function from auth context
+  const handleViewAllRoles = () => {
+    console.log('Navigating to role selection page from PM dashboard');
+    setDropdownOpen(false);
+    // Use direct navigation from auth context
+    navigateToRoleSelection();
+  };
+
+  // Process avatar URL (handle both absolute and relative paths)
+  const getAvatarUrl = (avatarPath: string | null) => {
+    if (!avatarPath) return null;
+    
+    // For Firebase Storage URLs, return as is
+    if (avatarPath.includes('firebasestorage.googleapis.com')) {
+      return avatarPath;
+    }
+    
+    // If the avatar path is already a full URL, return it as is
+    if (avatarPath.startsWith('http') || avatarPath.startsWith('https')) {
+      return avatarPath;
+    }
+    
+    // If the avatar path starts with a slash, make sure we don't duplicate slashes
+    if (avatarPath.startsWith('/')) {
+      return `${BASE_URL}${avatarPath}`;
+    }
+    
+    // Otherwise, add a slash between BASE_URL and avatarPath
+    return `${BASE_URL}/${avatarPath}`;
+  };
+
+  // Get initials for fallback avatar
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  // Reset avatar error when avatar changes
+  useEffect(() => {
+    setAvatarError(false);
+  }, [avatar]);
+
+  // Count new notifications
+  const newNotificationsCount = notifications.filter(n => n.isNew).length;
+
+  // Get avatar URL
+  const avatarUrl = getAvatarUrl(avatar || user?.avatar);
+
   return (
-    <div className="bg-white rounded-2xl shadow-sm mb-6 transition-all duration-300 hover:shadow-md">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 sm:p-6">
+    <div className="p-4 sm:p-6 relative">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4 mb-4 sm:mb-0">
-          <div className="w-12 sm:w-16 h-12 sm:h-16 bg-[#BF4BF6] rounded-full flex items-center justify-center transition-transform duration-300 hover:scale-105">
-            <FolderKanban className="w-6 sm:w-8 h-6 sm:h-8 text-white" />
+          {/* User Avatar with improved implementation */}
+          <div className="w-12 sm:w-16 h-12 sm:h-16 rounded-full overflow-hidden bg-gradient-to-br from-[#52007C] to-[#BF4BF6] border-2 border-[#BF4BF6] flex items-center justify-center transition-transform duration-300 hover:scale-105">
+            {(avatar || user?.avatar) && !avatarError ? (
+              <img 
+                src={avatarUrl || ''}
+                alt={`${adminName}'s avatar`} 
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  console.error("Image failed to load:", avatarUrl);
+                  setAvatarError(true);
+                }}
+              />
+            ) : (
+              <span className="text-xl sm:text-2xl font-bold text-white">
+                {getInitials(adminName)}
+              </span>
+            )}
           </div>
+          
           <div>
             <h1 className="text-xl sm:text-2xl text-[#1B0A3F] font-['Unbounded']">{adminName}</h1>
-            <p className="text-sm sm:text-base text-gray-400 font-['Nunito_Sans']">{role}</p>
+            <p className="text-sm sm:text-base text-gray-500 font-['Nunito_Sans']">{role}</p>
           </div>
         </div>
                 
         <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto justify-end">
-
-
           {/* Notification Bell */}
-
           <button 
-            type="button"
             onClick={navigateToNotifications}
-            className="relative hover:text-[#BF4BF6] transition-colors duration-200"
+            className="relative group"
             aria-label="View notifications"
-            title="View notifications"
           >
-            <Bell size={20} className="text-gray-500 hover:text-[#BF4BF6]" />
-            {/* Show notification indicator dot if there are unread notifications */}
-            {hasUnreadNotifications && (
-              <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full" aria-hidden="true"></span>
-            )}
-            {/* Use the notifications count if needed */}
-            {notifications.length > 0 && (
-              <span className="sr-only">{notifications.length} notifications</span>
-            )}
+            <div className="p-2.5 rounded-lg bg-[#F6E6FF] transition-all duration-300 group-hover:bg-[#F0D6FF] group-hover:shadow-md flex items-center justify-center relative">
+              <Bell 
+                size={20} 
+                className="text-[#BF4BF6] transition-colors duration-300" 
+                strokeWidth={1.8}
+              />
+              
+              {/* Notification badge */}
+              {newNotificationsCount > 0 && (
+                <div className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center">
+                  <div className="absolute w-full h-full rounded-full bg-[#BF4BF6] animate-pulse-slow opacity-60"></div>
+                  <div className="absolute w-full h-full rounded-full bg-[#BF4BF6] flex items-center justify-center">
+                    <span className="text-[10px] font-semibold text-white leading-none">{newNotificationsCount}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Tooltip */}
+            <div className="absolute hidden md:group-hover:block right-0 mt-2 bg-[#1B0A3F] text-white text-xs py-1.5 px-3 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap z-50">
+              {newNotificationsCount} new notification{newNotificationsCount !== 1 ? 's' : ''}
+            </div>
           </button>
 
           {/* Role Switcher - Only show if user has multiple roles */}
-          {currentUser && currentUser.roles && currentUser.roles.length > 1 && (
-            <div className="relative" ref={dropdownRef}>
-            
+          {user && user.roles && user.roles.length > 1 && (
+            <div 
+              className="relative" 
+              ref={dropdownRef} 
+              style={{ zIndex: 9999 }}
+            >
               <button 
-                type="button"
                 onClick={toggleDropdown}
-                className="flex items-center gap-2 text-gray-500 hover:text-[#BF4BF6] transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-[#F6E6FF]"
+                className="flex items-center gap-2.5 px-3.5 py-2.5 text-[#1B0A3F] transition-all duration-300 rounded-lg hover:bg-[#F6E6FF] hover:text-[#BF4BF6]"
                 aria-label="Switch role"
-                aria-expanded={dropdownOpen ? "true" : "false"}
+                aria-expanded={dropdownOpen}
                 aria-haspopup="true"
-                title="Switch role"
               >
-                
-                <Users size={20} />
-                <span className="font-['Nunito_Sans'] hidden sm:inline">Roles</span>
+                <Users size={18} strokeWidth={1.8} />
+                <span className="font-['Nunito_Sans'] text-sm font-medium hidden sm:inline">
+                  {currentRole ? formatRoleName(currentRole as string) : 'Roles'}
+                </span>
                 <ChevronDown 
-                  size={16} 
+                  size={14} 
                   className={`transition-transform duration-300 hidden sm:block ${dropdownOpen ? 'rotate-180' : ''}`}
-                  aria-hidden="true"
+                  strokeWidth={1.8}
                 />
               </button>
               
               {/* Dropdown Menu */}
               {dropdownOpen && (
                 <div 
-                  className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white border border-gray-100 overflow-hidden z-50"
-                  role="menu"
-                  aria-orientation="vertical"
-                  aria-labelledby="role-menu"
+                  className="absolute top-full right-0 mt-2 w-56 rounded-lg shadow-lg bg-white border border-[#BF4BF6]/20 overflow-hidden"
+                  style={{ 
+                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+                    zIndex: 9999,
+                  }}
                 >
-                  <div className="text-sm text-gray-500 px-4 py-2 border-b border-gray-100 font-['Nunito_Sans']">
+                  <div className="text-sm text-gray-500 px-4 py-2.5 border-b border-gray-100 font-['Nunito_Sans'] bg-[#F6E6FF]">
                     Switch Role
                   </div>
                   <div className="py-1">
-                    {currentUser.roles.map((roleOption: string) => (
+                    {user.roles.map((role) => (
                       <button
-                        type="button"
-                        key={roleOption}
-                        onClick={() => switchToRole(roleOption)}
-                        className={`flex items-center w-full text-left px-4 py-2 text-sm transition-colors duration-200 font-['Nunito_Sans'] ${
-                          roleOption === 'ProjectManager' 
-                            ? 'bg-[#F6E6FF] text-[#BF4BF6]' 
+                        key={role}
+                        onClick={() => handleSwitchRole(role as UserRole)}
+                        className={`flex items-center w-full text-left px-4 py-2.5 text-sm transition-all duration-200 font-['Nunito_Sans'] ${
+                          role === currentRole 
+                            ? 'bg-[#F6E6FF] text-[#BF4BF6] font-medium' 
                             : 'text-gray-700 hover:bg-[#F6E6FF] hover:text-[#BF4BF6]'
                         }`}
-                        role="menuitem"
-                        title={`Switch to ${formatRoleName(roleOption)} role`}
                       >
                         <div className="flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                            <span className="w-5 h-5 flex items-center justify-center text-[#BF4BF6]">
-                              {roleIcons[roleOption] || <Users size={16} />}
+                          <div className="flex items-center gap-2.5">
+                            <span className="w-6 h-6 flex items-center justify-center text-[#BF4BF6] bg-[#F6E6FF] rounded-md">
+                              {roleIcons[role] || <Users size={14} />}
                             </span>
-                            <span>{formatRoleName(roleOption)}</span>
+                            <span>{formatRoleName(role)}</span>
                           </div>
-                          {roleOption === 'ProjectManager' && (
-                            <Check size={16} className="text-[#BF4BF6]" aria-hidden="true" />
+                          {role === currentRole && (
+                            <Check size={14} className="text-[#BF4BF6]" />
                           )}
                         </div>
                       </button>
@@ -186,11 +267,8 @@ const Header: React.FC<HeaderProps> = ({
                   </div>
                   <div className="border-t border-gray-100">
                     <button
-                      type="button"
-                      onClick={() => navigate('/role-selection')}
-                      className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-[#F6E6FF] hover:text-[#BF4BF6] transition-colors duration-200 font-['Nunito_Sans']"
-                      role="menuitem"
-                      title="View all roles"
+                      onClick={handleViewAllRoles}
+                      className="flex items-center w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-[#F6E6FF] hover:text-[#BF4BF6] transition-all duration-200 font-['Nunito_Sans']"
                     >
                       View All Roles
                     </button>
@@ -202,14 +280,11 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Logout Button */}
           <button 
-            type="button"
             onClick={handleLogout}
-            className="flex items-center gap-2 text-gray-500 hover:text-[#BF4BF6] transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-[#F6E6FF]"
-            aria-label="Logout"
-            title="Logout"
+            className="flex items-center gap-2.5 px-3.5 py-2.5 text-gray-700 transition-all duration-300 rounded-lg hover:bg-red-50 hover:text-red-600"
           >
-            <LogOut size={20} />
-            <span className="font-['Nunito_Sans'] hidden sm:inline">Logout</span>
+            <LogOut size={18} strokeWidth={1.8} />
+            <span className="font-['Nunito_Sans'] text-sm font-medium hidden sm:inline">Logout</span>
           </button>
         </div>
       </div>

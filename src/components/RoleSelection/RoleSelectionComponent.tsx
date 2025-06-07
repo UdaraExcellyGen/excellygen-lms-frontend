@@ -1,8 +1,6 @@
-// Path: src/components/RoleSelection/RoleSelectionComponent.tsx
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext'; // Update the path based on your actual auth context
+import { useAuth } from '../../contexts/AuthContext'; 
 
 interface Role {
   id: string;
@@ -12,9 +10,23 @@ interface Role {
   path: string;
 }
 
+// Define user and auth context types to fix TypeScript errors
+interface User {
+  name?: string;
+  roles?: string[];
+}
+
+interface AuthContextType {
+  user?: User;
+  updateUserRole?: (roleId: string) => Promise<void>;
+}
+
 const RoleSelectionComponent: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, updateUserRole } = useAuth(); // Assuming your auth context has these properties
+  const auth = useAuth() as AuthContextType; // Cast to expected type
+  const currentUser = auth.user; // Access user property instead of currentUser
+  const updateUserRole = auth.updateUserRole; // Use the updateUserRole property
+  
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

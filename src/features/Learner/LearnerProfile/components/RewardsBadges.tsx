@@ -34,17 +34,7 @@ const RewardsBadges: React.FC<RewardsBadgesProps> = ({
         <h2 className="text-xl font-semibold text-[#1B0A3F]">Rewards & Badges</h2>
       </div>
 
-      {/* Badges Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 shadow-sm">
-          <p className="text-sm text-[#52007C] mb-1">Total Badges</p>
-          <p className="text-2xl font-bold text-[#1B0A3F]">{profileData.rewards.totalBadges}</p>
-        </div>
-        <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 shadow-sm">
-          <p className="text-sm text-[#52007C] mb-1">This Month</p>
-          <p className="text-2xl font-bold text-[#1B0A3F]">{profileData.rewards.thisMonth}</p>
-        </div>
-      </div>
+      
 
       {/* Scrollable Badges */}
       <div className="relative">

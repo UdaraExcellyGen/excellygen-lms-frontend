@@ -6,7 +6,6 @@ import {
   logout as apiLogout, 
   selectRole as apiSelectRole, 
   resetPassword as apiResetPassword,
-  validateToken,
   refreshToken as apiRefreshToken,
   changePassword as apiChangePassword
 } from '../api/authApi';
@@ -48,6 +47,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializingRef = useRef(true);
+  const stateRef = useRef<AuthState>(initialState);
+
+  // Keep stateRef updated with the latest state
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   // Function to reset auth state
   const resetAuthState = useCallback(() => {
@@ -103,7 +108,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [navigate, location.pathname]);
 
-  // Handle token refresh
+  // Handle token refresh - use stateRef instead of state dependency
   const handleTokenRefresh = useCallback(async () => {
     try {
       const accessToken = localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -125,9 +130,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Store password change requirement
       localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, tokenData.requirePasswordChange.toString());
       
+      // Use the functional update pattern
       setState(prevState => ({
         ...prevState,
-        currentRole: tokenData.currentRole as UserRole,
+        currentRole: tokenData.currentRole as UserRole, // Cast string to UserRole
         requirePasswordChange: tokenData.requirePasswordChange
       }));
       
@@ -146,11 +152,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!isInitializingRef.current) {
         // If refresh fails, reset auth state and redirect to login
         resetAuthState();
-        setState(prevState => ({
+        setState({
           ...initialState,
           initialized: true,
           error: 'Session expired. Please login again.'
-        }));
+        });
         
         if (location.pathname !== '/') {
           toast.error('Your session has expired. Please login again.');
@@ -207,7 +213,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
         const token = localStorage.getItem(TOKEN_STORAGE_KEY);
         const currentRole = localStorage.getItem(CURRENT_ROLE_STORAGE_KEY);
-        const tokenExpiry = localStorage.getItem(TOKEN_EXPIRY_STORAGE_KEY);
         const requirePasswordChange = localStorage.getItem(REQUIRE_PASSWORD_CHANGE_KEY) === 'true';
 
         if (storedUser && token && currentRole) {
@@ -224,15 +229,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
           setState({
             user,
-            currentRole: currentRole as UserRole,
+            currentRole: currentRole as UserRole, // Cast string to UserRole
             loading: false,
             initialized: true,
             error: null,
             requirePasswordChange: requirePasswordChange
           });
           
-          // Setup refresh timer for the token
-          setupRefreshTimer();
+          // Setup refresh timer for the token after state update
+          setTimeout(() => {
+            setupRefreshTimer();
+          }, 0);
           
           // Check if password change is required
           if (requirePasswordChange) {
@@ -241,7 +248,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Navigate to appropriate dashboard based on role if on landing or role selection
             const isOnPublicPage = location.pathname === '/' || location.pathname === '/login';
             if (isOnPublicPage) {
-              navigateByRole(currentRole as UserRole);
+              navigateByRole(currentRole as UserRole); // Cast string to UserRole
             }
           }
         } else {
@@ -342,14 +349,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setState(prevState => ({
         ...prevState,
         user,
-        currentRole: token.currentRole as UserRole,
+        currentRole: token.currentRole as UserRole, // Cast string to UserRole
         loading: false,
         error: null,
         requirePasswordChange
       }));
 
       // Set up refresh timer after successful login
-      setupRefreshTimer();
+      setTimeout(() => {
+        setupRefreshTimer();
+      }, 0);
 
       toast.success('Login successful!');
       
@@ -357,11 +366,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (requirePasswordChange) {
         setShowPasswordChangeModal(true);
       } else {
-        // Handle role selection for users with multiple roles
-        if (roles.length > 1) {
+        // Enhanced role selection logic
+        console.log(`User has ${roles.length} role(s):`, roles);
+        
+        if (roles.length === 1) {
+          // User has only one role, navigate directly to dashboard
+          const singleRole = roles[0] as UserRole;
+          console.log(`User has single role: ${singleRole}, bypassing role selection`);
+          
+          // Ensure the currentRole is set to this single role
+          localStorage.setItem(CURRENT_ROLE_STORAGE_KEY, singleRole);
+          
+          // Update state with the current role
+          setState(prevState => ({
+            ...prevState,
+            currentRole: singleRole as UserRole
+          }));
+          
+          // Navigate directly to the appropriate dashboard
+          navigateByRole(singleRole);
+        } else if (roles.length > 1) {
+          // Multiple roles - go to role selection
+          console.log('User has multiple roles, navigating to role selection');
           navigate('/role-selection');
         } else {
-          navigateByRole(token.currentRole as UserRole);
+          // Edge case - no roles
+          console.error('User has no roles assigned');
+          toast.error('No roles assigned to your account. Please contact administrator.');
+          // Handle logout or redirect to a specific page
         }
       }
     } catch (error) {
@@ -410,7 +442,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     try {
       console.log(`Selecting role: ${role}`);
-      if (!state.user) {
+      if (!stateRef.current.user) {
         throw new Error('User not authenticated');
       }
       
@@ -420,7 +452,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       // Save user ID before role change
-      const userId = state.user.id;
+      const userId = stateRef.current.user.id;
       
       const tokenData = await apiSelectRole(role);
       
@@ -438,7 +470,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       setState(prevState => ({
         ...prevState,
-        currentRole: tokenData.currentRole as UserRole,
+        currentRole: tokenData.currentRole as UserRole, // Cast string to UserRole
         loading: false,
         error: null,
         requirePasswordChange: tokenData.requirePasswordChange
@@ -447,7 +479,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('Role selection successful, tokens updated');
       
       // Setup refresh timer after role change
-      setupRefreshTimer();
+      setTimeout(() => {
+        setupRefreshTimer();
+      }, 0);
       
       // Check if password change is required
       if (tokenData.requirePasswordChange) {
@@ -485,46 +519,54 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
   
-// In changePassword method 
-const changePassword = async (currentPassword: string, newPassword: string) => {
-  setIsChangingPassword(true);
-  
-  try {
-    const userId = localStorage.getItem('userId');
-    if (!userId) {
-      throw new Error('User ID not found');
+  // In changePassword method 
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    setIsChangingPassword(true);
+    
+    try {
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+      
+      await apiChangePassword({
+        userId,
+        currentPassword,
+        newPassword
+      });
+      
+      // Update the local storage flag
+      localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, 'false');
+      
+      // Update state
+      setState(prevState => ({
+        ...prevState,
+        requirePasswordChange: false
+      }));
+      
+      // Close modal
+      setShowPasswordChangeModal(false);
+      setIsChangingPassword(false);
+      
+      toast.success('Password changed successfully');
+      
+      // Check if user has only one role
+      const user = stateRef.current.user;
+      if (user && user.roles && user.roles.length === 1) {
+        // Single role - navigate directly to dashboard
+        const singleRole = user.roles[0];
+        navigateByRole(singleRole);
+      } else {
+        // Multiple roles - go to role selection
+        navigateToRoleSelection();
+      }
+    } catch (error) {
+      console.error('Password change error:', error);
+      setIsChangingPassword(false);
+      toast.error('Failed to change password. Please check your current password and try again.');
+      throw error;
     }
-    
-    await apiChangePassword({
-      userId,
-      currentPassword,
-      newPassword
-    });
-    
-    // Update the local storage flag
-    localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, 'false');
-    
-    // Update state
-    setState(prevState => ({
-      ...prevState,
-      requirePasswordChange: false
-    }));
-    
-    // Close modal
-    setShowPasswordChangeModal(false);
-    setIsChangingPassword(false);
-    
-    toast.success('Password changed successfully');
-    
-    // Navigate to role selection page after password change
-    navigateToRoleSelection();
-  } catch (error) {
-    console.error('Password change error:', error);
-    setIsChangingPassword(false);
-    toast.error('Failed to change password. Please check your current password and try again.');
-    throw error;
-  }
-};
+  };
 
   return (
     <AuthContext.Provider

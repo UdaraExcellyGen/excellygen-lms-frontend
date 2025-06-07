@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { FaEdit, FaCheck, FaTimes, FaUser, FaPercentage, FaInfoCircle } from 'react-icons/fa';
+import { FaEdit, FaCheck, FaTimes, FaPercentage, FaInfoCircle } from 'react-icons/fa'; // Removed FaUser
 
 interface EditWorkloadModalProps {
   isOpen: boolean;
