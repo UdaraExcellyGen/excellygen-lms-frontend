@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import NavBar from '../../components/Navbar/NavBar';
 import Footer from '../../components/Footer/Footer';
-import AuthContainer from '../Auth/AuthContainer';
-import HeroSection from './components/HeroSection';
-import FeaturesSection from './components/FeaturesSection';
+import AuthContainer from '../../features/auth/AuthContainer';
+import AnimatedHeroSection from './components/AnimatedHeroSection';
+import AnimatedFeaturesSection from './components/AnimatedFeaturesSection';
 
-const LandingPage: React.FC = () => {
+const AnimatedLandingPage: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
 
   const handleGetStarted = (): void => {
@@ -20,8 +20,8 @@ const LandingPage: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-[#F6E6FF]">
       <NavBar />
       <main className="flex-grow">
-        <HeroSection onGetStarted={handleGetStarted} />
-        <FeaturesSection />
+        <AnimatedHeroSection onGetStarted={handleGetStarted} />
+        <AnimatedFeaturesSection />
       </main>
       <Footer />
       <AuthContainer 
@@ -32,4 +32,4 @@ const LandingPage: React.FC = () => {
   );
 };
 
-export default LandingPage;
+export default AnimatedLandingPage;

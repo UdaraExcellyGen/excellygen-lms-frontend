@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Plus, X, ArrowLeft, AlertCircle, Mail, Phone, Building2, 
   Pencil, Trash2, ShieldAlert, ChevronLeft, ChevronRight, Users, 
-  UserCheck, UserX, Check, UserCog
+  UserCheck, UserX, UserCog
 } from 'lucide-react';
 import { useUsers } from './data/useUsers';
 import FilterBar from './components/FilterBar';
