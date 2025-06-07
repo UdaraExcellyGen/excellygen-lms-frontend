@@ -1,11 +1,10 @@
-// Path: src/features/Learner/LearnerProjects/LearnerProjects.tsx
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Briefcase, ChevronLeft, ChevronRight } from 'lucide-react'; 
+import { Search, Briefcase, ChevronLeft, ChevronRight } from 'lucide-react';
 import Layout from '../../../components/Sidebar/Layout';
 import { ProjectCard } from './components/ProjectCard';
 import { ProjectStats } from './components/ProjectStats';
-import { Project, ProjectStatus } from './types/Project';
+import { Project} from './types/Project';
+
 import { useAuth } from '../../../contexts/AuthContext';
 import { learnerProjectApi } from '../../../api/services/learnerProjectService';
 import { toast } from 'react-hot-toast';
@@ -31,7 +30,7 @@ const LearnerProjects: React.FC = () => {
       }
       setIsLoading(true);
       setError(null);
-      setCurrentPage(1); // Reset to first page on new fetch
+      setCurrentPage(1);
       try {
         const projectsData = await learnerProjectApi.getUserProjects(user.id);
         setAllProjects(projectsData);
@@ -88,7 +87,7 @@ const LearnerProjects: React.FC = () => {
       </Layout>
     );
   }
-  
+
   if (isLoading) {
     return (
       <Layout>
@@ -114,10 +113,12 @@ const LearnerProjects: React.FC = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-6 flex flex-col"> {/* Added flex-col */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 flex-grow"> {/* Added flex-grow */}
-          {/* Header */}
-          <div className="mb-12 sm:mb-16">
+      {/* Outermost container for page background and overall padding */}
+      <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-4 sm:p-6 flex flex-col">
+        {/* Inner container for content - REMOVED max-w-7xl mx-auto, ADDED w-full */}
+        <div className="w-full px-4 sm:px-6 lg:px-8 space-y-8 flex-grow">
+          {/* Header - Reduced bottom margin */}
+          <div className="mb-8 sm:mb-10"> {/* Changed from mb-12 sm:mb-16 */}
             <h1 className="text-3xl md:text-4xl text-center font-bold bg-gradient-to-r from-white via-white bg-clip-text text-transparent">
               Projects
             </h1>
@@ -126,6 +127,7 @@ const LearnerProjects: React.FC = () => {
 
           <ProjectStats projects={allProjects} />
 
+          {/* Filters - This will now also be wider as its parent is wider */}
           <div className="bg-white rounded-xl shadow-lg p-4 mb-8">
             <div className="flex flex-col sm:flex-row flex-wrap items-center gap-4">
               <div className="flex items-center gap-2 flex-1 w-full sm:w-auto">
@@ -155,13 +157,12 @@ const LearnerProjects: React.FC = () => {
 
           {/* Projects Section */}
           <div className="space-y-8">
-            {/* The h2 heading for "All My Projects" etc. is REMOVED as per earlier request */}
-            
+            {/* The h2 heading for "All My Projects" etc. is REMOVED */}
+
             {currentProjectsToDisplay.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {currentProjectsToDisplay.map(project => (
-                  <ProjectCard key={`${project.id}-${project.role}`} project={project} /> 
-                  // Using a more unique key if ID might not be unique due to multiple roles in same project mapping to same backend ID before parsing
+                  <ProjectCard key={`${project.id}-${project.role}`} project={project} />
                 ))}
               </div>
             ) : (
@@ -176,40 +177,38 @@ const LearnerProjects: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
+        </div> {/* End of w-full content wrapper */}
 
         {/* --- Pagination Controls --- */}
         {totalPages > 1 && (
-          <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 mt-8 mb-4 flex justify-center items-center space-x-2">
+
+          <div className="w-full px-4 sm:px-6 lg:px-8 mt-8 mb-4 flex justify-center items-center space-x-2">
             <button
               onClick={handlePrevPage}
               disabled={currentPage === 1}
               className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center
-                          ${currentPage === 1 
-                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
+                          ${currentPage === 1
+                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
                             : 'bg-[#BF4BF6] hover:bg-[#A030D0] text-white'}`}
             >
               <ChevronLeft size={18} className="mr-1" />
               Previous
             </button>
 
-            {/* Page Numbers (Optional: Render a few page numbers) */}
             {Array.from({ length: totalPages }, (_, i) => i + 1)
-              // Limit number of page buttons displayed for very large number of pages
-              .filter(pageNumber => 
-                pageNumber === 1 || 
-                pageNumber === totalPages || 
+              .filter(pageNumber =>
+                pageNumber === 1 ||
+                pageNumber === totalPages ||
                 (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
               )
               .map((pageNumber, index, arr) => (
                 <React.Fragment key={pageNumber}>
-                  {index > 0 && arr[index-1] !== pageNumber - 1 && <span className="text-white">...</span>} 
-                  {/* Ellipsis for skipped numbers */}
+                  {index > 0 && arr[index-1] !== pageNumber - 1 && <span className="text-white">...</span>}
                   <button
                     onClick={() => goToPage(pageNumber)}
                     className={`px-3 py-2 rounded-lg text-sm font-medium
-                                ${currentPage === pageNumber 
-                                  ? 'bg-[#7A00B8] text-white' 
+                                ${currentPage === pageNumber
+                                  ? 'bg-[#7A00B8] text-white'
                                   : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}
                   >
                     {pageNumber}
@@ -217,13 +216,12 @@ const LearnerProjects: React.FC = () => {
                 </React.Fragment>
             ))}
 
-
             <button
               onClick={handleNextPage}
               disabled={currentPage === totalPages}
               className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center
-                          ${currentPage === totalPages 
-                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
+                          ${currentPage === totalPages
+                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
                             : 'bg-[#BF4BF6] hover:bg-[#A030D0] text-white'}`}
             >
               Next

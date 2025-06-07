@@ -1,7 +1,7 @@
 // src/features/Learner/Certificates/components/CertificateCard.tsx
 import React from 'react';
 // FIXED: Added Clock import
-import { Download, Award, Trash2, Clock } from 'lucide-react'; 
+import { Download, Award, Clock } from 'lucide-react'; 
 import { CertificateDto } from '../../../../types/course.types'; // Use backend CertificateDto
 
 interface CertificateCardProps {

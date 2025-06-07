@@ -3,7 +3,7 @@ import React, { useRef, useState } from 'react';
 import { Download, X } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { CertificateDto } from '../../../../types/course.types';
+import { CertificateDto } from '../../../../src/types/course.types';
 
 interface CertificateViewerProps {
   certificate: CertificateDto;
