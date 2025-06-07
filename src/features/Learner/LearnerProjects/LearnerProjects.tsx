@@ -1,11 +1,10 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Briefcase, ChevronLeft, ChevronRight } from 'lucide-react';
 import Layout from '../../../components/Sidebar/Layout';
 import { ProjectCard } from './components/ProjectCard';
 import { ProjectStats } from './components/ProjectStats';
 import { Project} from './types/Project';
+
 import { useAuth } from '../../../contexts/AuthContext';
 import { learnerProjectApi } from '../../../api/services/learnerProjectService';
 import { toast } from 'react-hot-toast';
@@ -31,7 +30,7 @@ const LearnerProjects: React.FC = () => {
       }
       setIsLoading(true);
       setError(null);
-      setCurrentPage(1); 
+      setCurrentPage(1);
       try {
         const projectsData = await learnerProjectApi.getUserProjects(user.id);
         setAllProjects(projectsData);
@@ -88,7 +87,7 @@ const LearnerProjects: React.FC = () => {
       </Layout>
     );
   }
-  
+
   if (isLoading) {
     return (
       <Layout>
@@ -118,8 +117,8 @@ const LearnerProjects: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-4 sm:p-6 flex flex-col">
         {/* Inner container for content - REMOVED max-w-7xl mx-auto, ADDED w-full */}
         <div className="w-full px-4 sm:px-6 lg:px-8 space-y-8 flex-grow">
-          {/* Header */}
-          <div className="mb-12 sm:mb-16">
+          {/* Header - Reduced bottom margin */}
+          <div className="mb-8 sm:mb-10"> {/* Changed from mb-12 sm:mb-16 */}
             <h1 className="text-3xl md:text-4xl text-center font-bold bg-gradient-to-r from-white via-white bg-clip-text text-transparent">
               Projects
             </h1>
@@ -159,7 +158,7 @@ const LearnerProjects: React.FC = () => {
           {/* Projects Section */}
           <div className="space-y-8">
             {/* The h2 heading for "All My Projects" etc. is REMOVED */}
-            
+
             {currentProjectsToDisplay.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {currentProjectsToDisplay.map(project => (
@@ -182,14 +181,14 @@ const LearnerProjects: React.FC = () => {
 
         {/* --- Pagination Controls --- */}
         {totalPages > 1 && (
-          
+
           <div className="w-full px-4 sm:px-6 lg:px-8 mt-8 mb-4 flex justify-center items-center space-x-2">
             <button
               onClick={handlePrevPage}
               disabled={currentPage === 1}
               className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center
-                          ${currentPage === 1 
-                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
+                          ${currentPage === 1
+                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
                             : 'bg-[#BF4BF6] hover:bg-[#A030D0] text-white'}`}
             >
               <ChevronLeft size={18} className="mr-1" />
@@ -197,9 +196,9 @@ const LearnerProjects: React.FC = () => {
             </button>
 
             {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(pageNumber => 
-                pageNumber === 1 || 
-                pageNumber === totalPages || 
+              .filter(pageNumber =>
+                pageNumber === 1 ||
+                pageNumber === totalPages ||
                 (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
               )
               .map((pageNumber, index, arr) => (
@@ -208,8 +207,8 @@ const LearnerProjects: React.FC = () => {
                   <button
                     onClick={() => goToPage(pageNumber)}
                     className={`px-3 py-2 rounded-lg text-sm font-medium
-                                ${currentPage === pageNumber 
-                                  ? 'bg-[#7A00B8] text-white' 
+                                ${currentPage === pageNumber
+                                  ? 'bg-[#7A00B8] text-white'
                                   : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}
                   >
                     {pageNumber}
@@ -221,8 +220,8 @@ const LearnerProjects: React.FC = () => {
               onClick={handleNextPage}
               disabled={currentPage === totalPages}
               className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center
-                          ${currentPage === totalPages 
-                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
+                          ${currentPage === totalPages
+                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
                             : 'bg-[#BF4BF6] hover:bg-[#A030D0] text-white'}`}
             >
               Next
