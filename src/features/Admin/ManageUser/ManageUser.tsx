@@ -12,12 +12,16 @@ import DeleteConfirmationModal from './components/DeleteConfirmationModal';
 import TempPasswordDialog from './components/TempPasswordDialog';
 import { useAuth } from '../../../contexts/AuthContext';
 import { User } from './types';
+import { promoteToSuperAdmin } from '../../../api/services/userService';
+import { toast } from 'react-toastify';
 
 const ManageUser: React.FC = () => {
   const navigate = useNavigate();
   const [showRoleFilter, setShowRoleFilter] = useState(false);
   const [showStatusFilter, setShowStatusFilter] = useState(false);
   const { user: currentUser } = useAuth(); // Get current logged-in user
+  const [showPromotionModal, setShowPromotionModal] = useState(false);
+  const [loadingUserIds, setLoadingUserIds] = useState<string[]>([]);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -25,6 +29,7 @@ const ManageUser: React.FC = () => {
   
   const {
     users,
+    setUsers,
     isPageLoading,
     isFetchingFilteredData,
     isSubmitting,
@@ -69,15 +74,52 @@ const ManageUser: React.FC = () => {
     isPromotingToSuperAdmin
   } = useUsers();
 
+  // Function to handle promoting a user to SuperAdmin without auto-logout
+  const safePromoteToSuperAdmin = async (userId: string) => {
+    // First check if this is the current user
+    const isCurrentUser = userId === currentUser?.id;
+    
+    if (isCurrentUser) {
+      // If trying to promote yourself, show a modal with instructions instead
+      setShowPromotionModal(true);
+    } else {
+      // For other users, proceed with promotion
+      try {
+        setLoadingUserIds(prev => [...prev, userId]);
+        
+        // Get the current access token from auth context
+        const token = localStorage.getItem('access_token');
+        
+        // Call the API without triggering token refresh, but with the current token
+        await promoteToSuperAdmin(userId, token);
+        
+        // Manually update the UI
+        setUsers(prevUsers => prevUsers.map(user => 
+          user.id === userId 
+            ? { ...user, roles: [...user.roles.filter(r => r !== 'SuperAdmin'), 'SuperAdmin'] } 
+            : user
+        ));
+        
+        toast.success(`User promoted to SuperAdmin successfully`);
+      } catch (error) {
+        toast.error("Failed to promote user to SuperAdmin");
+        console.error(error);
+      } finally {
+        setLoadingUserIds(prev => prev.filter(id => id !== userId));
+      }
+    }
+  };
+
   // Reset to first page when users list changes
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearchTerm, filterState.selectedRoles, filterState.filterStatus]);
 
   useEffect(() => {
-  console.log('All users:', users);
-  console.log('Current user:', currentUser);
+    console.log('All users:', users);
+    console.log('Current user:', currentUser);
   }, [users, currentUser]);
+  
   // Pagination calculations
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
@@ -112,34 +154,7 @@ const ManageUser: React.FC = () => {
     return null;
   };
 
-  // Render SuperAdmin promotion button
-  const renderPromoteToSuperAdminButton = (user: User) => {
-    // Only show for SuperAdmin users and only for users who aren't already SuperAdmin
-    if (!isSuperAdmin || user.roles.includes('SuperAdmin') || user.id === currentUser?.id) {
-      return null;
-    }
-    
-    return (
-      <button
-        onClick={() => handlePromoteToSuperAdmin(user.id)}
-        disabled={isUserLoading(user.id) || isPromotingToSuperAdmin}
-        className="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded-md flex items-center gap-1 transition-colors"
-        title="Promote to Super Admin"
-      >
-        {isUserLoading(user.id) ? (
-          <>
-            <div className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full"></div>
-            <span>Promoting...</span>
-          </>
-        ) : (
-          <>
-            <Shield size={12} />
-            <span>Make Super Admin</span>
-          </>
-        )}
-      </button>
-    );
-  };
+  // Removed renderPromoteToSuperAdminButton function
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
@@ -343,12 +358,7 @@ const ManageUser: React.FC = () => {
                               );
                             })}
                           </div>
-                          {/* SuperAdmin promotion button */}
-                          {!user.roles.includes('SuperAdmin') && isSuperAdmin && !isCurrentUser && (
-                            <div className="mt-2">
-                              {renderPromoteToSuperAdminButton(user)}
-                            </div>
-                          )}
+                          {/* SuperAdmin promotion button removed */}
                         </td>
                         
                         {/* Department Column */}
@@ -591,6 +601,35 @@ const ManageUser: React.FC = () => {
           tempPassword={tempPasswordData.tempPassword}
           userId={tempPasswordData.userId}
         />
+      )}
+
+      {/* SuperAdmin Promotion Modal */}
+      {showPromotionModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-3">SuperAdmin Promotion</h3>
+            <p className="mb-4">
+              You cannot promote yourself to SuperAdmin while logged in. Please follow these steps:
+            </p>
+            <ol className="list-decimal pl-5 mb-4 space-y-2">
+              <li>Log out of your current session</li>
+              <li>Log in as another SuperAdmin user</li>
+              <li>Promote your account to SuperAdmin</li>
+              <li>Log back in with your account</li>
+            </ol>
+            <p className="mb-4 text-sm text-gray-600">
+              This prevents token validation issues that would automatically log you out.
+            </p>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowPromotionModal(false)}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

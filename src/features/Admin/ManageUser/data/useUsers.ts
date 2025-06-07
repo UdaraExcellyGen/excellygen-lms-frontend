@@ -784,7 +784,7 @@ export const useUsers = () => {
     setShowAddModal(true);
   };
 
-  // Promote user to SuperAdmin
+  // Promote user to SuperAdmin - UPDATED with improved handling for current user
   const handlePromoteToSuperAdmin = async (userId: string) => {
     if (!isSuperAdmin) {
       toast.error("Only SuperAdmin can promote users to SuperAdmin");
@@ -799,50 +799,57 @@ export const useUsers = () => {
       if (!targetUser) return;
       
       // Check if user already has SuperAdmin role
-      if (targetUser.roles.some(role => role.toLowerCase() === 'superadmin')) {
+      if (targetUser.roles.some(r => r.toLowerCase() === 'superadmin')) {
         toast.info("User is already a SuperAdmin");
         return;
       }
       
-      // Optimistic update
-      const updatedRoles = [...targetUser.roles, 'SuperAdmin'];
-      const optimisticUser = { ...targetUser, roles: updatedRoles };
+      // Don't update the UI optimistically for the current user
+      // This prevents token mismatch issues
+      const isCurrentUser = targetUser.id === currentUser?.id;
       
-      setUsers(prevUsers => prevUsers.map(user => 
-        user.id === userId ? optimisticUser : user
-      ));
-      
-      if (allUsers.length > 0) {
-        setAllUsers(prevUsers => prevUsers.map(user => 
+      // Only update UI optimistically for other users, not the current user
+      if (!isCurrentUser) {
+        // Optimistic update for other users
+        const updatedRoles = [...targetUser.roles, 'SuperAdmin'];
+        const optimisticUser = { ...targetUser, roles: updatedRoles };
+        
+        setUsers(prevUsers => prevUsers.map(user => 
           user.id === userId ? optimisticUser : user
         ));
+        
+        if (allUsers.length > 0) {
+          setAllUsers(prevUsers => prevUsers.map(user => 
+            user.id === userId ? optimisticUser : user
+          ));
+        }
       }
       
       try {
         // Call API to promote user
-        const updatedUser = await promoteToSuperAdmin(userId);
+        await promoteToSuperAdmin(userId);
         
-        setUsers(prevUsers => prevUsers.map(user => 
-          user.id === userId ? updatedUser : user
-        ));
-        
-        if (allUsers.length > 0) {
-          setAllUsers(prevUsers => prevUsers.map(user => 
-            user.id === userId ? updatedUser : user
-          ));
+        // If this is the current user, display message but don't update UI
+        if (isCurrentUser) {
+          toast.success("You have been promoted to SuperAdmin. Please log out and log back in for changes to take effect.");
+        } else {
+          toast.success(`User promoted to SuperAdmin successfully`);
+          
+          // Refresh the user list after promotion for non-current users
+          fetchUsers();
         }
-        
-        toast.success(`User promoted to SuperAdmin successfully`);
       } catch (error) {
-        // Revert on error
-        setUsers(prevUsers => prevUsers.map(user => 
-          user.id === userId ? targetUser : user
-        ));
-        
-        if (allUsers.length > 0) {
-          setAllUsers(prevUsers => prevUsers.map(user => 
+        // Revert UI changes on error (for non-current users)
+        if (!isCurrentUser) {
+          setUsers(prevUsers => prevUsers.map(user => 
             user.id === userId ? targetUser : user
           ));
+          
+          if (allUsers.length > 0) {
+            setAllUsers(prevUsers => prevUsers.map(user => 
+              user.id === userId ? targetUser : user
+            ));
+          }
         }
         
         throw error;
