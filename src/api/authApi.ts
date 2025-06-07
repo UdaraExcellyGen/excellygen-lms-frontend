@@ -47,6 +47,15 @@ export interface SendTempPasswordEmailRequest {
   tempPassword: string;
 }
 
+export interface HeartbeatRequest {
+  accessToken: string;
+}
+
+export interface HeartbeatResponse {
+  accessToken: string;
+  expiresAt: string;
+}
+
 // Login
 export const login = async (data: LoginRequest): Promise<AuthResponse> => {
   const response = await apiClient.post('/auth/login', data);
@@ -93,6 +102,27 @@ export const refreshToken = async (): Promise<TokenResponse> => {
     accessToken,
     refreshToken
   });
+  
+  return response.data;
+};
+
+// Heartbeat to extend session for active users
+export const heartbeat = async (): Promise<HeartbeatResponse> => {
+  const accessToken = localStorage.getItem('access_token');
+  
+  if (!accessToken) {
+    throw new Error('No access token available');
+  }
+  
+  const response = await apiClient.post('/auth/heartbeat', {
+    accessToken
+  });
+  
+  // Update the tokens in localStorage
+  if (response.data.accessToken) {
+    localStorage.setItem('access_token', response.data.accessToken);
+    localStorage.setItem('token_expiry', response.data.expiresAt);
+  }
   
   return response.data;
 };
