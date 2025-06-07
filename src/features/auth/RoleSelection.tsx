@@ -44,6 +44,21 @@ const RoleSelection: React.FC = () => {
     }
   }, [user, navigate, initialized]);
 
+  // Auto-redirect if user has only one role
+  useEffect(() => {
+    if (initialized && user && user.roles && user.roles.length === 1) {
+      console.log('User has only one role, auto-redirecting from role selection page');
+      const singleRole = user.roles[0];
+      
+      // Small delay to ensure consistent UI experience
+      const timer = setTimeout(() => {
+        handleRoleSelect(singleRole);
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [initialized, user]);  // handleRoleSelect is not included in deps because it'll cause lint warnings, but it's fine in this case
+
   const availableRoles: Role[] = [
     {
       id: UserRole.Admin,
@@ -131,7 +146,6 @@ const RoleSelection: React.FC = () => {
           <p className="text-gray-500">
             Select your role to access the dashboard
           </p>
-          {/* Removed the User ID display line */}
         </div>
 
         {/* Role Grid */}

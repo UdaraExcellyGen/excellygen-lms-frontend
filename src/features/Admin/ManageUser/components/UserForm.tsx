@@ -46,7 +46,7 @@ const UserForm: React.FC<UserFormProps> = ({
     'HR'
   ];
 
-  // Real-time validation functions
+  // Email validation functions
   const validateEmail = (email: string): string => {
     if (!email) return 'Email is required';
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -56,7 +56,7 @@ const UserForm: React.FC<UserFormProps> = ({
 
   // Enhanced phone validation with international format support
   const validatePhone = (phone: string): string => {
-    if (!phone) return ''; // Phone is optional
+    if (!phone) return ''; 
     
     // Remove any non-digit characters for validation
     const digitsOnly = phone.replace(/\D/g, '');
@@ -66,7 +66,7 @@ const UserForm: React.FC<UserFormProps> = ({
     const hasValidDigitLength = digitsOnly.length >= 10 && digitsOnly.length <= 15;
     
     if (!isValidInternational && !hasValidDigitLength) {
-      return 'Please enter a valid phone number (e.g., +1234567890)';
+      return 'Please enter a valid phone number (e.g., +94770123456)';
     }
     
     return '';
@@ -218,7 +218,7 @@ const UserForm: React.FC<UserFormProps> = ({
               </div>
               <input
                 type="tel"
-                placeholder="Phone (e.g., +1234567890)"
+                placeholder="Phone (e.g., +94770123456)"
                 value={newUser.phone}
                 onChange={(e) => handleFieldChange('phone', e.target.value)}
                 className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none 
@@ -233,7 +233,7 @@ const UserForm: React.FC<UserFormProps> = ({
                 </div>
               )}
               <div className="mt-1 text-gray-500 text-xs pl-3">
-                Use international format with country code (e.g., +1 for US)
+                Use international format with country code (e.g., +94 for SL)
               </div>
             </div>
             

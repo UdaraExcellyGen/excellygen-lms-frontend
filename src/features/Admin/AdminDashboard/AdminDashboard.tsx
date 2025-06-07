@@ -17,7 +17,7 @@ import { getQuickActions } from './data/dashboardData';
 // Main AdminDashboard Component
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { userDetails, initialized } = useAuth();
+  const { user: userDetails, initialized } = useAuth();
   
   // States for dashboard data
   const [stats, setStats] = useState({

@@ -16,7 +16,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
       <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
         <h2 className="text-xl text-[#1B0A3F] font-['Unbounded'] mb-4">Confirm Delete</h2>
         <p className="text-gray-600 font-['Nunito_Sans'] mb-6">
