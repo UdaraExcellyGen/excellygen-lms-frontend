@@ -1,3 +1,4 @@
+// src/features/Learner/LearnerCv/Components/ProjectsSection.tsx
 import React from 'react';
 import { Calendar, Briefcase } from 'lucide-react';
 import { Project } from '../types/types';
@@ -41,7 +42,7 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({ projects }) => {
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {project.technologies.map((tech, idx) => (
+                {project.technologies.map((tech: string, idx: number) => (
                   <span key={idx} className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-md font-medium">
                     {tech}
                   </span>
