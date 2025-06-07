@@ -147,7 +147,7 @@ const BasicCourseDetails: React.FC = () => {
         return () => { isMounted = false; };
     }, [courseIdFromParams, contextCourseData.createdCourseId, contextCourseData.basicDetails, 
         getInitialDetailsState, navigate, resetCourseContext, setCreatedCourseId, 
-        updateContextBasicDetails, currentEditingCourseId]); // Removed 'details' from dependency array
+        updateContextBasicDetails, currentEditingCourseId]); 
 
     // Click outside dropdown handler
     useEffect(() => {
@@ -165,7 +165,7 @@ const BasicCourseDetails: React.FC = () => {
         setDetails(prev => ({ ...prev, [name]: value }));
         setErrors(prev => ({ ...prev, [name]: '' }));
     }, []);
-
+//image validation
     const processAndSetThumbnail = useCallback((file: File) => {
         const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif'];
         const maxSizeMB = 2;
@@ -198,7 +198,7 @@ const BasicCourseDetails: React.FC = () => {
         }));
         setErrors(prev => ({ ...prev, technologies: '' }));
     }, []);
-
+//form validation
     const validateForm = useCallback((): boolean => {
         let isValid = true;
         const newErrors = { title: '', category: '', estimatedTime: '', technologies: '', thumbnail: errors.thumbnail };
@@ -218,11 +218,13 @@ const BasicCourseDetails: React.FC = () => {
         return isValid;
     }, [details, errors.thumbnail]);
 
+    //For next
     const performSaveOperation = async (isDraft: boolean) => {
         if (!validateForm() && !isDraft) {
             toast.error('Please fix errors in the form.');
             return;
         }
+        //For drafts
         if (isDraft && !details.title.trim()) {
             toast.error('Course Title is required to save a draft.');
             setErrors(prev => ({ ...prev, title: 'Course Title is required.'}));
@@ -323,7 +325,7 @@ const BasicCourseDetails: React.FC = () => {
                 </div>
             </div>
 
-            <ProgressSteps currentStep={1} />
+            <ProgressSteps stage={1} />
 
             <div className="bg-[#1B0A3F]/40 backdrop-blur-md rounded-2xl p-6 h-auto">
                 <h2 className="text-lg font-['Unbounded'] text-[#ffffff] mb-6">Course Details</h2>
@@ -377,7 +379,8 @@ const BasicCourseDetails: React.FC = () => {
                             type="text" 
                             placeholder="e.g., 10" 
                         />
-                        <TechnologyDropdown 
+                        <TechnologyDropdown
+                            label="Technology *" 
                             selectedTechnologyIds={details.technologies} 
                             availableTechnologies={availableTechnologies} 
                             error={!!errors.technologies} 

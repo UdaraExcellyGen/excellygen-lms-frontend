@@ -1,4 +1,3 @@
-// features/Coordinator/CoursesDisplayPage/CoursesDisplayPage.tsx
 import React, { useState, useMemo, useEffect } from 'react';
 import { ArrowLeft, Search, RefreshCw, Plus, Trash2, Edit, BookOpen, Clock, Award, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -253,7 +252,7 @@ const CoursesDisplayPage: React.FC = () => {
                 estimatedTime: parseInt(basicDetails.estimatedTime, 10) || 0,
                 thumbnailUrl: basicDetails.thumbnail
                     ? URL.createObjectURL(basicDetails.thumbnail)
-                    : undefined,
+                    : null,
                 category: availableCategories.find(c => c.id === basicDetails.categoryId) || { id: basicDetails.categoryId, title: "Loading..." },
                 technologies: basicDetails.technologies.map(techId => {
                     const foundTech = availableTechnologies.find(t => t.id === techId);
@@ -333,7 +332,6 @@ const CoursesDisplayPage: React.FC = () => {
             console.error("Failed to delete course:", error);
             
             // Optimistically update UI even if backend fails
-            // This is optional - remove this if you want strict consistency with backend
             setAllFetchedCourses(prevCourses => prevCourses.filter(course => course.id !== courseToDeleteId));
             
             toast.error("There was an error on the server. The course may or may not have been deleted.");

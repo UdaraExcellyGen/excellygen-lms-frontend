@@ -1,8 +1,7 @@
-// features/Coordinator/CoursesDisplayPage/components/GridCard.tsx
 import React from 'react';
 import { Trash2, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { CourseDto } from '../../../../types/course.types'; // Adjust path as needed
+import { CourseDto } from '../../../../types/course.types'; 
 
 interface GridCardProps {
     course: CourseDto;
@@ -10,14 +9,14 @@ interface GridCardProps {
     currentUserId: string;
 }
 
-// Helper function to map status numbers/strings to display strings
+
 // Ensure this matches the enum values/strings from your backend
 const formatCourseStatus = (status: 'Draft' | 'Published' | 'Archived' | number): string => {
     if (typeof status === 'number') {
         switch (status) {
-            case 0: return 'Draft'; // Assuming 0 is Draft from backend
-            case 1: return 'Published'; // Assuming 1 is Published
-            case 2: return 'Archived'; // Assuming 2 is Archived
+            case 0: return 'Draft';
+            case 1: return 'Published';
+            case 2: return 'Archived'; 
             default: return 'Unknown';
         }
     }
@@ -25,7 +24,7 @@ const formatCourseStatus = (status: 'Draft' | 'Published' | 'Archived' | number)
     if (status === 'Draft' || status === 'Published' || status === 'Archived') {
         return status;
     }
-    return 'Unknown'; // Fallback for unexpected string values
+    return 'Unknown'; 
 };
 
 
@@ -46,7 +45,7 @@ export const GridCard: React.FC<GridCardProps> = ({ course, onDeleteCourse, curr
         navigate(`/coordinator/course-view/${course.id}`);
     };
 
-    const displayStatus = formatCourseStatus(course.status); // Use the helper function
+    const displayStatus = formatCourseStatus(course.status); 
 
     return (
         <div className="bg-white rounded-3xl p-3 sm:p-4 md:p-5 lg:p-6 shadow-sm flex flex-col justify-between h-full">

@@ -7,8 +7,8 @@ export const initialNotifications: Notification[] = [
 ];
 
 export const initialStats: DashboardStats = {
-  courses: { total: 12, active: 8 },
-  students: { total: 450, active: 380 },
+  courses: { total: 4, active: 3 },
+  students: { total: 6, active: 4 },
 };
 
 export const getQuickActions = (navigate: (path: string) => void): QuickAction[] => [

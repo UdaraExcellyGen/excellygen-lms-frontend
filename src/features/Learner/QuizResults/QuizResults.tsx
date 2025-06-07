@@ -1,4 +1,3 @@
-// src/features/Learner/QuizResults/QuizResults.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, XCircle, Award, Clock, BookOpen } from 'lucide-react';

@@ -3,7 +3,7 @@ import React from 'react';
 
 interface FormTextInputProps {
     label: string;
-    name: string; // <<< ADD THIS LINE
+    name: string; 
     placeholder?: string;
     value: string;
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -14,7 +14,7 @@ interface FormTextInputProps {
 
 const FormTextInput: React.FC<FormTextInputProps> = ({
     label,
-    name, // <<< Destructure the name prop
+    name, 
     placeholder,
     value,
     onChange,
@@ -24,21 +24,21 @@ const FormTextInput: React.FC<FormTextInputProps> = ({
 }) => {
     return (
         <div>
-            <label htmlFor={name} className="block text-[15px] text-[#ffffff] mb-2 font-['Nunito_Sans']">{label}</label> {/* Optional: Use name for htmlFor */}
+            <label htmlFor={name} className="block text-[15px] text-[#ffffff] mb-2 font-['Nunito_Sans']">{label}</label> 
             <input
-                id={name} // Optional: Link label to input
+                id={name} 
                 type={type}
-                name={name} // <<< ADD THIS LINE to the input element
+                name={name}
                 placeholder={placeholder}
                 className={`w-full p-2 border ${error ? 'border-red-500' : 'border-[#1B0A3F]/60'} rounded-lg focus:outline-none focus:border-[#BF4BF6] font-['Nunito_Sans'] bg-[#1B0A3F]/60 text-white`}
                 value={value}
                 onChange={onChange}
                 style={{ color: 'white' }}
-                aria-invalid={error ? "true" : "false"} // Accessibility improvement
-                aria-describedby={error ? `${name}-error` : undefined} // Accessibility
+                aria-invalid={error ? "true" : "false"} 
+                aria-describedby={error ? `${name}-error` : undefined} 
             />
             {error && errorMessage && (
-                <p id={`${name}-error`} className="text-red-500 text-sm mt-1 font-['Nunito_Sans']">{errorMessage}</p> // Accessibility ID
+                <p id={`${name}-error`} className="text-red-500 text-sm mt-1 font-['Nunito_Sans']">{errorMessage}</p> 
             )}
         </div>
     );

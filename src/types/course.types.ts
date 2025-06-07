@@ -1,5 +1,7 @@
 // src/types/course.types.ts
 
+import { QuizDto } from './quiz.types';
+
 // Backend DTOs mapped to TypeScript interfaces
 
 export interface UserBasicDto {

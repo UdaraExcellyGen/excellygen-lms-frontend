@@ -2,7 +2,7 @@
 import React from 'react';
 // Import refined types
 import { ExistingMaterialFile, SubtopicFE } from '../../../../../types/course.types'; // Adjust path
-import { PlayCircle, FileText, BookCheck, X } from 'lucide-react';
+import { FileText, X } from 'lucide-react';
 
 // interface MaterialItemProps {
 //     lessonId: number; // Need lessonId to help identify which lesson this material belongs to

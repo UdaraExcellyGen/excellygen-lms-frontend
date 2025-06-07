@@ -1,4 +1,3 @@
-// src/features/Coordinator/QuizManagement/EditQuiz.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Plus, Save, Trash2, AlertCircle, CheckCircle } from 'lucide-react';

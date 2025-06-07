@@ -170,3 +170,13 @@ export interface ActiveQuizState {
   timeRemaining: number; // in seconds
   isCompleted: boolean;
 }
+
+export interface QuizBank {
+    id: number; // Corresponds to quizId
+    title: string;
+    description: string;
+    questions: QuizBankQuestionDto[]; // Array of questions
+    timeLimitMinutes: number;
+    totalMarks: number;
+    lessonId: number;
+}

@@ -1,7 +1,8 @@
 // src/features/Coordinator/QuizManagement/CreateQuiz.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, Plus, Save, Trash2, AlertCircle, Info } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2, Info } from 'lucide-react';
+
 import toast from 'react-hot-toast';
 
 import {
@@ -305,8 +306,8 @@ const CreateQuiz: React.FC = () => {
     // Prepare sanitized questions first so we can validate them
     const sanitizedQuestions = quizState.questions.map((q, index) => ({
       questionContent: q.questionContent.trim(),
-      questionType: "MCQ", // Required field - ensure correct case
-      questionBankOrder: index + 1, // Ensure correct ordering
+      questionType: "MCQ", 
+      questionBankOrder: index + 1, 
       options: q.options.map(o => ({
         optionText: o.optionText.trim(),
         isCorrect: o.isCorrect

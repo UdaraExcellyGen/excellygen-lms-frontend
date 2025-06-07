@@ -9,7 +9,8 @@ import {
     CreateLessonPayload,
     UpdateLessonPayload,
     CreateCoursePayload, // Use the refined type
-    UpdateCourseCoordinatorDtoFE // Use the refined type
+    UpdateCourseCoordinatorDtoFE, // Use the refined type
+    OverallLmsStatsDto
 } from '../../../types/course.types';
 
 // --- Fetch Lookups ---
@@ -127,4 +128,12 @@ export const uploadDocument = async (lessonId: number, file: File): Promise<Cour
 
 export const deleteDocument = async (documentId: number): Promise<void> => {
     await apiClient.delete(`/courses/documents/${documentId}`);
+};
+
+
+//for Course Management stat card
+export const getLmsOverallStats = async (): Promise<OverallLmsStatsDto> => {
+    // Note: Adjust the endpoint '/stats/overall-lms-stats' if your backend uses a different URL
+    const response = await apiClient.get<OverallLmsStatsDto>('/stats/overall-lms-stats');
+    return response.data;
 };

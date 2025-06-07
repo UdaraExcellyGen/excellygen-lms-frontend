@@ -69,8 +69,9 @@ const UploadMaterials: React.FC = () => {
                                 id: l.id, lessonName: l.lessonName, lessonPoints: l.lessonPoints,
                                 courseId: l.courseId,
                                 documents: l.documents.map(d => ({
-                                    id: d.id, name: d.name, type: 'document', fileUrl: d.fileUrl,
-                                    documentType: d.documentType, fileSize: d.fileSize, lessonId: d.lessonId
+                                    id: d.id, name: d.name, fileUrl: d.fileUrl,
+                                    documentType: d.documentType, fileSize: d.fileSize, lessonId: d.lessonId,
+                                    lastUpdatedDate: d.lastUpdatedDate
                                 })),
                                 isEditing: false, originalName: l.lessonName, originalPoints: l.lessonPoints ?? 1
                             }));
@@ -298,8 +299,8 @@ const UploadMaterials: React.FC = () => {
             try {
                 const docDto = await uploadDocument(lessonId, file);
                 const newDoc: ExistingMaterialFile = {
-                    id: docDto.id, name: docDto.name, type: 'document', fileUrl: docDto.fileUrl,
-                    documentType: docDto.documentType, fileSize: docDto.fileSize, lessonId: docDto.lessonId
+                    id: docDto.id, name: docDto.name, fileUrl: docDto.fileUrl,
+                    documentType: docDto.documentType, fileSize: docDto.fileSize, lessonId: docDto.lessonId,lastUpdatedDate: docDto.lastUpdatedDate 
                 };
                 addDocumentToLessonState(lessonId, newDoc);
                 successCount++;

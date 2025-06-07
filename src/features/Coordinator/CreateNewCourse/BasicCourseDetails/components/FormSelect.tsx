@@ -1,7 +1,6 @@
-// features/Coordinator/CreateNewCourse/BasicCourseDetails/components/FormSelect.tsx
 import React from 'react';
 
-// Interface for options expects { id: string, title: string }
+// Interface for options expects 
 interface SelectOption {
     id: string;
     title: string;
@@ -9,37 +8,37 @@ interface SelectOption {
 
 interface FormSelectProps {
     label: string;
-    name: string; // <<< CONFIRM this exists
-    value: string; // This will be the ID
+    name: string; 
+    value: string;
     onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
     error?: boolean;
     errorMessage?: string;
-    options: SelectOption[]; // Updated options type
-    placeholder?: string; // Optional placeholder text
+    options: SelectOption[]; 
+    placeholder?: string;
 }
 
 const FormSelect: React.FC<FormSelectProps> = ({
     label,
-    name, // <<< Destructure the name prop
+    name, 
     value,
     onChange,
     error,
     errorMessage,
     options,
-    placeholder = "Select..." // Default placeholder
+    placeholder = "Select..." 
 }) => {
     return (
         <div>
-            <label htmlFor={name} className="block text-[15px] text-[#ffffff] mb-2 font-['Nunito_Sans']">{label}</label> {/* Optional: Use name for htmlFor */}
+            <label htmlFor={name} className="block text-[15px] text-[#ffffff] mb-2 font-['Nunito_Sans']">{label}</label> 
             <select
-                id={name} // Optional: Link label to input
-                name={name} // <<< CONFIRM this exists on the select element
+                id={name} 
+                name={name} 
                 className={`w-full p-2 border ${error ? 'border-red-500' : 'border-[#1B0A3F]/60'} rounded-lg focus:outline-none focus:border-[#BF4BF6] font-['Nunito_Sans'] bg-[#1B0A3F]/60 text-white`}
-                value={value} // Bind to the ID
+                value={value} 
                 onChange={onChange}
-                style={{ color: value ? 'white' : '#9ca3af' }} // Style placeholder differently if needed
-                aria-invalid={error ? "true" : "false"} // Accessibility improvement
-                aria-describedby={error ? `${name}-error` : undefined} // Accessibility
+                style={{ color: value ? 'white' : '#9ca3af' }} 
+                aria-invalid={error ? "true" : "false"} 
+                aria-describedby={error ? `${name}-error` : undefined} 
             >
                  {/* Use the placeholder */}
                  <option value="" disabled hidden={value !== ""}>
@@ -51,7 +50,7 @@ const FormSelect: React.FC<FormSelectProps> = ({
                 ))}
             </select>
              {error && errorMessage && (
-                <p id={`${name}-error`} className="text-red-500 text-sm mt-1 font-['Nunito_Sans']">{errorMessage}</p> // Accessibility ID
+                <p id={`${name}-error`} className="text-red-500 text-sm mt-1 font-['Nunito_Sans']">{errorMessage}</p> 
              )}
         </div>
     );

@@ -27,12 +27,13 @@ const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({
     onDragEnter,
     onDragLeave
 }) => {
+    const containerHeight = "h-60";
     return (
         <div>
             <p className="text-[15px] text-[#ffffff] mb-2 font-['Nunito_Sans']">Thumbnail Image</p>
             <label htmlFor="thumbnail-upload" className="cursor-pointer">
                 <div
-                    className={`border-1 border-dashed bg-[#1B0A3F]/60 rounded-lg p-1 text-center transition-colors ${isDragging ? 'border-[#BF4BF6] bg-[#F6E6FF]/10' : 'border-[#1B0A3F]/60'}`}
+                    className={`border-1 border-dashed bg-[#1B0A3F]/60 rounded-lg p-1 text-center transition-colors ${containerHeight} flex flex-col justify-center items-center ${isDragging ? 'border-[#BF4BF6] bg-[#F6E6FF]/10' : 'border-[#1B0A3F]/60'}`}
                     onDragOver={onDragOver}
                     onDragEnter={onDragEnter}
                     onDragLeave={onDragLeave}
@@ -42,7 +43,7 @@ const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({
                         <img
                             src={URL.createObjectURL(thumbnail)}
                             alt="Course thumbnail"
-                            className="w-full h-60 object-cover rounded-lg"
+                            className="max-w-full h-full object-contain rounded-lg bg-black/10" 
                         />
                         
                     ) : (

@@ -1,7 +1,8 @@
-// types/index.ts
+// LearnerListPage/types/index.ts
 export interface Student {
-    id: number;
+    id: number; 
     name: string;
+    userId: string; 
 }
 
 export interface Course {

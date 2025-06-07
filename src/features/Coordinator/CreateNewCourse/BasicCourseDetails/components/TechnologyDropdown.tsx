@@ -1,7 +1,7 @@
 // components/TechnologyDropdown.tsx
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { TechnologyDto } from '../../../../../types/course.types'; // Use TechnologyDto
+import { TechnologyDto } from '../../../../../types/course.types'; 
 
 interface TechnologyDropdownProps {
   label: string; // Added label prop
