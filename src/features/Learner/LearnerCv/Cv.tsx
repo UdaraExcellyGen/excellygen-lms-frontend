@@ -92,7 +92,7 @@ const CV: React.FC = () => {
 
   const handleDownloadCV = (): void => {
     console.log('Downloading CV...');
-    toast.info('CV download functionality is not yet implemented.');
+    toast.success('CV download currently Unavailable!.');
   };
 
   if (loading) {
