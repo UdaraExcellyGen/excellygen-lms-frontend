@@ -7,10 +7,13 @@ import {
   selectRole as apiSelectRole, 
   resetPassword as apiResetPassword,
   refreshToken as apiRefreshToken,
-  changePassword as apiChangePassword
+  changePassword as apiChangePassword,
+  heartbeat
 } from '../api/authApi';
 import { User, UserRole, AuthState } from '../types/auth.types';
 import PasswordChangeModal from '../features/auth/PasswordChangeModal';
+import ActivityTracker from '../api/services/ActivityTracker';
+import SessionService from '../api/services/SessionService';
 
 type AuthContextType = AuthState & {
   login: (email: string, password: string) => Promise<void>;
@@ -48,6 +51,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializingRef = useRef(true);
   const stateRef = useRef<AuthState>(initialState);
+  const sessionService = useRef(SessionService.getInstance());
 
   // Keep stateRef updated with the latest state
   useEffect(() => {
@@ -119,7 +123,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       console.log('Refreshing token...');
-      const tokenData = await apiRefreshToken();
+      
+      // Try heartbeat first if user is active
+      const activityTracker = ActivityTracker.getInstance();
+      const idleTime = activityTracker.getIdleTime();
+      const maxIdleTime = 30 * 60 * 1000; // 30 minutes
+      
+      let tokenData;
+      
+      if (idleTime < maxIdleTime) {
+        // User is active, use heartbeat for a simpler token refresh
+        try {
+          console.log('User is active, using heartbeat to refresh token');
+          const heartbeatResponse = await heartbeat();
+          tokenData = {
+            accessToken: heartbeatResponse.accessToken,
+            refreshToken: refreshToken, // Keep existing refresh token
+            expiresAt: heartbeatResponse.expiresAt,
+            currentRole: localStorage.getItem(CURRENT_ROLE_STORAGE_KEY) || '',
+            requirePasswordChange: stateRef.current.requirePasswordChange
+          };
+        } catch (err) {
+          console.warn('Heartbeat failed, falling back to standard refresh:', err);
+          // Fall back to standard refresh if heartbeat fails
+          tokenData = await apiRefreshToken();
+        }
+      } else {
+        // User has been idle for too long, use standard refresh
+        console.log('User has been idle, using standard token refresh');
+        tokenData = await apiRefreshToken();
+      }
       
       // Update stored tokens
       localStorage.setItem(TOKEN_STORAGE_KEY, tokenData.accessToken);
@@ -128,7 +161,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem(CURRENT_ROLE_STORAGE_KEY, tokenData.currentRole);
       
       // Store password change requirement
-      localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, tokenData.requirePasswordChange.toString());
+      if (tokenData.requirePasswordChange !== undefined) {
+        localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, tokenData.requirePasswordChange.toString());
+      }
       
       // Use the functional update pattern
       setState(prevState => ({
@@ -241,6 +276,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setupRefreshTimer();
           }, 0);
           
+          // Start the session activity tracking
+          sessionService.current.startSessionManager();
+          
           // Check if password change is required
           if (requirePasswordChange) {
             setShowPasswordChangeModal(true);
@@ -273,11 +311,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     initAuth();
     
-    // Cleanup refresh timer on unmount
+    // Cleanup refresh timer and session manager on unmount
     return () => {
       if (refreshTimerRef.current) {
         clearInterval(refreshTimerRef.current);
       }
+      sessionService.current.stopSessionManager();
     };
   }, [resetAuthState, navigateByRole, setupRefreshTimer, location.pathname]);
 
@@ -359,6 +398,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setTimeout(() => {
         setupRefreshTimer();
       }, 0);
+      
+      // Start the session activity tracking
+      sessionService.current.startSessionManager();
 
       toast.success('Login successful!');
       
@@ -413,6 +455,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('Logging out...');
       await apiLogout();
+      
+      // Stop the session manager
+      sessionService.current.stopSessionManager();
+      
       resetAuthState();
       
       setState({
