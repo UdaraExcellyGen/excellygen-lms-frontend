@@ -1,10 +1,10 @@
 // Path: src/features/ProjectManager/Employee-assign/Employee-assign.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom'; // Removed useNavigate
 import {
-    FaUserCircle, FaProjectDiagram, FaSearch, FaArrowLeft, FaFilter,
-    FaFileExport, FaUsers, FaClock, FaObjectGroup, FaChevronDown,
+    FaUserCircle, FaProjectDiagram, FaSearch, FaArrowLeft, // Removed FaFilter
+    FaObjectGroup, FaChevronDown, // Removed FaFileExport, FaUsers, FaClock
     FaUserSlash, FaHashtag, FaExclamationTriangle
 } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
@@ -21,11 +21,11 @@ import ProjectCard from './components/ProjectCard';
 import EditWorkloadModal from './components/EditWorkloadModal'; // ADDED
 
 // Import types and API services
-import { Employee, Project, EmployeeAssignment, EmployeeFilter } from './types/types';
+import { Employee, Project, EmployeeFilter } from './types/types'; // Removed EmployeeAssignment
 import { employeeApi, projectApi, assignmentApi, resourceApi } from '../../../api/services/ProjectManager/employeeAssignmentService';
 
 const EmployeeManagement: React.FC = () => {
-    const [darkMode, setDarkMode] = useState(false);
+    const [darkMode] = useState(false); // Removed setDarkMode, darkMode is still available if needed elsewhere in this component
     const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [projectStatusFilter, setProjectStatusFilter] = useState('All');
@@ -38,7 +38,7 @@ const EmployeeManagement: React.FC = () => {
     const [isSkillMatchActive, setIsSkillMatchActive] = useState(false);
     const [searchType, setSearchType] = useState('name');
     const [projectSearchType, setProjectSearchType] = useState('name');
-    const navigate = useNavigate();
+    // const navigate = useNavigate(); // Removed
 
     // Data states
     const [projects, setProjects] = useState<Project[]>([]);
@@ -349,7 +349,7 @@ const EmployeeManagement: React.FC = () => {
         setProjectToRemoveFrom(null);
     };
 
-    const triggerRemoveConfirmation = (projectId: string, employeeId: string, employeeName: string, projectName: string) => {
+    const triggerRemoveConfirmation = (projectId: string, employeeId: string) => { // Removed employeeName, projectName
         const employeeData = employees.find(e => e.id === employeeId);
         const projectData = projects.find(p => p.id === projectId);
         if (employeeData && projectData) {
@@ -713,7 +713,7 @@ const EmployeeManagement: React.FC = () => {
                     <ProjectDetailsPopup
                         project={projectDetailsPopup.project}
                         onClose={handleCloseProjectDetails}
-                        darkMode={darkMode}
+                        // darkMode={darkMode} // THIS LINE IS THE FIX - REMOVE IT
                         employees={employees}
                     />
 

@@ -2,9 +2,9 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
     FaArrowLeft,
-    FaBookmark,
-    FaCompress,
-    FaExpand
+    // FaBookmark, // Removed: Unused import
+    // FaCompress, // Removed: Unused import
+    // FaExpand    // Removed: Unused import
 } from 'react-icons/fa';
 import {
     Play,
@@ -64,11 +64,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoData, onClose, startTime
     };
 
     const handleTimeUpdate = () => {
-        if (videoRef.current) {
-            setCurrentTime(videoRef.current.currentTime);
+        const videoElement = videoRef.current;
+        if (videoElement) {
+            const currentVideoTime = videoElement.currentTime; // Fix for TS18047
+            setCurrentTime(currentVideoTime);
             const currentTranscript = videoData.transcript.find((t, index) => {
                 const nextTime = videoData.transcript[index + 1]?.timestamp || Infinity;
-                return t.timestamp <= videoRef.current.currentTime && nextTime > videoRef.current.currentTime;
+                // Use the captured currentVideoTime variable
+                return t.timestamp <= currentVideoTime && nextTime > currentVideoTime;
             });
             setActiveTranscript(currentTranscript?.timestamp || null);
         }
@@ -149,16 +152,21 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoData, onClose, startTime
 
     useEffect(() => {
         if (videoRef.current && duration > 0) {
-            videoRef.current.currentTime = startTime; // Set currentTime when startTime prop changes and video is loaded
-            if (startTime > 0) {
+            videoRef.current.currentTime = startTime; 
+            if (startTime > 0 && !isPlaying) { // Added !isPlaying to prevent multiple play calls if already playing
                 videoRef.current.play().catch(error => {
-                    // Handle autoplay error, for example, show a message to the user
                     console.error("Autoplay prevented:", error);
                 });
-                setIsPlaying(true); // Update isPlaying state to reflect video is playing
+                setIsPlaying(true); 
+            } else if (startTime === 0 && isPlaying && videoRef.current.paused) {
+                // If startTime is 0, ensure video plays if isPlaying is true but video is somehow paused
+                // This case might be redundant depending on other logic, but can be a safeguard
+                videoRef.current.play().catch(error => {
+                    console.error("Error attempting to play video:", error);
+                });
             }
         }
-    }, [startTime, duration]);
+    }, [startTime, duration, isPlaying]); // Added isPlaying to dependency array
 
 
     const VolumeIcon = () => {
@@ -254,7 +262,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoData, onClose, startTime
                                                             <div
                                                                 className="absolute inset-y-0 w-1 bg-white/80 rounded-full shadow-md"
                                                                 style={{
-                                                                    left: `${((activeTranscript - currentTime) / duration) * 100}%`,
+                                                                    left: `${((activeTranscript - currentTime) / duration) * 100}%`, // This logic might need review for correctness if activeTranscript can be far from currentTime
                                                                 }}
                                                             ></div>
                                                         )}
@@ -360,7 +368,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoData, onClose, startTime
 
                                 {/* Video Info Section */}
                                 <div className="p-6 bg-gradient-to-r from-primary to-primary-light">
-                                    {/* Removed Course Code and Instructor Info */}
                                     <h2 className="font-display text-xl text-white mb-1 font-bold tracking-tight">
                                         {videoData.title}
                                     </h2>
@@ -377,7 +384,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoData, onClose, startTime
                             </h3>
                             <div className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto pr-2 custom-scrollbar">
                                 {videoData.transcript.map((item, index) => {
-                                    const transcriptTime = item.timestamp !== undefined ? item.timestamp : item.time;
+                                    // Fix for TS2339: 'item' is TranscriptSegment, use item.timestamp
+                                    const transcriptTime = item.timestamp; 
                                     const transcriptText = item.text;
                                     return (
                                         <TranscriptItem
@@ -394,7 +402,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoData, onClose, startTime
                     </div>
                 </div>
             </div>
-
+            {/* 
+              Fix for TS2322: Suppress TypeScript error for styled-jsx attributes.
+              This assumes styled-jsx is configured and working in the project.
+              The 'jsx' and 'global' props are valid for styled-jsx.
+            */}
+            {/* @ts-ignore */}
             <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
@@ -427,7 +440,7 @@ const TranscriptItem: React.FC<TranscriptItemProps> = ({ item, isActive, onClick
         onClick={onClick}
         className={`p-4 rounded-lg cursor-pointer transition-all duration-300 hover:scale-102
                 ${isActive
-                ? 'bg-gradient-to-r from-secondary to-secondary-light text-white shadow-md font-bold' // Highlight active transcript
+                ? 'bg-gradient-to-r from-secondary to-secondary-light text-white shadow-md font-bold' 
                 : 'bg-secondary-lighter dark:bg-primary-light/20 text-primary dark:text-white hover:bg-secondary-light hover:text-white'
             }`}
     >

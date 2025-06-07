@@ -84,7 +84,6 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ value, onChange, options, dar
             {isOpen && createPortal(
                 <div
                     ref={dropdownRef}
-                    className='z-[9999]'
                     style={{
                         position: 'fixed',
                         top: `${dropdownPosition.top}px`,
@@ -96,8 +95,8 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ value, onChange, options, dar
                         scrollbarWidth: 'thin',
                         scrollbarColor: darkMode ? '#7A00B8 #34137C' : '#D68BF9 #F6E6FF',
                     }}
-                    className="bg-white dark:bg-[#34137C] rounded-lg shadow-lg
-                  border border-[#F6E6FF] dark:border-[#7A00B8]"
+                    className="z-[9999] bg-white dark:bg-[#34137C] rounded-lg shadow-lg
+                  border border-[#F6E6FF] dark:border-[#7A00B8]" // Combined className attributes
                 >
                     <div className="sticky top-0 bg-white dark:bg-[#34137C] p-2 border-b border-[#F6E6FF] dark:border-[#7A00B8]
                       flex justify-between items-center shadow-sm">
@@ -126,7 +125,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ value, onChange, options, dar
                                 <input
                                     type="checkbox"
                                     checked={value.includes(skill)}
-                                    onChange={() => { }}
+                                    onChange={() => { }} // Kept empty onChange as it's controlled by div click
                                     className="mr-2"
                                 />
                                 <span className="text-[#52007C] dark:text-white">{skill}</span>
