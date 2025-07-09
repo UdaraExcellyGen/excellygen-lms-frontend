@@ -1,33 +1,31 @@
-import { DashboardStats, Notification, QuickAction } from '../types/types';
+import { Book, Users, BarChart2, LayoutList } from 'lucide-react';
+import { Notification, QuickAction } from '../types/types';
 
 export const initialNotifications: Notification[] = [
   { id: 1, text: 'New student enrolled in Advanced AI course', time: '2 hours ago', isNew: true },
   { id: 2, text: 'Quiz results ready for review', time: '3 hours ago', isNew: true },
-  { id: 3, text: 'Course material update needed', time: '5 hours ago', isNew: true },
+  { id: 3, text: 'Course material update needed', time: '5 hours ago', isNew: false },
 ];
-
-export const initialStats: DashboardStats = {
-  courses: { total: 4, active: 3 },
-  students: { total: 6, active: 4 },
-};
 
 export const getQuickActions = (navigate: (path: string) => void): QuickAction[] => [
   { 
     text: 'Create New Course', 
-    color: 'bg-[#03045e]',
-    hoverColor: 'hover:scale-105',
-    onClick: () => navigate('/coordinator/course-details/${createdCourse.id}')
+    icon: Book,
+    onClick: () => navigate('/coordinator/course-creation') // CORRECTED
+  },
+  { 
+    text: 'View My Courses', 
+    icon: LayoutList, // ADDED
+    onClick: () => navigate('/coordinator/course-display-page')
   },
   { 
     text: 'View Students', 
-    color: 'bg-[#03045e]', 
-    hoverColor: 'hover:scale-105',
+    icon: Users,
     onClick: () => navigate('/coordinator/learner-list')
   },
   { 
     text: 'Course Analytics', 
-    color: 'bg-[#03045e]', 
-    hoverColor: 'hover:scale-105',
+    icon: BarChart2,
     onClick: () => navigate('/coordinator/analytics')
   }
 ];
