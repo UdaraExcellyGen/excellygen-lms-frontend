@@ -13,7 +13,8 @@ import SkillsSection from './Components/SkillsSection';
 import CVFooter from './Components/CVFooter';
 
 import { getCvData, CvDataResponse } from '../../../api/cvApi';
-import { UserData } from './types/types';
+import { UserData, ProfileProject } from './types/types';
+import { learnerProjectApi } from '../../../api/services/learnerProjectService';
 
 const CV: React.FC = () => {
     const [cvData, setCvData] = useState<UserData | null>(null);
@@ -42,12 +43,29 @@ const CV: React.FC = () => {
             }
         }
 
-        const fetchCv = async (id: string) => {
+        const fetchCvAndProjects = async (id: string) => {
             setLoading(true);
             setError(null);
             try {
+                // 1. Fetch CV Data (personal info, courses, skills)
                 console.log(`CV.tsx: Fetching CV data for userId: ${id}`);
-                const backendData: CvDataResponse = await getCvData(id);
+                const backendData: CvDataResponse = await getCvData(id);  // Assuming getCvData now returns only the personal info, courses, and skills
+
+                // 2. Fetch Projects Data from learnerProjectApi
+                console.log(`CV.tsx: Fetching project data for userId: ${id}`);
+                const projectsData = await learnerProjectApi.getUserProjects(id);
+
+
+                // 3. Map and Combine the Data
+                const mappedProjects: ProfileProject[] = projectsData.map(p => ({
+                    title: p.title,
+                    description: p.description,
+                    technologies: p.technologies,
+                    startDate: p.startDate,
+                    completionDate: p.endDate,
+                    status: p.status,
+                }));
+
 
                 const mappedData: UserData = {
                     personalInfo: {
@@ -59,14 +77,7 @@ const CV: React.FC = () => {
                         photo: backendData.personalInfo.photo,
                         summary: backendData.personalInfo.summary,
                     },
-                    projects: backendData.projects.map(p => ({
-                        title: p.title,
-                        description: p.description,
-                        technologies: p.technologies,
-                        startDate: p.startDate,
-                        completionDate: p.completionDate,
-                        status: p.status,
-                    })),
+                    projects: mappedProjects, // Use mapped projects fetched from learnerProjectApi
                     courses: backendData.courses.map(c => ({
                         title: c.title,
                         provider: c.provider,
@@ -76,6 +87,7 @@ const CV: React.FC = () => {
                     })),
                     skills: backendData.skills,
                 };
+
                 setCvData(mappedData);
                 console.log('CV.tsx: CV Data loaded and mapped:', mappedData);
             } catch (err: any) {
@@ -89,7 +101,7 @@ const CV: React.FC = () => {
         };
 
         if (userIdToFetch) {
-            fetchCv(userIdToFetch);
+            fetchCvAndProjects(userIdToFetch);
         }
     }, [location.search]);
 
