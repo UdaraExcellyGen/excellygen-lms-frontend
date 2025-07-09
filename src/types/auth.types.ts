@@ -2,7 +2,8 @@ export enum UserRole {
   Admin = 'Admin',
   Learner = 'Learner',
   CourseCoordinator = 'CourseCoordinator',
-  ProjectManager = 'ProjectManager'
+  ProjectManager = 'ProjectManager',
+  SuperAdmin = 'SuperAdmin'
 }
 
 export interface User {

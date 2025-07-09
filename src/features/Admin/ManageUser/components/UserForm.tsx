@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Check, User, Mail, Phone, Users, Building2, AlertCircle, ChevronDown } from 'lucide-react';
+import { X, Check, User, Mail, Phone, Users, Building2, AlertCircle, ChevronDown, ShieldAlert } from 'lucide-react';
 import { User as UserType, CreateUserDto } from '../types';
+import { useUsers } from '../data/useUsers';
 
 interface UserFormProps {
   showAddModal: boolean;
@@ -33,6 +34,9 @@ const UserForm: React.FC<UserFormProps> = ({
 }) => {
   const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
   const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false);
+  
+  // Get permission utilities from useUsers hook
+  const { canCreateUserWithRole, getAvailableRoles } = useUsers();
 
   // Available departments
   const departments = [
@@ -75,6 +79,22 @@ const UserForm: React.FC<UserFormProps> = ({
   const validateName = (name: string): string => {
     if (!name) return 'Name is required';
     if (name.length < 2) return 'Name must be at least 2 characters';
+    return '';
+  };
+  
+  // Validate role selection
+  const validateRoles = (): string => {
+    if (newUser.roles.length === 0) {
+      return 'At least one role must be selected';
+    }
+    
+    // Check if user has permission for all selected roles
+    for (const role of newUser.roles) {
+      if (!canCreateUserWithRole(role)) {
+        return `You don't have permission to assign the ${formatRoleName(role)} role`;
+      }
+    }
+    
     return '';
   };
 
@@ -148,6 +168,7 @@ const UserForm: React.FC<UserFormProps> = ({
           errors.name = validateName(newUser.name);
           errors.email = validateEmail(newUser.email);
           errors.phone = validatePhone(newUser.phone);
+          errors.roles = validateRoles();
           
           const hasErrors = Object.values(errors).some(error => error !== '');
           setValidationErrors(errors);
@@ -281,25 +302,44 @@ const UserForm: React.FC<UserFormProps> = ({
                 </label>
               </div>
               <div className="space-y-2 pl-6">
-                {['Learner', 'Admin', 'CourseCoordinator', 'ProjectManager'].map((role) => (
-                  <div key={role} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id={`role-${role}`}
-                      checked={newUser.roles.some(userRole => userRole.toLowerCase() === role.toLowerCase())}
-                      onChange={(e) => updateNewUserRoles(role, e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-[#BF4BF6] focus:ring-[#BF4BF6]"
-                      disabled={isSubmitting}
-                    />
-                    <label
-                      htmlFor={`role-${role}`}
-                      className="ml-2 text-sm text-gray-700 font-['Nunito_Sans']"
-                    >
-                      {formatRoleName(role)}
-                    </label>
-                  </div>
-                ))}
+                {getAvailableRoles().map((role) => {
+                  const canAssign = canCreateUserWithRole(role);
+                  const isSuperAdmin = role === 'SuperAdmin';
+                  
+                  return (
+                    <div key={role} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`role-${role}`}
+                        checked={newUser.roles.some(userRole => userRole.toLowerCase() === role.toLowerCase())}
+                        onChange={(e) => updateNewUserRoles(role, e.target.checked)}
+                        className={`h-4 w-4 rounded border-gray-300 focus:ring-[#BF4BF6] ${
+                          canAssign ? 'text-[#BF4BF6]' : 'text-gray-300 cursor-not-allowed'
+                        }`}
+                        disabled={isSubmitting || !canAssign}
+                      />
+                      <label
+                        htmlFor={`role-${role}`}
+                        className={`ml-2 text-sm ${
+                          canAssign ? 'text-gray-700' : 'text-gray-400'
+                        } font-['Nunito_Sans'] flex items-center`}
+                      >
+                        {isSuperAdmin && <ShieldAlert size={14} className="mr-1 text-purple-600" />}
+                        {formatRoleName(role)}
+                        {isSuperAdmin && (
+                          <span className="ml-1 text-xs text-purple-600 font-medium">(Super Admin only)</span>
+                        )}
+                      </label>
+                    </div>
+                  );
+                })}
               </div>
+              {validationErrors.roles && (
+                <div className="mt-1 text-red-500 text-sm flex items-center gap-1 pl-6">
+                  <AlertCircle size={14} />
+                  {validationErrors.roles}
+                </div>
+              )}
             </div>
             
             {/* Temporary Password Checkbox for Editing Users */}
