@@ -1,0 +1,67 @@
+{
+  "navigation": {
+    "login": "Login",
+    "contactUs": "Contact Us",
+    "language": "Language"
+  },
+  "hero": {
+    "title": "Elevate Your Workforce with Modern Learning Solutions",
+    "description": "Unite learning and talent development in one powerful platform. Drive employee growth, track performance, and build a culture of continuous learning.",
+    "getStarted": "Get Started"
+  },
+  "features": {
+    "title": "Features",
+    "description": "Experience the next generation of corporate learning with our comprehensive suite of features",
+    "interactiveLearning": {
+      "title": "Interactive Learning",
+      "description": "Engage with interactive content, quizzes, and assessments."
+    },
+    "employeeManagement": {
+      "title": "Employee Management", 
+      "description": "Comprehensive tools for tracking employee skills, projects, and development paths."
+    },
+    "performanceTracking": {
+      "title": "Performance Tracking",
+      "description": "Monitor employee progress, bench status, and project assignments in real-time."
+    },
+    "collaborativeLearning": {
+      "title": "Collaborative Learning",
+      "description": "Connect with peers and experts through discussion forums."
+    },
+    "learningPaths": {
+      "title": "Learning Paths",
+      "description": "Customized learning paths based on job roles and departments."
+    },
+    "multiPlatformIntegration": {
+      "title": "Multi-Platform Integration",
+      "description": "Seamless integration with LinkedIn Learning, Coursera, and Udemy."
+    },
+    "skillGapAnalysis": {
+      "title": "Skill Gap Analysis",
+      "description": "Personalized recommendations based on industry benchmarks."
+    },
+    "advancedAnalytics": {
+      "title": "Advanced Analytics",
+      "description": "Detailed reports and predictive learning trends."
+    }
+  },
+  "admin": {
+    "dashboard": {
+      "title": "Admin Dashboard",
+      "loadingData": "Loading dashboard data...",
+      "errorLoading": "Error Loading Dashboard",
+      "tryAgain": "Try Again",
+      "courseCategoryManagement": "Course Category Management",
+      "userManagement": "User Management", 
+      "technologyManagement": "Technology Management",
+      "totalCourseCategories": "Total Course Categories",
+      "activeCourseCategories": "Active Course Categories",
+      "totalUsers": "Total Users",
+      "activeUsers": "Active Users",
+      "totalTechnologies": "Total Technologies",
+      "activeTechnologies": "Active Technologies",
+      "quickActions": "Quick Actions",
+      "systemAdministrator": "System Administrator"
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "navigation": {
+    "login": "Logg inn",
+    "contactUs": "Kontakt oss",
+    "language": "Språk"
+  },
+  "hero": {
+    "title": "Løft arbeidsstyrken din med moderne læringsløsninger",
+    "description": "Foren læring og talentutvikling i én kraftig plattform. Driv ansattes vekst, spor ytelse og bygg en kultur med kontinuerlig læring.",
+    "getStarted": "Kom i gang"
+  },
+  "features": {
+    "title": "Funksjoner",
+    "description": "Opplev neste generasjon bedriftslæring med vårt omfattende sett med funksjoner",
+    "interactiveLearning": {
+      "title": "Interaktiv læring",
+      "description": "Engasjer deg med interaktivt innhold, quizer og vurderinger."
+    },
+    "employeeManagement": {
+      "title": "Ansattledelse",
+      "description": "Omfattende verktøy for å spore ansattes ferdigheter, prosjekter og utviklingsveier."
+    },
+    "performanceTracking": {
+      "title": "Ytelsesoppfølging",
+      "description": "Overvåk ansattes fremgang, benkstatus og prosjektoppgaver i sanntid."
+    },
+    "collaborativeLearning": {
+      "title": "Samarbeidslæring",
+      "description": "Koble til kolleger og eksperter gjennom diskusjonsforum."
+    },
+    "learningPaths": {
+      "title": "Læringsveier",
+      "description": "Tilpassede læringsveier basert på jobbroller og avdelinger."
+    },
+    "multiPlatformIntegration": {
+      "title": "Flerlattform-integrasjon",
+      "description": "Sømløs integrasjon med LinkedIn Learning, Coursera og Udemy."
+    },
+    "skillGapAnalysis": {
+      "title": "Ferdighetsgapanalyse",
+      "description": "Personlige anbefalinger basert på bransjestandarder."
+    },
+    "advancedAnalytics": {
+      "title": "Avansert analyse",
+      "description": "Detaljerte rapporter og prediktive læringstrender."
+    }
+  },
+  "admin": {
+    "dashboard": {
+      "title": "Admin dashbord",
+      "loadingData": "Laster dashbord-data...",
+      "errorLoading": "Feil ved lasting av dashbord",
+      "tryAgain": "Prøv igjen",
+      "courseCategoryManagement": "Kurskatalogstyring",
+      "userManagement": "Brukerstyring",
+      "technologyManagement": "Teknologistyring", 
+      "totalCourseCategories": "Totalt kurskategorier",
+      "activeCourseCategories": "Aktive kurskategorier",
+      "totalUsers": "Totalt brukere",
+      "activeUsers": "Aktive brukere",
+      "totalTechnologies": "Totalt teknologier",
+      "activeTechnologies": "Aktive teknologier",
+      "quickActions": "Hurtighandlinger",
+      "systemAdministrator": "Systemadministrator"
+    }
+  }
+}
