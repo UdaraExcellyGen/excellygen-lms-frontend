@@ -45,6 +45,18 @@
       "description": "Detailed reports and predictive learning trends."
     }
   },
+  "footer": {
+    "companyDescription": "Empowering businesses with cutting-edge AI solutions for continuous learning and development.",
+    "quickLinks": "Quick Links",
+    "aboutUs": "About Us",
+    "services": "Services",
+    "contact": "Contact",
+    "contactUs": "Contact Us",
+    "followUs": "Follow Us",
+    "allRightsReserved": "All rights reserved",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service"
+  },
   "admin": {
     "dashboard": {
       "title": "Admin Dashboard",

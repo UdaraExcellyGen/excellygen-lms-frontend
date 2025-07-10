@@ -45,6 +45,18 @@
       "description": "Detaljerte rapporter og prediktive læringstrender."
     }
   },
+  "footer": {
+    "companyDescription": "Styrker bedrifter med banebrytende AI-løsninger for kontinuerlig læring og utvikling.",
+    "quickLinks": "Hurtiglenker",
+    "aboutUs": "Om oss",
+    "services": "Tjenester",
+    "contact": "Kontakt",
+    "contactUs": "Kontakt oss",
+    "followUs": "Følg oss",
+    "allRightsReserved": "Alle rettigheter forbeholdt",
+    "privacyPolicy": "Personvernerklæring",
+    "termsOfService": "Vilkår for bruk"
+  },
   "admin": {
     "dashboard": {
       "title": "Admin dashbord",
