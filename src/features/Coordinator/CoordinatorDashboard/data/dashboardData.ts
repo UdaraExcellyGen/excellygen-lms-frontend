@@ -11,11 +11,11 @@ export const getQuickActions = (navigate: (path: string) => void): QuickAction[]
   { 
     text: 'Create New Course', 
     icon: Book,
-    onClick: () => navigate('/coordinator/course-creation') // CORRECTED
+    onClick: () => navigate('/coordinator/course-details/${createdCourse.id}')
   },
   { 
     text: 'View My Courses', 
-    icon: LayoutList, // ADDED
+    icon: LayoutList,
     onClick: () => navigate('/coordinator/course-display-page')
   },
   { 

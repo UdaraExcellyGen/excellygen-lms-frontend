@@ -36,34 +36,34 @@ const TechnologyDropdown: React.FC<TechnologyDropdownProps> = ({
 
   return (
     <div>
-      <label className="block text-[15px] text-[#ffffff] mb-2 font-['Nunito_Sans']">{label}</label>
+      <label className="block text-[15px] text-[#1B0A3F] mb-2 font-['Nunito_Sans']">{label}</label>
       <div className="relative" ref={dropdownRef}>
         <button
           type="button"
-          className={`w-full p-2 border ${error ? 'border-red-500' : 'border-[#1B0A3F]/60'} rounded-lg focus:outline-none focus:border-[#BF4BF6] font-['Nunito_Sans'] bg-[#1B0A3F]/60 text-white flex justify-between items-center text-left h-10`}
+          className={`w-full p-2 border-2 ${error ? 'border-red-500' : 'border-[#52007C]'} rounded-lg focus:outline-none focus:border-gray-400 font-['Nunito_Sans'] bg-white/90 text-[#1B0A3F] flex justify-between items-center text-left h-10`}
           onClick={() => setIsOpen(!isOpen)}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
         >
-          <span className="truncate pr-2">
+          <span className={`truncate pr-2 ${selectedTechnologyIds.length === 0 ? 'text-gray-400' : ''}`}>
             {selectedTechnologyIds.length > 0 ? getSelectedNames() : 'Select Technologies'}
           </span>
-          {isOpen ? <ChevronUp className="text-white flex-shrink-0" size={20} /> : <ChevronDown className="text-white flex-shrink-0" size={20} />}
+          {isOpen ? <ChevronUp className="text-[#1B0A3F] flex-shrink-0" size={20} /> : <ChevronDown className="text-[#1B0A3F] flex-shrink-0" size={20} />}
         </button>
         {isOpen && (
-          <div className="absolute z-10 mt-1 w-full rounded-md shadow-lg bg-[#2a1c4a] backdrop-blur-sm ring-1 ring-black ring-opacity-5 focus:outline-none max-h-60 overflow-y-auto">
+          <div className="absolute z-10 mt-1 w-full rounded-md shadow-lg bg-white/90 backdrop-blur-sm ring-1 ring-black ring-opacity-5 focus:outline-none max-h-60 overflow-y-auto">
             <ul className="py-1" role="listbox" aria-labelledby="options-menu">
               {availableTechnologies.map(tech => (
-                <li key={tech.id} className="px-3 py-2 hover:bg-[#4a3a7a] cursor-pointer text-white" role="option" aria-selected={selectedTechnologyIds.includes(tech.id)}>
+                <li key={tech.id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-[#1B0A3F]" role="option" aria-selected={selectedTechnologyIds.includes(tech.id)}>
                   <label className="flex items-center w-full cursor-pointer">
                     <input
                       type="checkbox"
-                      className="form-checkbox h-4 w-4 text-[#BF4BF6] rounded border-gray-500 bg-[#1B0A3F] focus:ring-[#BF4BF6] focus:ring-offset-0 cursor-pointer"
+                      className="form-checkbox h-4 w-4 text-[#BF4BF6] rounded border-gray-500 bg-white focus:ring-[#BF4BF6] focus:ring-offset-0 cursor-pointer"
                       value={tech.id}
                       checked={selectedTechnologyIds.includes(tech.id)}
                       onChange={() => onTechnologyChange(tech.id)}
                     />
-                    <span className="ml-3 text-white font-['Nunito_Sans'] flex-1">{tech.name}</span>
+                    <span className="ml-3 font-['Nunito_Sans'] flex-1">{tech.name}</span>
                   </label>
                 </li>
               ))}

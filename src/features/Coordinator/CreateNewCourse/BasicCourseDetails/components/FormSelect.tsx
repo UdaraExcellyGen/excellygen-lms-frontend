@@ -29,14 +29,14 @@ const FormSelect: React.FC<FormSelectProps> = ({
 }) => {
     return (
         <div>
-            <label htmlFor={name} className="block text-[15px] text-[#ffffff] mb-2 font-['Nunito_Sans']">{label}</label> 
+            <label htmlFor={name} className="block text-[15px] text-[#1B0A3F] mb-2 font-['Nunito_Sans']">{label}</label> 
             <select
                 id={name} 
                 name={name} 
-                className={`w-full p-2 border ${error ? 'border-red-500' : 'border-[#1B0A3F]/60'} rounded-lg focus:outline-none focus:border-[#BF4BF6] font-['Nunito_Sans'] bg-[#1B0A3F]/60 text-white`}
+                className={`w-full p-2 border-2 ${error ? 'border-red-500' : 'border-[#52007C]'} rounded-lg focus:outline-none focus:border-[#52007C] font-['Nunito_Sans'] bg-white/90 text-[#1B0A3F]`}
                 value={value} 
                 onChange={onChange}
-                style={{ color: value ? 'white' : '#9ca3af' }} 
+                style={{ color: value ? '[#1B0A3F]' : 'gray-400' }} 
                 aria-invalid={error ? "true" : "false"} 
                 aria-describedby={error ? `${name}-error` : undefined} 
             >
@@ -46,7 +46,7 @@ const FormSelect: React.FC<FormSelectProps> = ({
                 </option>
                  {/* Map over the options using id and title */}
                  {options.map(option => (
-                    <option key={option.id} value={option.id}>{option.title}</option>
+                    <option key={option.id} value={option.id} >{option.title}</option>
                 ))}
             </select>
              {error && errorMessage && (
