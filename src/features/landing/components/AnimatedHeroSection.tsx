@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { ArrowRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import heroSvg from '../../../assets/hero.svg';
 import { useScrollAnimation } from '../../../hooks/useScrollAnimation';
 
@@ -8,6 +9,8 @@ export interface HeroSectionProps {
 }
 
 const AnimatedHeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
+  const { t } = useTranslation();
+  
   // Use a left-to-right animation for the text content (left side)
   const titleAnimation = useScrollAnimation({ 
     type: 'slide', 
@@ -69,14 +72,13 @@ const AnimatedHeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
               ref={titleAnimation.ref as React.RefObject<HTMLHeadingElement>}
               className="text-4xl md:text-5xl lg:text-6xl font-sans font-bold leading-tight"
             >
-              Elevate Your Workforce with Modern Learning Solutions
+              {t('hero.title')}
             </h1>
             <p 
               ref={descriptionAnimation.ref as React.RefObject<HTMLParagraphElement>}
               className="text-lg md:text-xl text-gray-300 font-nunito"
             >
-              Unite learning and talent development in one powerful platform. 
-              Drive employee growth, track performance, and build a culture of continuous learning.
+              {t('hero.description')}
             </p>
             <div 
               ref={buttonAnimation.ref as React.RefObject<HTMLDivElement>}
@@ -86,7 +88,7 @@ const AnimatedHeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
                 onClick={onGetStarted}
                 className="px-6 py-3 bg-phlox hover:bg-heliotrope text-white rounded-md transition-colors duration-200 flex items-center justify-center"
               >
-                Get Started
+                {t('hero.getStarted')}
                 <ArrowRight className="ml-2 w-5 h-5" />
               </button> 
             </div>

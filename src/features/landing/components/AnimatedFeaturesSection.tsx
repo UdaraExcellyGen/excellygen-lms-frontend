@@ -7,58 +7,59 @@ import {
   Globe,
   Target
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useScrollAnimation } from '../../../hooks/useScrollAnimation';
 import AnimatedFeatureCard from './AnimatedFeatureCard';
-
-// Import features directly from the original component
-// or copy the feature data directly here to avoid dependency issues
-const features = [
-  {
-    icon: BookOpen,
-    title: "Interactive Learning",
-    description: "Engage with interactive content, quizzes, and assessments."
-  },
-  {
-    icon: Users,
-    title: "Employee Management",
-    description: "Comprehensive tools for tracking employee skills, projects, and development paths."
-  },
-  {
-    icon: BarChart,
-    title: "Performance Tracking",
-    description: "Monitor employee progress, bench status, and project assignments in real-time."
-  },
-  {
-    icon: Users,
-    title: "Collaborative Learning",
-    description: "Connect with peers and experts through discussion forums."
-  },
-  {
-    icon: Layout,
-    title: "Learning Paths",
-    description: "Customized learning paths based on job roles and departments."
-  },
-  {
-    icon: Globe,
-    title: "Multi-Platform Integration",
-    description: "Seamless integration with LinkedIn Learning, Coursera, and Udemy."
-  },
-  {
-    icon: Target,
-    title: "Skill Gap Analysis",
-    description: "Personalized recommendations based on industry benchmarks."
-  },
-  {
-    icon: BarChart,
-    title: "Advanced Analytics",
-    description: "Detailed reports and predictive learning trends."
-  }
-];
 
 export interface FeaturesSectionProps {}
 
 const AnimatedFeaturesSection: React.FC<FeaturesSectionProps> = () => {
+  const { t } = useTranslation();
   const [activeFeature, setActiveFeature] = useState<number | null>(null);
+  
+  // Features with translation keys
+  const features = [
+    {
+      icon: BookOpen,
+      titleKey: "features.interactiveLearning.title",
+      descriptionKey: "features.interactiveLearning.description"
+    },
+    {
+      icon: Users,
+      titleKey: "features.employeeManagement.title",
+      descriptionKey: "features.employeeManagement.description"
+    },
+    {
+      icon: BarChart,
+      titleKey: "features.performanceTracking.title",
+      descriptionKey: "features.performanceTracking.description"
+    },
+    {
+      icon: Users,
+      titleKey: "features.collaborativeLearning.title",
+      descriptionKey: "features.collaborativeLearning.description"
+    },
+    {
+      icon: Layout,
+      titleKey: "features.learningPaths.title",
+      descriptionKey: "features.learningPaths.description"
+    },
+    {
+      icon: Globe,
+      titleKey: "features.multiPlatformIntegration.title",
+      descriptionKey: "features.multiPlatformIntegration.description"
+    },
+    {
+      icon: Target,
+      titleKey: "features.skillGapAnalysis.title",
+      descriptionKey: "features.skillGapAnalysis.description"
+    },
+    {
+      icon: BarChart,
+      titleKey: "features.advancedAnalytics.title",
+      descriptionKey: "features.advancedAnalytics.description"
+    }
+  ];
   
   // Animation for the section title
   const titleAnimation = useScrollAnimation({
@@ -86,13 +87,13 @@ const AnimatedFeaturesSection: React.FC<FeaturesSectionProps> = () => {
           ref={titleAnimation.ref as React.RefObject<HTMLHeadingElement>}
           className="text-4xl font-unbounded font-bold text-center text-[#1B0A3F] mb-4"
         >
-          Features
+          {t('features.title')}
         </h2>
         <p 
           ref={descriptionAnimation.ref as React.RefObject<HTMLParagraphElement>}
           className="text-center text-gray-600 mb-16 max-w-2xl mx-auto font-nunito text-lg"
         >
-          Experience the next generation of corporate learning with our comprehensive suite of features
+          {t('features.description')}
         </p>
         
         <div 
@@ -103,8 +104,8 @@ const AnimatedFeaturesSection: React.FC<FeaturesSectionProps> = () => {
             <AnimatedFeatureCard
               key={index}
               icon={feature.icon}
-              title={feature.title}
-              description={feature.description}
+              title={t(feature.titleKey)}
+              description={t(feature.descriptionKey)}
               onMouseEnter={() => setActiveFeature(index)}
               onMouseLeave={() => setActiveFeature(null)}
               delay={100 * (index % 4)} // Staggered delay for each column
