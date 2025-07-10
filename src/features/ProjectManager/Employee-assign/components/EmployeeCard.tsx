@@ -1,6 +1,7 @@
 // Path: src/features/ProjectManager/Employee-assign/components/EmployeeCard.tsx
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FaUserCircle, FaBriefcase, FaCertificate, FaGraduationCap, FaProjectDiagram, FaRegFileCode, FaLaptopCode } from 'react-icons/fa';
 import { Employee, Project } from '../types/types';
 
@@ -21,6 +22,8 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
   handleOpenProjectDetails,
   isDisabled
 }) => {
+  const { t } = useTranslation();
+  
   const assignedProjectsDetails = employee.activeProjects
     .map(projectName => projects.find(project => project.name === projectName))
     .filter(Boolean) as Project[];
@@ -36,7 +39,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
     >
       {isSelected && (
         <div className="bg-[#BF4BF6] p-2 text-white text-xs font-bold text-center">
-          Selected Employee
+          {t('projectManager.cards.selectedEmployee')}
         </div>
       )}
       <div className={isSelected ? 'p-6' : ''}>
@@ -53,7 +56,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
             <h3 className="text-lg font-semibold text-[#52007C] dark:text-white">
               {employee.name}
               <span className="ml-2 text-sm font-normal text-[#7A00B8] dark:text-[#D68BF9]">
-                (ID: {employee.id})
+                ({t('projectManager.employeeAssign.id')}: {employee.id})
               </span>
             </h3>
             <div className="flex items-center gap-2 text-sm text-[#7A00B8] dark:text-[#D68BF9]">
@@ -63,13 +66,13 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
             {/* Workload progress bar */}
             <div className="flex items-center gap-2 mt-1">
               <div className="flex items-center gap-1 px-2 py-0.5 bg-[#F6E6FF] rounded-full">
-                <span className="text-xs text-[#52007C] font-medium">Workload: {employee.currentWorkloadPercentage}%</span>
+                <span className="text-xs text-[#52007C] font-medium">{t('projectManager.cards.workloadLabel')} {employee.currentWorkloadPercentage}%</span>
               </div>
               {employee.currentWorkloadPercentage >= 100 ? (
-                <span className="text-xs text-red-600 font-medium px-2 py-0.5 bg-red-50 rounded-full">Fully allocated</span>
+                <span className="text-xs text-red-600 font-medium px-2 py-0.5 bg-red-50 rounded-full">{t('projectManager.dialogs.fullyAllocated')}</span>
               ) : (
                 <span className="text-xs text-green-600 font-medium px-2 py-0.5 bg-green-50 rounded-full">
-                  {employee.availableWorkloadPercentage}% available
+                  {employee.availableWorkloadPercentage}% {t('projectManager.dialogs.available')}
                 </span>
               )}
             </div>
@@ -99,7 +102,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
         <div className="w-1/2">
           <h6 className="text-sm font-semibold text-[#7A00B8] dark:text-[#D68BF9] mb-2 flex items-center gap-2">
             <FaCertificate className="w-4 h-4" />
-            Current Assignments
+            {t('projectManager.cards.currentAssignments')}
           </h6>
           {employee.currentAssignments.length > 0 ? (
             <div className="grid grid-cols-1 gap-2">
@@ -118,7 +121,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
             </div>
           ) : (
             <p className="text-sm italic text-[#7A00B8] dark:text-[#D68BF9]">
-              No current assignments
+              {t('projectManager.cards.noCurrentAssignments')}
             </p>
           )}
         </div>
@@ -126,7 +129,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
         <div className="w-1/2">
           <h6 className="text-sm font-semibold text-[#7A00B8] dark:text-[#D68BF9] mb-2 flex items-center gap-2">
             <FaProjectDiagram className="w-4 h-4" />
-            Active Projects
+            {t('projectManager.cards.activeProjects')}
           </h6>
           {assignedProjectsDetails.length > 0 ? (
             <div className="grid grid-cols-1 gap-2">
@@ -145,7 +148,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
                       }}
                       className="hover:underline text-[#52007C] dark:text-white text-sm font-medium"
                     >
-                      {project.name} (ID: {project.id})
+                      {project.name} ({t('projectManager.employeeAssign.id')}: {project.id})
                     </button>
                   </div>
                 </div>
@@ -153,7 +156,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
             </div>
           ) : (
             <p className="text-sm italic text-[#7A00B8] dark:text-[#D68BF9]">
-              No projects assigned yet
+              {t('projectManager.cards.noProjectsAssigned')}
             </p>
           )}
         </div>
