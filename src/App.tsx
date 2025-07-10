@@ -7,7 +7,7 @@ import { AuthProvider } from './contexts/AuthContext';
 
 // Loading Provider and Book Loader
 import { LoadingProvider, useLoading } from './contexts/LoadingContext';
-import BookLoader from './components/common/Bookloader';
+import BookLoader from './components/common/BookLoader';
 import { setupLoaderFunctions } from './api/apiClient';
 
 // Protected Route
