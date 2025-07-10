@@ -12,9 +12,11 @@ import {
   FolderKanban
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { HeaderProps } from '../types/types';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { UserRole } from '../../../../types/auth.types';
+import LanguageSwitcher from '../../../../components/common/LanguageSwitcher';
 
 // Role icon mapping
 const roleIcons: Record<string, React.ReactNode> = {
@@ -33,6 +35,7 @@ const Header: React.FC<HeaderProps> = ({
   role = "Project Manager",
   avatar = null
 }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, currentRole, selectRole, navigateToRoleSelection } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -202,6 +205,9 @@ const Header: React.FC<HeaderProps> = ({
               {newNotificationsCount} new notification{newNotificationsCount !== 1 ? 's' : ''}
             </div>
           </button>
+
+          {/* Language Switcher */}
+          <LanguageSwitcher />
 
           {/* Role Switcher - Only show if user has multiple roles */}
           {user && user.roles && user.roles.length > 1 && (

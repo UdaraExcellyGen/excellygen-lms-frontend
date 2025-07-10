@@ -75,5 +75,27 @@
       "quickActions": "Quick Actions",
       "systemAdministrator": "System Administrator"
     }
+  },
+  "projectManager": {
+    "dashboard": {
+      "title": "Project Manager Dashboard",
+      "loadingData": "Loading dashboard data...",
+      "errorLoading": "Error Loading Dashboard", 
+      "tryAgain": "Try Again",
+      "projectManagementSystem": "Project Management System",
+      "assignEmployees": "Assign Employees",
+      "manageTechnologies": "Manage Technologies",
+      "manageRoles": "Manage Roles",
+      "projectManagement": "Project Management",
+      "employeeManagement": "Employee Management",
+      "technologyManagement": "Technology Management",
+      "totalProjects": "Total Projects",
+      "activeProjects": "Active Projects",
+      "totalEmployees": "Total Employees", 
+      "activeEmployees": "Active Employees",
+      "totalTechnologies": "Total Technologies",
+      "activeTechnologies": "Active Technologies",
+      "quickActions": "Quick Actions"
+    }
   }
 }

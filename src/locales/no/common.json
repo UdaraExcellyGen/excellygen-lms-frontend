@@ -75,5 +75,27 @@
       "quickActions": "Hurtighandlinger",
       "systemAdministrator": "Systemadministrator"
     }
+  },
+  "projectManager": {
+    "dashboard": {
+      "title": "Prosjektleder dashbord",
+      "loadingData": "Laster dashbord-data...",
+      "errorLoading": "Feil ved lasting av dashbord",
+      "tryAgain": "Prøv igjen", 
+      "projectManagementSystem": "Prosjektstyringssystem",
+      "assignEmployees": "Tildel ansatte",
+      "manageTechnologies": "Administrer teknologier",
+      "manageRoles": "Administrer roller",
+      "projectManagement": "Prosjektstyring",
+      "employeeManagement": "Ansattstyring", 
+      "technologyManagement": "Teknologistyring",
+      "totalProjects": "Totalt prosjekter",
+      "activeProjects": "Aktive prosjekter",
+      "totalEmployees": "Totalt ansatte",
+      "activeEmployees": "Aktive ansatte", 
+      "totalTechnologies": "Totalt teknologier",
+      "activeTechnologies": "Aktive teknologier",
+      "quickActions": "Hurtighandlinger"
+    }
   }
 }
