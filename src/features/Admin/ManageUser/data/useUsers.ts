@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../../../../contexts/AuthContext';
 import { 
   getAllUsers, 
   createUser, 
@@ -7,6 +8,7 @@ import {
   deleteUser, 
   toggleUserStatus,
   searchUsers,
+  promoteToSuperAdmin,
   User, 
   CreateUserDto, 
   UpdateUserDto 
@@ -30,6 +32,21 @@ export const useDebounce = (value: string, delay: number) => {
 };
 
 export const useUsers = () => {
+  const { user: currentUser } = useAuth();
+  
+  // Permission checks - UPDATED for case-insensitivity
+  const isSuperAdmin = useMemo(() => {
+    return currentUser?.roles.some(role => 
+      role.toLowerCase() === 'superadmin'
+    ) || false;
+  }, [currentUser]);
+  
+  const isRegularAdmin = useMemo(() => {
+    return currentUser?.roles.some(role => role.toLowerCase() === 'admin') && 
+           !currentUser?.roles.some(role => role.toLowerCase() === 'superadmin') || 
+           false;
+  }, [currentUser]);
+
   // Data states
   const [users, setUsers] = useState<User[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]); // Cache for client-side filtering
@@ -41,6 +58,7 @@ export const useUsers = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isFetchingFilteredData, setIsFetchingFilteredData] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPromotingToSuperAdmin, setIsPromotingToSuperAdmin] = useState(false);
   
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -50,7 +68,7 @@ export const useUsers = () => {
   // Temporary password states
   const [showTempPasswordModal, setShowTempPasswordModal] = useState(false);
   const [tempPasswordData, setTempPasswordData] = useState<{
-    userId: string; // Add userId field
+    userId: string;
     userName: string;
     userEmail: string;
     tempPassword: string;
@@ -87,6 +105,59 @@ export const useUsers = () => {
   useEffect(() => {
     setGenerateTempPassword(!editingUser ? true : false);
   }, [editingUser]);
+
+  // Permission check methods - UPDATED for SuperAdmin to have full control
+  const canDeleteUser = useCallback((user: User) => {
+    // SuperAdmin can delete anyone except themselves
+    if (isSuperAdmin) {
+      return user.id !== currentUser?.id;
+    }
+    
+    // Regular Admin can only delete non-admin users
+    if (isRegularAdmin) {
+      return !user.roles.some(role => 
+        role.toLowerCase() === 'admin' || role.toLowerCase() === 'superadmin'
+      );
+    }
+    
+    // Non-admin users cannot delete anyone
+    return false;
+  }, [isSuperAdmin, isRegularAdmin, currentUser]);
+
+  const canEditUser = useCallback((user: User) => {
+    // SuperAdmin can edit anyone (including themselves)
+    if (isSuperAdmin) {
+      return true;
+    }
+    
+    // Regular Admin can only edit non-admin users
+    if (isRegularAdmin) {
+      return !user.roles.some(role => 
+        role.toLowerCase() === 'admin' || role.toLowerCase() === 'superadmin'
+      );
+    }
+    
+    // Non-admin users cannot edit anyone
+    return false;
+  }, [isSuperAdmin, isRegularAdmin]);
+
+  const canCreateUserWithRole = useCallback((role: string) => {
+    // Only SuperAdmin can create another SuperAdmin
+    if (role.toLowerCase() === 'superadmin') {
+      return isSuperAdmin;
+    }
+    
+    // Both Admin and SuperAdmin can create users with other roles
+    return isSuperAdmin || isRegularAdmin;
+  }, [isSuperAdmin, isRegularAdmin]);
+
+  const getAvailableRoles = useCallback(() => {
+    if (isSuperAdmin) {
+      return ['Admin', 'SuperAdmin', 'Learner', 'CourseCoordinator', 'ProjectManager'];
+    } else {
+      return ['Admin', 'Learner', 'CourseCoordinator', 'ProjectManager'];
+    }
+  }, [isSuperAdmin]);
 
   // Case-insensitive role comparison helper
   const roleMatches = (userRole: string, filterRole: string) => {
@@ -166,6 +237,8 @@ export const useUsers = () => {
           case 'project manager': 
           case 'project_manager': 
             return 'ProjectManager';
+          case 'superadmin':
+            return 'SuperAdmin';
           default: return role;
         }
       });
@@ -201,6 +274,8 @@ export const useUsers = () => {
         case 'project_manager': 
         case 'projectmanager': 
           normalizedRole = 'ProjectManager'; break;
+        case 'superadmin':
+          normalizedRole = 'SuperAdmin'; break;
       }
       
       if (isChecked) {
@@ -283,9 +358,18 @@ export const useUsers = () => {
           case 'project manager': 
           case 'project_manager': 
             return 'ProjectManager';
+          case 'superadmin':
+            return 'SuperAdmin';
           default: return role;
         }
       });
+      
+      // Check if user has permission to create users with these roles
+      for (const role of normalizedRoles) {
+        if (!canCreateUserWithRole(role)) {
+          throw new Error(`You don't have permission to create users with the ${role} role`);
+        }
+      }
       
       // Update the user object with normalized roles
       const userWithNormalizedRoles = {
@@ -295,6 +379,10 @@ export const useUsers = () => {
       
       if (editingUser) {
         // Edit existing user
+        if (!canEditUser(editingUser)) {
+          throw new Error(`You don't have permission to edit this user`);
+        }
+        
         const optimisticUser = { ...editingUser, ...userWithNormalizedRoles };
         
         setUsers(prevUsers => prevUsers.map(user => 
@@ -503,6 +591,8 @@ export const useUsers = () => {
       case 'project_manager': 
       case 'projectmanager': 
         normalizedRole = 'ProjectManager'; break;
+      case 'superadmin':
+        normalizedRole = 'SuperAdmin'; break;
     }
     
     setNewUser(prev => {
@@ -548,6 +638,20 @@ export const useUsers = () => {
   };
 
   // Delete a user
+  const handleDeleteUser = (id: string) => {
+    const userToDelete = users.find(user => user.id === id);
+    
+    if (!userToDelete || !canDeleteUser(userToDelete)) {
+      setError("You don't have permission to delete this user");
+      toast.error("Permission denied: You can't delete this user");
+      return;
+    }
+    
+    setUserToDelete(id);
+    setShowDeleteModal(true);
+  };
+  
+  // Confirm deletion of a user
   const confirmDelete = async () => {
     if (userToDelete) {
       try {
@@ -600,10 +704,16 @@ export const useUsers = () => {
   // Toggle user status
   const handleToggleStatus = async (userId: string) => {
     try {
-      setLoadingUserIds(prev => [...prev, userId]);
-      
       const targetUser = users.find(user => user.id === userId);
       if (!targetUser) return;
+      
+      // Check if the current user can edit this user
+      if (!canEditUser(targetUser)) {
+        toast.error("You don't have permission to change this user's status");
+        return;
+      }
+      
+      setLoadingUserIds(prev => [...prev, userId]);
       
       const newStatus = targetUser.status === 'active' ? 'inactive' : 'active';
       
@@ -654,7 +764,152 @@ export const useUsers = () => {
     }
   };
 
+  // Handle edit user
+  const handleEditUser = (user: User) => {
+    if (!canEditUser(user)) {
+      setError("You don't have permission to edit this user");
+      toast.error("Permission denied: You can't edit this user");
+      return;
+    }
+    
+    setEditingUser(user);
+    setNewUser({
+      name: user.name,
+      email: user.email,
+      phone: user.phone || '',
+      roles: [...user.roles],
+      department: user.department || '',
+      password: '' // Clear password when editing
+    });
+    setShowAddModal(true);
+  };
+
+  // Promote user to SuperAdmin - UPDATED with improved handling for current user
+  const handlePromoteToSuperAdmin = async (userId: string) => {
+    if (!isSuperAdmin) {
+      toast.error("Only SuperAdmin can promote users to SuperAdmin");
+      return;
+    }
+    
+    try {
+      setIsPromotingToSuperAdmin(true);
+      setLoadingUserIds(prev => [...prev, userId]);
+      
+      const targetUser = users.find(user => user.id === userId);
+      if (!targetUser) return;
+      
+      // Check if user already has SuperAdmin role
+      if (targetUser.roles.some(r => r.toLowerCase() === 'superadmin')) {
+        toast.info("User is already a SuperAdmin");
+        return;
+      }
+      
+      // Don't update the UI optimistically for the current user
+      // This prevents token mismatch issues
+      const isCurrentUser = targetUser.id === currentUser?.id;
+      
+      // Only update UI optimistically for other users, not the current user
+      if (!isCurrentUser) {
+        // Optimistic update for other users
+        const updatedRoles = [...targetUser.roles, 'SuperAdmin'];
+        const optimisticUser = { ...targetUser, roles: updatedRoles };
+        
+        setUsers(prevUsers => prevUsers.map(user => 
+          user.id === userId ? optimisticUser : user
+        ));
+        
+        if (allUsers.length > 0) {
+          setAllUsers(prevUsers => prevUsers.map(user => 
+            user.id === userId ? optimisticUser : user
+          ));
+        }
+      }
+      
+      try {
+        // Call API to promote user
+        await promoteToSuperAdmin(userId);
+        
+        // If this is the current user, display message but don't update UI
+        if (isCurrentUser) {
+          toast.success("You have been promoted to SuperAdmin. Please log out and log back in for changes to take effect.");
+        } else {
+          toast.success(`User promoted to SuperAdmin successfully`);
+          
+          // Refresh the user list after promotion for non-current users
+          fetchUsers();
+        }
+      } catch (error) {
+        // Revert UI changes on error (for non-current users)
+        if (!isCurrentUser) {
+          setUsers(prevUsers => prevUsers.map(user => 
+            user.id === userId ? targetUser : user
+          ));
+          
+          if (allUsers.length > 0) {
+            setAllUsers(prevUsers => prevUsers.map(user => 
+              user.id === userId ? targetUser : user
+            ));
+          }
+        }
+        
+        throw error;
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || "Failed to promote user to SuperAdmin";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      console.error('Error promoting user to SuperAdmin:', err);
+    } finally {
+      setIsPromotingToSuperAdmin(false);
+      setLoadingUserIds(prev => prev.filter(id => id !== userId));
+    }
+  };
+
   const isUserLoading = (userId: string) => loadingUserIds.includes(userId);
+
+  // Format role name for display
+  const formatRoleName = (role: string) => {
+    switch(role.toLowerCase()) {
+      case 'superadmin':
+        return 'Super Admin';
+      case 'admin':
+        return 'Admin';
+      case 'coursecoordinator': 
+      case 'course coordinator': 
+      case 'course_coordinator': 
+        return 'Course Coordinator';
+      case 'projectmanager': 
+      case 'project manager': 
+      case 'project_manager': 
+        return 'Project Manager';
+      case 'learner': 
+        return 'Learner';
+      default: 
+        return role.charAt(0).toUpperCase() + role.slice(1);
+    }
+  };
+  
+  // Get role color for UI display
+  const getRoleColor = (role: string) => {
+    switch (role.toLowerCase()) {
+      case 'superadmin':
+        return 'bg-purple-100 text-purple-800';
+      case 'admin': 
+        return 'bg-red-100 text-red-800';
+      case 'learner': 
+        return 'bg-green-100 text-green-800';
+      case 'coursecoordinator': 
+      case 'course coordinator': 
+      case 'course_coordinator': 
+        return 'bg-blue-100 text-blue-800';
+      case 'projectmanager': 
+      case 'project manager': 
+      case 'project_manager': 
+        return 'bg-yellow-100 text-yellow-800';
+      default: 
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return {
     // Data
@@ -667,6 +922,14 @@ export const useUsers = () => {
     isSubmitting,
     isDeleting,
     error,
+    
+    // Permission checks
+    isSuperAdmin,
+    isRegularAdmin,
+    canDeleteUser,
+    canEditUser,
+    canCreateUserWithRole,
+    getAvailableRoles,
     
     // Modal states
     showAddModal,
@@ -698,10 +961,20 @@ export const useUsers = () => {
     handleAddUser,
     handleSubmitUser,
     handleToggleStatus,
+    handleDeleteUser,
+    handleEditUser,
     confirmDelete,
     resetForm,
     setError,
     isUserLoading,
-    loadingUserIds
+    loadingUserIds,
+    
+    // Role display
+    formatRoleName,
+    getRoleColor,
+    
+    // SuperAdmin functions
+    handlePromoteToSuperAdmin,
+    isPromotingToSuperAdmin
   };
 };

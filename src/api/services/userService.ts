@@ -131,3 +131,55 @@ export const searchUsers = async (
     throw error;
   }
 };
+
+// Promote user to SuperAdmin
+export const promoteToSuperAdmin = async (userId: string, accessToken?: string): Promise<User> => {
+  try {
+    // Try different token sources in order of reliability
+    let token = accessToken;
+    
+    // Fallback to localStorage if no token is provided
+    if (!token) {
+      token = localStorage.getItem('access_token') || '';
+    }
+    
+    if (!token) {
+      throw new Error('No authentication token available');
+    }
+    
+    // Use a direct fetch call to prevent token refresh
+    const response = await fetch(`${apiClient.defaults.baseURL}/auth/promote-to-superadmin`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ userId })
+    });
+    
+    if (!response.ok) {
+      // Try to parse error response
+      try {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to promote user to SuperAdmin (${response.status})`);
+      } catch (jsonError) {
+        // If response is not JSON
+        throw new Error(`Failed to promote user to SuperAdmin (${response.status}: ${response.statusText})`);
+      }
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(`Error promoting user ${userId} to SuperAdmin:`, error);
+    throw error;
+  }
+};
+
+export enum UserRole {
+  Admin = 'Admin',
+  Learner = 'Learner',
+  CourseCoordinator = 'CourseCoordinator',
+  ProjectManager = 'ProjectManager',
+  SuperAdmin = 'SuperAdmin' // Added SuperAdmin role
+}
