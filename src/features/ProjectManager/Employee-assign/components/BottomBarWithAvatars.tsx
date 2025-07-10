@@ -1,6 +1,7 @@
 // Path: src/features/ProjectManager/Employee-assign/components/BottomBarWithAvatars.tsx
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Project, Employee } from '../types/types';
 
 interface BottomBarWithAvatarsProps {
@@ -18,6 +19,8 @@ const BottomBarWithAvatars: React.FC<BottomBarWithAvatarsProps> = ({
   handleAssignEmployees,
   clearSelections
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="fixed bottom-0 left-0 w-full bg-[#52007C] text-white p-4 shadow-lg z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -40,15 +43,15 @@ const BottomBarWithAvatars: React.FC<BottomBarWithAvatarsProps> = ({
             )}
           </div>
           <div>
-            <div className="text-xs opacity-70">Selected Employees</div>
-            <div className="text-sm font-semibold">{selectedEmployees.length} employees selected</div>
+            <div className="text-xs opacity-70">{t('projectManager.employeeAssign.selectedEmployees')}</div>
+            <div className="text-sm font-semibold">{selectedEmployees.length} {t('projectManager.employeeAssign.employeesSelected')}</div>
           </div>
 
           {selectedProject && (
             <>
               <div className="w-px h-8 bg-[#D68BF9] opacity-30"></div>
                <div>
-                <div className="text-xs opacity-70">Project</div>
+                <div className="text-xs opacity-70">{t('projectManager.employeeAssign.project')}</div>
                 <div className="text-sm font-semibold truncate max-w-[200px]">{selectedProject.name}</div>
               </div>
             </>
@@ -61,7 +64,7 @@ const BottomBarWithAvatars: React.FC<BottomBarWithAvatarsProps> = ({
             className="px-4 py-2 text-white bg-[#7A00B8] hover:bg-[#52007C] rounded-lg
                      transition-colors duration-200"
           >
-            Clear
+            {t('projectManager.employeeAssign.clear')}
           </button>
           <button
             onClick={handleAssignEmployees}
@@ -70,7 +73,7 @@ const BottomBarWithAvatars: React.FC<BottomBarWithAvatarsProps> = ({
                      transition-colors duration-200 font-semibold
                      disabled:opacity-50 disabled:hover:bg-white"
           >
-            Confirm Assignment
+            {t('projectManager.employeeAssign.confirmAssignment')}
           </button>
         </div>
       </div>
