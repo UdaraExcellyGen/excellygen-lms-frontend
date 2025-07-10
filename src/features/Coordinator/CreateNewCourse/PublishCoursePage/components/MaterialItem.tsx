@@ -31,7 +31,7 @@ const MaterialItem: React.FC<MaterialItemProps> = ({
             case 'PDF':
                 return <FileText className="w-5 h-5 mr-3 text-red-400 flex-shrink-0" />;
             case 'Word':
-                return <FileText className="w-5 h-5 mr-3 text-blue-400 flex-shrink-0" />;
+                return <FileText className="w-5 h-5 mr-3 text-black flex-shrink-0" />;
             default:
                 return <FileText className="w-5 h-5 mr-3 text-gray-400 flex-shrink-0" />;
         }
@@ -40,14 +40,14 @@ const MaterialItem: React.FC<MaterialItemProps> = ({
     // const handleQuizClick = () => { /* ... if quizzes implemented ... */ };
 
     return (
-        <div className="bg-[#1B0A3F]/60 rounded-lg p-3 flex items-center justify-between group hover:bg-[#1B0A3F]/80 transition-all duration-300">
+        <div className="border border-[#52007C] rounded-lg p-3 flex items-center justify-between group hover:border border-[#52007C] transition-all duration-300">
             <div className="flex items-center gap-2 overflow-hidden">
                 {renderMaterialIcon()}
                 <a
                     href={material.fileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-white group-hover:text-[#D68BF9] transition-colors font-nunito truncate"
+                    className="text-sm text-[#1B0A3F] group-hover:text-[#1B0A3F]/80 transition-colors font-nunito truncate"
                     title={material.name}
                 >
                     {material.name}

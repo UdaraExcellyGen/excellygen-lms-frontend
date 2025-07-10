@@ -456,13 +456,13 @@ const handleRemoveQuizAction = useCallback((lessonId: number) => {
             <Header onSaveDraft={handleSaveDraftAction} navigateToCreateCourse={handleBackNavigation} />
             <ProgressBar stage={2} />
             <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
-                <div className="bg-[#1B0A3F]/40 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg overflow-hidden mb-6">
+                <div className="bg-white/90 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg overflow-hidden mb-6">
                     <div className="px-6 py-4 flex justify-between items-center">
-                        <h2 className="text-lg font-['Unbounded'] text-white">Course Materials (Subtopics & Documents)</h2>
+                        <h2 className="text-lg font-['Unbounded'] text-[#1B0A3F]">Course Materials (Subtopics & Documents)</h2>
                         <button onClick={handleAddNewSubtopic} disabled={isSubmittingAction} className="px-4 py-2 bg-[#BF4BF6] text-white rounded-lg font-['Nunito_Sans'] hover:bg-[#D68BF9] transition-colors text-sm disabled:opacity-50">Add New Subtopic</button>
                     </div>
                     <div className="px-6 py-4 space-y-4 border-t border-[#BF4BF6]/20">
-                        {courseData.lessons.length === 0 && (<p className="text-center text-gray-400 py-4">No subtopics added yet. Click 'Add New Subtopic' to begin.</p>)}
+                        {courseData.lessons.length === 0 && (<p className="text-center text-gray-600 py-4">No subtopics added yet. Click 'Add New Subtopic' to begin.</p>)}
                         {courseData.lessons.map((subtopic) => (
                             <SubtopicItem
                                 key={subtopic.id}

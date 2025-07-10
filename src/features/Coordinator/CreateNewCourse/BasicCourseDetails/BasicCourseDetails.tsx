@@ -256,17 +256,23 @@ const BasicCourseDetails: React.FC = () => {
                 toast.success(`Course '${response.title}' ${isDraft ? 'draft updated' : 'updated'}!`, { id: toastId });
             } else {
                 response = await createCourse(payload, details.thumbnail);
-                toast.success(`Course '${response.title}' ${isDraft ? 'draft created' : 'created'}!`, { id: toastId });
+               // toast.success(`Course '${response.title}' ${isDraft ? 'draft created' : 'created'}!`, { id: toastId });
             }
+            toast.dismiss(toastId);
 
             updateContextBasicDetails(details);
             setCreatedCourseId(response.id);
             setCurrentEditingCourseId(response.id);
 
             if (!isDraft) {
+     /**/       toast.success(`Course '${response.title}' ${activeCourseId ? 'updated' : 'created'}!`);
                 navigate(`/coordinator/upload-materials/${response.id}`);
             } else {
-                console.log(`Draft saved for course ID: ${response.id}`);
+                //console.log(`Draft saved for course ID: ${response.id}`);
+                // "Save as Draft" button was clicked
+                toast.success(`Draft for '${response.title}' saved successfully!`);
+                resetCourseContext(); // Clean up the context before leaving
+                navigate('/coordinator/dashboard'); // Navigate to the dashboard
             }
         } catch (error) {
             toast.error(`${isDraft ? 'Draft save' : (activeCourseId ? 'Update' : 'Creation')} failed.`, { id: toastId });

@@ -52,10 +52,10 @@ const CourseMaterialsSection: React.FC<CourseMaterialsSectionProps> = ({
     };
 
     return (
-        <div className="bg-[#1B0A3F]/40 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg overflow-hidden hover:border-[#BF4BF6]/40 transition-all duration-300">
+        <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg overflow-hidden transition-all duration-300">
             <button
                 onClick={() => toggleSection('materials')}
-                className="w-full px-6 py-4 flex items-center justify-between text-white hover:bg-[#BF4BF6]/5 transition-colors"
+                className="w-full px-6 py-4 flex items-center justify-between text-[#1B0A3F] hover:bg-gray-200 transition-colors"
             >
                 <div className="flex items-center gap-4">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#BF4BF6] to-[#7A00B8] flex items-center justify-center relative font-nunito">

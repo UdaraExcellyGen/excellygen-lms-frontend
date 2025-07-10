@@ -522,7 +522,7 @@ const PublishCoursePage: React.FC = () => {
             <ProgressSteps stage={3} />
 
             <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-8 relative">
-                <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 p-6 shadow-lg">
+                <div className="bg-white/90 backdrop-blur-md rounded-xl border border-[#52007C] p-6 shadow-lg">
                     {displayCourse.thumbnailUrl && (
                         <div className="mb-4 flex justify-left"> 
                             <img
@@ -532,17 +532,17 @@ const PublishCoursePage: React.FC = () => {
                             />
                         </div>
                     )}
-                    <h3 className="font-bold text-white text-xl mb-4 text-center md:text-left">
+                    <h3 className="font-bold text-[#1B0A3F] text-xl mb-4 text-center md:text-left">
                         {displayCourse.title || "Course Title Not Set"}
                     </h3>
-                    <p className="text-gray-300 mb-2">
-                        <span className="font-semibold text-gray-100">Description:</span> {displayCourse.description || "Not specified"}
+                    <p className="text-gray-700 mb-2">
+                        <span className="font-semibold text-[#1B0A3F]">Description :</span> {displayCourse.description || "Not specified"}
                     </p>
-                    <p className="text-gray-300 mb-2">
-                        <span className="font-semibold text-gray-100">Estimated Time:</span> {displayCourse.estimatedTime ? `${displayCourse.estimatedTime} hours` : "Not specified"}
+                    <p className="text-gray-700 mb-2">
+                        <span className="font-semibold text-[#1B0A3F]">Estimated Time :</span> {displayCourse.estimatedTime ? `${displayCourse.estimatedTime} hours` : "Not specified"}
                     </p>
-                    <p className="text-gray-300">
-                        <span className="font-semibold text-gray-100">Total Points:</span> {displayCourse.coordinatorPoints}
+                    <p className="text-gray-700">
+                        <span className="font-semibold text-[#1B0A3F]">Total Points :</span> {displayCourse.coordinatorPoints}
                     </p>
                 </div>
 
