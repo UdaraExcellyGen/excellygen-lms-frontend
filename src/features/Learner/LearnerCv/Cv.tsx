@@ -8,13 +8,13 @@ import html2canvas from 'html2canvas';
 
 import ProfessionalSummary from './Components/ProfessionalSummary';
 import ProjectsSection from './Components/ProjectsSection';
-import CertificationsSection from './Components/CertificationsSection'; // UPDATED: Using CertificationsSection
+import CertificationsSection from './Components/CertificationsSection';
 import CVFooter from './Components/CVFooter';
 
 import { getCvData, CvDataResponse } from '../../../api/cvApi';
-import { UserData, ProfileProject, ProfileCertification } from './types/types'; // UPDATED: Import new types
+import { UserData, ProfileProject, ProfileCertification } from './types/types';
 import { learnerProjectApi } from '../../../api/services/learnerProjectService';
-import { getUserCertificates } from '../../../api/services/Course/certificateService'; // ADDED: To get certificate data
+import { getUserCertificates } from '../../../api/services/Course/certificateService';
 import { Download } from 'lucide-react';
 
 const CV: React.FC = () => {
@@ -34,6 +34,7 @@ const CV: React.FC = () => {
         if (!userIdToFetch) {
             const storedUserId = localStorage.getItem('userId');
             if (storedUserId) {
+                console.warn("CV.tsx: userId not found in query params, using userId from localStorage as a fallback.");
                 userIdToFetch = storedUserId;
             } else {
                 toast.error('User ID not provided for CV.');
@@ -48,14 +49,20 @@ const CV: React.FC = () => {
             setError(null);
             try {
                 console.log(`CV.tsx: Fetching data for userId: ${id}`);
-                // Fetch all data in parallel
                 const [backendData, projectsData, certificatesData] = await Promise.all([
                     getCvData(id),
                     learnerProjectApi.getUserProjects(id),
-                    getUserCertificates() // Fetches certificates for the current user
+                    getUserCertificates()
                 ]);
 
-                const mappedProjects: ProfileProject[] = projectsData.map(p => ({
+                // --- FIX: De-duplicate the projects array based on project ID ---
+                const uniqueProjectsData = Array.from(
+                    new Map(projectsData.map(p => [p.id, p])).values()
+                );
+                // --- END FIX ---
+
+                // Now, map over the de-duplicated array
+                const mappedProjects: ProfileProject[] = uniqueProjectsData.map(p => ({
                     title: p.title,
                     description: p.description,
                     technologies: p.technologies,
@@ -63,18 +70,17 @@ const CV: React.FC = () => {
                     completionDate: p.endDate,
                     status: p.status,
                 }));
-                
-                // Map the fetched certificate data
+
                 const mappedCertifications: ProfileCertification[] = certificatesData.map(c => ({
                     title: c.courseTitle,
-                    issuer: 'ExcellyGen Academy', // Or another field from your DTO if available
+                    issuer: 'ExcellyGen Academy',
                     completionDate: c.completionDate,
                 }));
 
                 const mappedData: UserData = {
                     personalInfo: backendData.personalInfo,
                     projects: mappedProjects,
-                    certifications: mappedCertifications, // Using new certifications data
+                    certifications: mappedCertifications,
                     skills: backendData.skills,
                 };
 
@@ -100,19 +106,30 @@ const CV: React.FC = () => {
             toast.error('CV data not loaded or CV not available for download.');
             return;
         }
-        // ... (rest of the download function remains the same)
         try {
             const element = cvRef.current;
             const downloadButton = element.querySelector('.download-button') as HTMLElement;
             if (downloadButton) downloadButton.style.display = 'none';
-            const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+            const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
             if (downloadButton) downloadButton.style.display = '';
-            const data = canvas.toDataURL('image/png');
+            const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF('p', 'mm', 'a4');
-            const imgProps = pdf.getImageProperties(data);
             const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-            pdf.addImage(data, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            const pdfPageHeight = pdf.internal.pageSize.getHeight();
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const ratio = pdfWidth / canvasWidth;
+            const canvasImageHeight = canvasHeight * ratio;
+            let position = 0;
+            let heightLeft = canvasImageHeight;
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, canvasImageHeight);
+            heightLeft -= pdfPageHeight;
+            while (heightLeft > 0) {
+                position -= pdfPageHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, canvasImageHeight);
+                heightLeft -= pdfPageHeight;
+            }
             pdf.save(`CV_${cvData.personalInfo.name}.pdf`);
             toast.success('CV downloaded successfully!');
         } catch (e: any) {
@@ -128,8 +145,7 @@ const CV: React.FC = () => {
             </div>
         );
     }
-    
-    // FIX: This robustly handles the error state before attempting to render
+
     if (error) {
         return (
             <div className="min-h-screen bg-gray-200 p-6 flex flex-col items-center justify-center">
@@ -147,9 +163,7 @@ const CV: React.FC = () => {
         );
     }
 
-    // FIX: This guard prevents rendering with null data, solving the crash.
     if (!cvData) {
-        // This can be a loading indicator or null, as the main loading/error states are handled above
         return null;
     }
 
@@ -214,7 +228,9 @@ const CV: React.FC = () => {
                             <div>
                                 {cvData.skills.map((skill, index) => (
                                     <div key={index} className="mb-2">
-                                        <span className="cv-skill-item text-xs text-blue-100 font-medium">{skill}</span>
+                                        <span className="cv-skill-item text-xs text-blue-100 font-medium">
+                                            {skill}
+                                        </span>
                                     </div>
                                 ))}
                             </div>
@@ -223,7 +239,6 @@ const CV: React.FC = () => {
                     <div className="w-2/3 bg-gray-50 p-6 flex flex-col">
                         <ProfessionalSummary summary={cvData.personalInfo.summary} />
                         <ProjectsSection projects={cvData.projects} />
-                        {/* UPDATED: Rendering the new certifications section */}
                         <CertificationsSection certifications={cvData.certifications} />
                         <div className="mt-auto">
                             <CVFooter />
