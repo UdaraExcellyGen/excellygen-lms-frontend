@@ -1,28 +1,26 @@
-// src/features/Learner/CourseContent/CourseContent.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import Layout from '../../../components/Sidebar/Layout';
-import { LearnerCourseDto } from '../../../types/course.types'; 
+import { LearnerCourseDto } from '../../../types/course.types';
 import ConfirmationModal from './components/ConfirmationModal';
-import StatsOverview from './components/StatsOverview'; 
+import StatsOverview from './components/StatsOverview';
 import CourseTabs from './components/CourseTabs';
 import CourseGrid from './components/CourseGrid';
 
 import { getCoursesForCategory, clearCourseCaches } from '../../../api/services/Course/learnerCourseService';
 import { createEnrollment, deleteEnrollment } from '../../../api/services/Course/enrollmentService';
-import { getCategories as getCourseCategoriesApi } from '../../../api/services/courseCategoryService'; 
-import { getOverallLmsStatsForLearner } from '../../../api/services/LearnerDashboard/learnerOverallStatsService'; 
+import { getCategories as getCourseCategoriesApi } from '../../../api/services/courseCategoryService';
+import { getOverallLmsStatsForLearner } from '../../../api/services/LearnerDashboard/learnerOverallStatsService';
 import { OverallLmsStatsDto as OverallLmsStatsBackendDto } from '../../../types/course.types';
 import { useAuth } from '../../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 const CourseContent: React.FC = () => {
-  const { categoryId: categoryIdParam } = useParams<{ categoryId: string }>(); 
+  const { categoryId: categoryIdParam } = useParams<{ categoryId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth(); 
+  const { user } = useAuth();
 
-  // OPTIMIZATION: Use refs to prevent unnecessary re-renders
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
 
@@ -33,11 +31,10 @@ const CourseContent: React.FC = () => {
   const [enrolledCourses, setEnrolledCourses] = useState<LearnerCourseDto[]>([]);
   const [isUnenrollModalOpen, setIsUnenrollModalOpen] = useState(false);
   const [selectedCourseForUnenroll, setSelectedCourseForUnenroll] = useState<LearnerCourseDto | null>(null);
-  const [categoryName, setCategoryName] = useState<string>('Loading Category...'); 
+  const [categoryName, setCategoryName] = useState<string>('Loading Category...');
   const [overallLmsStats, setOverallLmsStats] = useState<OverallLmsStatsBackendDto | null>(null);
   const [totalCategoryDuration, setTotalCategoryDuration] = useState<string>('0 hours');
 
-  // OPTIMIZATION: Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -48,7 +45,6 @@ const CourseContent: React.FC = () => {
     };
   }, []);
 
-  // OPTIMIZATION: Memoized category name fetching
   const getCategoryName = useCallback(async (categoryId: string): Promise<string> => {
     const cachedCategories = sessionStorage.getItem('course_categories_simple');
     if (cachedCategories) {
@@ -60,7 +56,6 @@ const CourseContent: React.FC = () => {
         console.error('Error parsing cached categories:', error);
       }
     }
-
     try {
       const allCategories = await getCourseCategoriesApi();
       sessionStorage.setItem('course_categories_simple', JSON.stringify(allCategories));
@@ -72,13 +67,11 @@ const CourseContent: React.FC = () => {
     }
   }, []);
 
-  // OPTIMIZATION: Single optimized data fetching function
   const fetchData = useCallback(async () => {
     if (!user?.id || !categoryIdParam || !isMountedRef.current) {
       return;
     }
 
-    // Cancel any ongoing request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -86,38 +79,30 @@ const CourseContent: React.FC = () => {
 
     setLoading(true);
     setError(null);
-    
+
     try {
       console.log('Fetching course data optimized...');
-      
-      // OPTIMIZATION: Start category name fetch early
       getCategoryName(categoryIdParam).then(name => {
         if (isMountedRef.current) setCategoryName(name);
       });
 
-      // OPTIMIZATION: Single batch request for courses + parallel stats request
       const [coursesResult, statsResult] = await Promise.allSettled([
         getCoursesForCategory(categoryIdParam),
         getOverallLmsStatsForLearner()
       ]);
 
-      // Check if component is still mounted
       if (!isMountedRef.current) return;
 
-      // Handle courses data
       if (coursesResult.status === 'fulfilled') {
-        const { available, enrolled, categoryEnrolled } = coursesResult.value;
+        const { available, categoryEnrolled } = coursesResult.value;
         setAvailableCourses(available);
         setEnrolledCourses(categoryEnrolled);
-        
-        // Calculate total duration
-        const allCategoryCoursesHours = [...available, ...categoryEnrolled]
-          .reduce((total, course) => total + course.estimatedTime, 0);
+        const allCategoryCoursesHours = [...available, ...categoryEnrolled].reduce((total, course) => total + course.estimatedTime, 0);
         setTotalCategoryDuration(`${allCategoryCoursesHours} h`);
       } else {
         console.error('Failed to fetch courses:', coursesResult.reason);
-        
-        if (coursesResult.reason?.response?.status === 404) {
+        const reason = coursesResult.reason;
+        if (reason?.response?.status === 404) {
           setError("Course category not found.");
           toast.error("Course category not found.");
           navigate('/learner/course-categories', { replace: true });
@@ -128,7 +113,6 @@ const CourseContent: React.FC = () => {
         }
       }
 
-      // Handle stats data (non-critical)
       if (statsResult.status === 'fulfilled') {
         setOverallLmsStats(statsResult.value);
       } else {
@@ -138,15 +122,12 @@ const CourseContent: React.FC = () => {
 
     } catch (err: any) {
       if (!isMountedRef.current) return;
-      
       console.error("Failed to fetch data:", err);
-      
       if (err.name === 'AbortError') {
         console.log('Request was aborted');
         return;
       }
-      
-      if (err.response?.status === 403) { 
+      if (err.response?.status === 403) {
         setError("Access denied to course data. Please contact your administrator.");
         toast.error("Access denied to course data.");
       } else {
@@ -160,32 +141,46 @@ const CourseContent: React.FC = () => {
     }
   }, [user?.id, categoryIdParam, navigate, getCategoryName]);
 
-  // OPTIMIZATION: Effect with dependency array
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // OPTIMIZATION: Optimized enrollment handlers
+  // =================================================================
+  // OPTIMIZATION: Implement Optimistic UI Update for enrollment
+  // =================================================================
   const handleEnroll = useCallback(async (courseId: number) => {
     if (!user?.id) {
       toast.error("You must be logged in to enroll in courses.");
       return;
     }
 
-    const enrollToast = toast.loading("Enrolling...");
+    const courseToEnroll = availableCourses.find(c => c.id === courseId);
+    if (!courseToEnroll) return;
+
+    // 1. Optimistically update the UI *before* the API call
+    setAvailableCourses(prev => prev.filter(c => c.id !== courseId));
+    setEnrolledCourses(prev => [...prev, { ...courseToEnroll, isEnrolled: true }]);
+    setActiveTab('learning');
+    
+    const enrollToast = toast.loading(`Enrolling in "${courseToEnroll.title}"...`);
+
     try {
-      const newEnrollment = await createEnrollment(courseId); 
-      toast.success(`Enrolled in "${newEnrollment.courseTitle}" successfully!`, { id: enrollToast });
+      // 2. Make the API call
+      const newEnrollment = await createEnrollment(courseId);
       
-      // OPTIMIZATION: Clear caches and refetch data
-      clearCourseCaches();
-      await fetchData();
-      setActiveTab('learning'); 
+      // 3. On success, update the enrolled course with the real enrollmentId and clear caches silently
+      setEnrolledCourses(prev => prev.map(c => c.id === courseId ? { ...c, enrollmentId: newEnrollment.id } : c));
+      toast.success(`Successfully enrolled!`, { id: enrollToast });
+      clearCourseCaches(); // Clear cache for the next full page load
+
     } catch (err: any) {
-      console.error("Failed to enroll:", err);
-      toast.error(err.response?.data?.message || "Failed to enroll in the course. Please try again.", { id: enrollToast });
+      // 4. On failure, revert the UI back to its original state and show an error
+      toast.error(`Failed to enroll: ${err.response?.data?.message || 'Please try again.'}`, { id: enrollToast });
+      setAvailableCourses(prev => [...prev, courseToEnroll]);
+      setEnrolledCourses(prev => prev.filter(c => c.id !== courseId));
+      setActiveTab('courses');
     }
-  }, [user?.id, fetchData]);
+  }, [user?.id, availableCourses]); // Dependency on availableCourses is important
 
   const handleUnenrollConfirmation = useCallback((course: LearnerCourseDto) => {
     setSelectedCourseForUnenroll(course);
@@ -198,29 +193,32 @@ const CourseContent: React.FC = () => {
     const unenrollToast = toast.loading("Unenrolling...");
     try {
       if (selectedCourseForUnenroll.isEnrolled && selectedCourseForUnenroll.enrollmentId) {
-        await deleteEnrollment(selectedCourseForUnenroll.enrollmentId); 
+        await deleteEnrollment(selectedCourseForUnenroll.enrollmentId);
         toast.success(`Unenrolled from "${selectedCourseForUnenroll.title}" successfully!`, { id: unenrollToast });
+        
+        // Instead of a full refetch, just update the state
+        setEnrolledCourses(prev => prev.filter(c => c.id !== selectedCourseForUnenroll.id));
+        setAvailableCourses(prev => [...prev, { ...selectedCourseForUnenroll, isEnrolled: false, enrollmentId: null }]);
+        clearCourseCaches();
+
       } else {
-        throw new Error("Enrollment ID not found for unenrollment. Course may not be correctly enrolled.");
+        throw new Error("Enrollment ID not found for unenrollment.");
       }
-      
-      // OPTIMIZATION: Clear caches and refetch data
-      clearCourseCaches();
-      await fetchData();
-      setIsUnenrollModalOpen(false);
-      setSelectedCourseForUnenroll(null);
     } catch (err: any) {
       console.error("Failed to unenroll:", err);
-      toast.error(err.response?.data?.message || "Failed to unenroll from the course. Please try again.", { id: unenrollToast });
+      toast.error(err.response?.data?.message || "Failed to unenroll.", { id: unenrollToast });
+    } finally {
+        setIsUnenrollModalOpen(false);
+        setSelectedCourseForUnenroll(null);
     }
-  }, [selectedCourseForUnenroll, user?.id, fetchData]);
+  }, [selectedCourseForUnenroll, user?.id]);
 
   const handleContinueLearning = useCallback((courseId: number) => {
-    navigate(`/learner/course-view/${courseId}`); 
+    navigate(`/learner/course-view/${courseId}`);
   }, [navigate]);
 
   const handleBack = useCallback(() => {
-    navigate('/learner/course-categories'); 
+    navigate('/learner/course-categories');
   }, [navigate]);
 
   const handleRetry = useCallback(() => {
@@ -228,6 +226,7 @@ const CourseContent: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
+  // The rest of the return statement remains the same...
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-3 sm:p-6">
@@ -241,7 +240,6 @@ const CourseContent: React.FC = () => {
             <span className="text-sm sm:text-base">Back to Course Categories</span>
           </button>
           
-          {/* Header Section */}
           <div className="text-center mb-6 sm:mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold font-unbounded mb-2 sm:mb-4 bg-gradient-to-r from-white via-white to-[#D68BF9] bg-clip-text text-transparent">
               {categoryName}
@@ -251,20 +249,17 @@ const CourseContent: React.FC = () => {
             </p>
           </div>
 
-          {/* Stats Overview */}
           <StatsOverview 
             availableCoursesCount={availableCourses.length}
             enrolledCoursesCount={enrolledCourses.length}
             totalCategoryDuration={totalCategoryDuration}
           />
 
-          {/* Tabs */}
           <CourseTabs 
             activeTab={activeTab} 
             setActiveTab={setActiveTab} 
           />
 
-          {/* Error Message */}
           {error && (
             <div className="bg-white/95 backdrop-blur-sm rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 border border-red-500 text-red-500 font-nunito text-sm sm:text-base">
               {error}
@@ -278,7 +273,6 @@ const CourseContent: React.FC = () => {
             </div>
           )}
 
-          {/* Course Grid */}
           {loading ? (
             <div className="flex justify-center items-center h-40 sm:h-64">
               <div className="text-center">
@@ -299,7 +293,6 @@ const CourseContent: React.FC = () => {
           )}
         </div>
 
-        {/* Unenroll Confirmation Modal */}
         <ConfirmationModal
           isOpen={isUnenrollModalOpen}
           onClose={() => {
