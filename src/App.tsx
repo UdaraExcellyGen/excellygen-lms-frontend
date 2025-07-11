@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { I18nextProvider } from 'react-i18next'; // ADDED
+import i18n from './i18n'; // ADDED
 
 // Auth Provider
 import { AuthProvider } from './contexts/AuthContext';
@@ -90,16 +92,18 @@ const ApiLoadingInterceptor: React.FC = () => {
 
 function AppWrapper() {
   return (
-    <BrowserRouter>
-      <LoadingProvider>
-        <AuthProvider>
-          <ApiLoadingInterceptor />
-          <BookLoader />
-          <App />
-          <Toaster position="top-right" />
-        </AuthProvider>
-      </LoadingProvider>
-    </BrowserRouter>
+    <I18nextProvider i18n={i18n}> {/* CRITICAL: This wraps the entire app */}
+      <BrowserRouter>
+        <LoadingProvider>
+          <AuthProvider>
+            <ApiLoadingInterceptor />
+            <BookLoader />
+            <App />
+            <Toaster position="top-right" />
+          </AuthProvider>
+        </LoadingProvider>
+      </BrowserRouter>
+    </I18nextProvider>
   );
 }
 

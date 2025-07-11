@@ -20,8 +20,9 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    lng: 'en', // default language
-    fallbackLng: 'en',
+    // ❌ REMOVE THIS LINE: lng: 'en', 
+    // ✅ Let LanguageDetector handle it automatically
+    fallbackLng: 'en', // Only used if detection fails
     debug: false,
     
     // Configure language detection
