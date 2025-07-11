@@ -202,7 +202,7 @@ const Header: React.FC<HeaderProps> = ({
             
             {/* Tooltip */}
             <div className="absolute hidden md:group-hover:block right-0 mt-2 bg-[#1B0A3F] text-white text-xs py-1.5 px-3 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap z-50">
-              {newNotificationsCount} new notification{newNotificationsCount !== 1 ? 's' : ''}
+              {newNotificationsCount} {newNotificationsCount === 1 ? t('projectManager.dashboard.newNotifications') : t('projectManager.dashboard.newNotificationsPlural')}
             </div>
           </button>
 
@@ -244,7 +244,7 @@ const Header: React.FC<HeaderProps> = ({
                   }}
                 >
                   <div className="text-sm text-gray-500 px-4 py-2.5 border-b border-gray-100 font-['Nunito_Sans'] bg-[#F6E6FF]">
-                    Switch Role
+                    {t('projectManager.dashboard.switchRole')}
                   </div>
                   <div className="py-1">
                     {user.roles.map((role) => (
@@ -276,7 +276,7 @@ const Header: React.FC<HeaderProps> = ({
                       onClick={handleViewAllRoles}
                       className="flex items-center w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-[#F6E6FF] hover:text-[#BF4BF6] transition-all duration-200 font-['Nunito_Sans']"
                     >
-                      View All Roles
+                      {t('projectManager.dashboard.viewAllRoles')}
                     </button>
                   </div>
                 </div>
@@ -290,7 +290,7 @@ const Header: React.FC<HeaderProps> = ({
             className="flex items-center gap-2.5 px-3.5 py-2.5 text-gray-700 transition-all duration-300 rounded-lg hover:bg-red-50 hover:text-red-600"
           >
             <LogOut size={18} strokeWidth={1.8} />
-            <span className="font-['Nunito_Sans'] text-sm font-medium hidden sm:inline">Logout</span>
+            <span className="font-['Nunito_Sans'] text-sm font-medium hidden sm:inline">{t('projectManager.dashboard.logout')}</span>
           </button>
         </div>
       </div>

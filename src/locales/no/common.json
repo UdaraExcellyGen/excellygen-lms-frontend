@@ -79,6 +79,12 @@
   "projectManager": {
     "dashboard": {
       "title": "Prosjektleder dashbord",
+       "switchRole": "Bytt rolle",
+      "viewAllRoles": "Se alle roller",
+      "logout": "Logg ut", 
+      "recentNotifications": "Nylige varsler",
+      "newNotifications": "nytt varsel",
+      "newNotificationsPlural": "nye varsler",
       "loadingData": "Laster dashbord-data...",
       "errorLoading": "Feil ved lasting av dashbord",
       "tryAgain": "Prøv igjen", 

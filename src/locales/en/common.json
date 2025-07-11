@@ -79,6 +79,12 @@
   "projectManager": {
     "dashboard": {
       "title": "Project Manager Dashboard",
+        "switchRole": "Switch Role",
+      "viewAllRoles": "View All Roles", 
+      "logout": "Logout",
+      "recentNotifications": "Recent Notifications",
+      "newNotifications": "new notification",
+      "newNotificationsPlural": "new notifications",
       "loadingData": "Loading dashboard data...",
       "errorLoading": "Error Loading Dashboard", 
       "tryAgain": "Try Again",
