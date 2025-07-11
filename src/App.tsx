@@ -111,6 +111,7 @@ const AuthCleanup: React.FC = () => {
   useEffect(() => {
     if (!user) {
       console.log('User logged out, clearing session data...');
+      // Simple cleanup - only clear what's necessary
       try {
         sessionStorage.removeItem('course_categories');
         console.log('Session data cleared');

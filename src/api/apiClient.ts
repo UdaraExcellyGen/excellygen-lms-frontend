@@ -7,7 +7,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // OPTIMIZATION: Increased timeout to 15 seconds
+  timeout: 15000, // OPTIMIZATION: Increased timeout to 15 seconds
 });
 
 // Flag to prevent multiple token refresh attempts at the same time
@@ -114,7 +114,7 @@ const processQueue = (error: any = null, token: string | null = null) => {
 const pendingRequests = new Map<string, Promise<any>>();
 
 const getRequestKey = (config: any): string => {
-  return `${config.method?.toUpperCase()}_${config.url}_${JSON.stringify(config.params || {})}`; // FIXED
+  return `${config.method?.toUpperCase()}_${config.url}_${JSON.stringify(config.params || {})}`;
 };
 
 // Request interceptor to add authorization header and active role
@@ -124,7 +124,7 @@ apiClient.interceptors.request.use(
     if (config.method === 'get') {
       const requestKey = getRequestKey(config);
       if (pendingRequests.has(requestKey)) {
-        console.log(`Deduplicating request: ${requestKey}`); // FIXED
+        console.log(`Deduplicating request: ${requestKey}`);
         return pendingRequests.get(requestKey)!.then(() => config);
       }
     }
@@ -153,7 +153,7 @@ apiClient.interceptors.request.use(
       
       // Add debug logging in development
       if (import.meta.env.DEV) {
-        console.log(`Request with role: ${normalizedRole} to ${config.url}`); // FIXED
+        console.log(`Request with role: ${normalizedRole} to ${config.url}`);
       }
     }
     
@@ -310,23 +310,23 @@ apiClient.interceptors.response.use(
       const endpoint = error.config?.url || 'unknown';
       
       // Don't log certain expected errors
-     const expectedErrors = [401, 403, 404];
+      const expectedErrors = [401, 403, 404];
       if (!expectedErrors.includes(status)) {
         switch (status) {
           case 500:
-            console.error(`Server error at ${endpoint}:`, message); // FIXED
+            console.error(`Server error at ${endpoint}:`, message);
             break;
           case 502:
-            console.error(`Bad Gateway for ${endpoint}:`, message); // FIXED
+            console.error(`Bad Gateway for ${endpoint}:`, message);
             break;
           case 503:
-            console.error(`Service Unavailable for ${endpoint}:`, message); // FIXED
+            console.error(`Service Unavailable for ${endpoint}:`, message);
             break;
           case 504:
-            console.error(`Gateway Timeout for ${endpoint}:`, message); // FIXED
+            console.error(`Gateway Timeout for ${endpoint}:`, message);
             break;
           default:
-            console.error(`Error (${status}) at ${endpoint}:`, message); // FIXED
+            console.error(`Error (${status}) at ${endpoint}:`, message);
         }
       }
     } else if (error.request) {

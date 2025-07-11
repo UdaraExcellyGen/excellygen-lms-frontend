@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { 
@@ -34,31 +34,32 @@ export const useDebounce = (value: string, delay: number) => {
 export const useUsers = () => {
   const { user: currentUser } = useAuth();
   
-  // Permission checks - UPDATED for case-insensitivity
-  const isSuperAdmin = useMemo(() => {
-    return currentUser?.roles.some(role => 
-      role.toLowerCase() === 'superadmin'
-    ) || false;
-  }, [currentUser]);
+  // SINGLE SOURCE OF TRUTH for loading state
+  const isInitialized = useRef(false);
+  const fetchController = useRef<AbortController | null>(null);
   
-  const isRegularAdmin = useMemo(() => {
-    return currentUser?.roles.some(role => role.toLowerCase() === 'admin') && 
-           !currentUser?.roles.some(role => role.toLowerCase() === 'superadmin') || 
-           false;
-  }, [currentUser]);
+  // Memoize permission checks
+  const permissionMemo = useMemo(() => {
+    if (!currentUser?.roles) return { isSuperAdmin: false, isRegularAdmin: false };
+    
+    const roles = currentUser.roles.map(role => role.toLowerCase());
+    const isSuperAdmin = roles.includes('superadmin');
+    const isRegularAdmin = roles.includes('admin') && !isSuperAdmin;
+    
+    return { isSuperAdmin, isRegularAdmin };
+  }, [currentUser?.roles]);
 
-  // Data states
-  const [users, setUsers] = useState<User[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>([]); // Cache for client-side filtering
+  const { isSuperAdmin, isRegularAdmin } = permissionMemo;
+
+  // SIMPLIFIED DATA STATES - Single source of truth
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   
-  // UI states
-  const [isPageLoading, setIsPageLoading] = useState(false);
+  // SINGLE LOADING STATE - No more double loading
+  const [isLoading, setIsLoading] = useState(false);
   const [loadingUserIds, setLoadingUserIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isFetchingFilteredData, setIsFetchingFilteredData] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isPromotingToSuperAdmin, setIsPromotingToSuperAdmin] = useState(false);
   
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -84,7 +85,6 @@ export const useUsers = () => {
     department: '',
     password: ''
   });
-  // Added state for temporary password generation
   const [generateTempPassword, setGenerateTempPassword] = useState(true);
 
   // Filter states
@@ -94,60 +94,102 @@ export const useUsers = () => {
     filterStatus: 'all'
   });
   
-  const debouncedSearchTerm = useDebounce(filterState.searchTerm, 300);
+  const debouncedSearchTerm = useDebounce(filterState.searchTerm, 500); // Increased debounce
 
-  // Initial data fetch
+  // CLIENT-SIDE FILTERING - Primary filtering method
+  const filteredUsers = useMemo(() => {
+    if (allUsers.length === 0) return [];
+    
+    return allUsers.filter(user => {
+      // Search filter
+      const matchesSearch = !debouncedSearchTerm || 
+        user.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
+        user.email.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
+        user.id.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+      
+      // Role filter - FIXED: Now shows users who have ALL selected roles (AND logic)
+      const matchesRoles = filterState.selectedRoles.length === 0 || 
+        filterState.selectedRoles.every(filterRole => 
+          user.roles.some(userRole => 
+            userRole.toLowerCase() === filterRole.toLowerCase()
+          )
+        );
+      
+      // Status filter
+      const matchesStatus = filterState.filterStatus === 'all' || 
+        user.status === filterState.filterStatus;
+      
+      return matchesSearch && matchesRoles && matchesStatus;
+    });
+  }, [allUsers, debouncedSearchTerm, filterState.selectedRoles, filterState.filterStatus]);
+
+  // SINGLE INITIALIZATION - Prevents double loading
   useEffect(() => {
-    fetchUsers();
+    if (!isInitialized.current) {
+      isInitialized.current = true;
+      fetchAllUsers();
+    }
   }, []);
+
+  // SIMPLIFIED FETCH FUNCTION - Only one fetch method needed
+  const fetchAllUsers = async () => {
+    // Cancel any ongoing fetch
+    if (fetchController.current) {
+      fetchController.current.abort();
+    }
+    
+    fetchController.current = new AbortController();
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const data = await getAllUsers();
+      setAllUsers(data);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        setError('Failed to fetch users. Please try again later.');
+        console.error('Error fetching users:', err);
+      }
+    } finally {
+      setIsLoading(false);
+      fetchController.current = null;
+    }
+  };
+
+  // REMOVE SERVER-SIDE FILTERING - Use only client-side filtering
+  // This eliminates the need for fetchFilteredUsers and prevents double loading
 
   // Reset generateTempPassword when editing state changes
   useEffect(() => {
     setGenerateTempPassword(!editingUser ? true : false);
   }, [editingUser]);
 
-  // Permission check methods - UPDATED for SuperAdmin to have full control
+  // Permission functions
   const canDeleteUser = useCallback((user: User) => {
-    // SuperAdmin can delete anyone except themselves
-    if (isSuperAdmin) {
-      return user.id !== currentUser?.id;
-    }
-    
-    // Regular Admin can only delete non-admin users
+    if (isSuperAdmin) return user.id !== currentUser?.id;
     if (isRegularAdmin) {
       return !user.roles.some(role => 
         role.toLowerCase() === 'admin' || role.toLowerCase() === 'superadmin'
       );
     }
-    
-    // Non-admin users cannot delete anyone
     return false;
-  }, [isSuperAdmin, isRegularAdmin, currentUser]);
+  }, [isSuperAdmin, isRegularAdmin, currentUser?.id]);
 
   const canEditUser = useCallback((user: User) => {
-    // SuperAdmin can edit anyone (including themselves)
-    if (isSuperAdmin) {
-      return true;
-    }
-    
-    // Regular Admin can only edit non-admin users
+    if (isSuperAdmin) return true;
     if (isRegularAdmin) {
       return !user.roles.some(role => 
         role.toLowerCase() === 'admin' || role.toLowerCase() === 'superadmin'
       );
     }
-    
-    // Non-admin users cannot edit anyone
     return false;
   }, [isSuperAdmin, isRegularAdmin]);
 
   const canCreateUserWithRole = useCallback((role: string) => {
-    // Only SuperAdmin can create another SuperAdmin
     if (role.toLowerCase() === 'superadmin') {
       return isSuperAdmin;
     }
-    
-    // Both Admin and SuperAdmin can create users with other roles
     return isSuperAdmin || isRegularAdmin;
   }, [isSuperAdmin, isRegularAdmin]);
 
@@ -159,109 +201,9 @@ export const useUsers = () => {
     }
   }, [isSuperAdmin]);
 
-  // Case-insensitive role comparison helper
-  const roleMatches = (userRole: string, filterRole: string) => {
-    return userRole.toLowerCase() === filterRole.toLowerCase();
-  };
-
-  // Client-side filtering implementation with case-insensitive role comparison
-  const filteredUsers = useMemo(() => {
-    if (allUsers.length > 0) {
-      return allUsers.filter(user => {
-        // Search term filter
-        const matchesSearch = !debouncedSearchTerm || 
-          user.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
-          user.email.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
-          user.id.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-        
-        // Role filter with case-insensitive comparison
-        const matchesRoles = filterState.selectedRoles.length === 0 || 
-          user.roles.some(userRole => 
-            filterState.selectedRoles.some(filterRole => 
-              roleMatches(userRole, filterRole)
-            )
-          );
-        
-        // Status filter
-        const matchesStatus = filterState.filterStatus === 'all' || 
-          user.status === filterState.filterStatus;
-        
-        return matchesSearch && matchesRoles && matchesStatus;
-      });
-    }
-    return []; // Return empty array to avoid circular dependency
-  }, [allUsers, debouncedSearchTerm, filterState.selectedRoles, filterState.filterStatus]);
-
-  // Server-side filtering effect
-  useEffect(() => {
-    if (allUsers.length === 0) {
-      if (debouncedSearchTerm || filterState.selectedRoles.length > 0 || filterState.filterStatus !== 'all') {
-        fetchFilteredUsers();
-      }
-    } else {
-      setUsers(filteredUsers);
-    }
-  }, [debouncedSearchTerm, filterState.selectedRoles, filterState.filterStatus, allUsers.length]);
-
-  // Fetch all users with caching
-  const fetchUsers = async () => {
-    try {
-      setIsPageLoading(true);
-      const data = await getAllUsers();
-      setUsers(data);
-      setAllUsers(data);
-      setError(null);
-    } catch (err) {
-      setError('Failed to fetch users. Please try again later.');
-      console.error('Error fetching users:', err);
-    } finally {
-      setIsPageLoading(false);
-    }
-  };
-
-  // Fetch filtered users from server with normalized role values
-  const fetchFilteredUsers = async () => {
-    try {
-      setIsFetchingFilteredData(true);
-      
-      // Use consistent role format for backend
-      const normalizedRoles = filterState.selectedRoles.map(role => {
-        switch(role.toLowerCase()) {
-          case 'admin': return 'Admin';
-          case 'learner': return 'Learner';
-          case 'coursecoordinator': 
-          case 'course coordinator': 
-          case 'course_coordinator': 
-            return 'CourseCoordinator';
-          case 'projectmanager': 
-          case 'project manager': 
-          case 'project_manager': 
-            return 'ProjectManager';
-          case 'superadmin':
-            return 'SuperAdmin';
-          default: return role;
-        }
-      });
-      
-      const data = await searchUsers(
-        debouncedSearchTerm, 
-        normalizedRoles, 
-        filterState.filterStatus
-      );
-      setUsers(data);
-      setError(null);
-    } catch (err) {
-      setError('Failed to fetch filtered users. Please try again later.');
-      console.error('Error fetching filtered users:', err);
-    } finally {
-      setIsFetchingFilteredData(false);
-    }
-  };
-
-  // Handle role change in a case-insensitive way
+  // Handle role change
   const handleRoleChange = useCallback((role: string, isChecked: boolean) => {
     setFilterState(prev => {
-      // First normalize the role value
       let normalizedRole = role;
       switch(role.toLowerCase()) {
         case 'admin': normalizedRole = 'Admin'; break;
@@ -279,7 +221,6 @@ export const useUsers = () => {
       }
       
       if (isChecked) {
-        // Check if we already have this role (case-insensitive)
         const alreadyHasRole = prev.selectedRoles.some(r => 
           r.toLowerCase() === normalizedRole.toLowerCase()
         );
@@ -292,7 +233,6 @@ export const useUsers = () => {
         }
         return prev;
       } else {
-        // Remove the role (case-insensitive)
         return {
           ...prev,
           selectedRoles: prev.selectedRoles.filter(r => 
@@ -303,49 +243,47 @@ export const useUsers = () => {
     });
   }, []);
 
-  // Helper function for phone number validation
+  // Helper functions
   const validatePhoneNumber = (phone: string): boolean => {
-    if (!phone) return true; // Phone is optional
-    
-    // Remove any non-digit characters for validation
+    if (!phone) return true;
     const digitsOnly = phone.replace(/\D/g, '');
-    
-    // Check if the phone starts with + or if it has valid length
     if (phone.startsWith('+')) {
-      return digitsOnly.length >= 10 && digitsOnly.length <= 15; // E.164 format allows 15 digits max
+      return digitsOnly.length >= 10 && digitsOnly.length <= 15;
     }
-    
-    // For non-prefixed numbers, accept 10-15 digits
     return digitsOnly.length >= 10 && digitsOnly.length <= 15;
   };
 
-  // Helper function for email validation
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  // Handle adding or updating a user with option to skip password generation
+  // OPTIMISTIC UPDATES - Single update function
+  const updateUsersOptimistically = useCallback((updateFn: (users: User[]) => User[]) => {
+    setAllUsers(updateFn);
+  }, []);
+
+  // STREAMLINED USER CREATION/UPDATE
   const handleAddUser = async (skipPasswordGen = false) => {
+    if (isSubmitting) return;
+    
     try {
       setIsSubmitting(true);
       
-      // Basic validation
+      // Validation
       if (!newUser.email || !newUser.name) {
         throw new Error('Name and email are required fields');
       }
       
-      // Email validation
       if (!validateEmail(newUser.email)) {
         throw new Error('Please enter a valid email address');
       }
       
-      // Phone validation (if provided)
       if (newUser.phone && !validatePhoneNumber(newUser.phone)) {
         throw new Error('Please enter a valid phone number (10-15 digits) or leave it empty');
       }
       
-      // Normalize role formats
+      // Process roles
       const normalizedRoles = newUser.roles.map(role => {
         switch(role.toLowerCase()) {
           case 'admin': return 'Admin';
@@ -358,24 +296,17 @@ export const useUsers = () => {
           case 'project manager': 
           case 'project_manager': 
             return 'ProjectManager';
-          case 'superadmin':
-            return 'SuperAdmin';
+          case 'superadmin': return 'SuperAdmin';
           default: return role;
         }
       });
       
-      // Check if user has permission to create users with these roles
-      for (const role of normalizedRoles) {
-        if (!canCreateUserWithRole(role)) {
-          throw new Error(`You don't have permission to create users with the ${role} role`);
-        }
+      const hasPermissionForAllRoles = normalizedRoles.every(role => canCreateUserWithRole(role));
+      if (!hasPermissionForAllRoles) {
+        throw new Error(`You don't have permission to create users with these roles`);
       }
       
-      // Update the user object with normalized roles
-      const userWithNormalizedRoles = {
-        ...newUser,
-        roles: normalizedRoles
-      };
+      const userWithNormalizedRoles = { ...newUser, roles: normalizedRoles };
       
       if (editingUser) {
         // Edit existing user
@@ -384,29 +315,19 @@ export const useUsers = () => {
         }
         
         const optimisticUser = { ...editingUser, ...userWithNormalizedRoles };
-        
-        setUsers(prevUsers => prevUsers.map(user => 
-          user.id === editingUser.id ? optimisticUser : user
-        ));
-        
-        if (allUsers.length > 0) {
-          setAllUsers(prevUsers => prevUsers.map(user => 
-            user.id === editingUser.id ? optimisticUser : user
-          ));
-        }
+        updateUsersOptimistically(prevUsers => 
+          prevUsers.map(user => user.id === editingUser.id ? optimisticUser : user)
+        );
         
         setShowAddModal(false);
         
         try {
-          // When updating, check if the special 'generateTemporaryPassword' flag should be set
           const updateDto: UpdateUserDto = {
             ...userWithNormalizedRoles,
             status: editingUser.status,
-            // Set generateTemporaryPassword based on our flag
             generateTemporaryPassword: userWithNormalizedRoles.password === '' && generateTempPassword
           };
           
-          // If password is 'NO_CHANGE', remove it from the payload to avoid sending it to the server
           if (updateDto.password === 'NO_CHANGE') {
             delete updateDto.password;
             updateDto.generateTemporaryPassword = false;
@@ -414,7 +335,6 @@ export const useUsers = () => {
           
           const updatedUser = await updateUser(editingUser.id, updateDto);
           
-          // Check if a temporary password was returned AND we're not skipping the password dialog
           if (updatedUser.temporaryPassword && !skipPasswordGen && generateTempPassword) {
             setTempPasswordData({
               userId: updatedUser.id,
@@ -424,32 +344,17 @@ export const useUsers = () => {
             });
             setShowTempPasswordModal(true);
           } else {
-            // Make sure we don't show the dialog if we're skipping it
             setShowTempPasswordModal(false);
             toast.success('User updated successfully');
           }
           
-          setUsers(prevUsers => prevUsers.map(user => 
-            user.id === editingUser.id ? updatedUser : user
-          ));
-          
-          if (allUsers.length > 0) {
-            setAllUsers(prevUsers => prevUsers.map(user => 
-              user.id === editingUser.id ? updatedUser : user
-            ));
-          }
+          updateUsersOptimistically(prevUsers => 
+            prevUsers.map(user => user.id === editingUser.id ? updatedUser : user)
+          );
         } catch (error) {
-          // Revert on error
-          setUsers(prevUsers => prevUsers.map(user => 
-            user.id === editingUser.id ? editingUser : user
-          ));
-          
-          if (allUsers.length > 0) {
-            setAllUsers(prevUsers => prevUsers.map(user => 
-              user.id === editingUser.id ? editingUser : user
-            ));
-          }
-          
+          updateUsersOptimistically(prevUsers => 
+            prevUsers.map(user => user.id === editingUser.id ? editingUser : user)
+          );
           throw error;
         }
       } else {
@@ -462,19 +367,12 @@ export const useUsers = () => {
           joinedDate: new Date().toISOString()
         } as User;
         
-        setUsers(prevUsers => [...prevUsers, tempUser]);
-        
-        if (allUsers.length > 0) {
-          setAllUsers(prevUsers => [...prevUsers, tempUser]);
-        }
-        
+        updateUsersOptimistically(prevUsers => [...prevUsers, tempUser]);
         setShowAddModal(false);
         
         try {
-          // For new users, we always generate a temporary password if the password field is empty
           const createdUser = await createUser(userWithNormalizedRoles);
           
-          // Check if a temporary password was returned
           if (createdUser.temporaryPassword) {
             setTempPasswordData({
               userId: createdUser.id,
@@ -487,65 +385,37 @@ export const useUsers = () => {
             toast.success('User created successfully');
           }
           
-          setUsers(prevUsers => prevUsers.map(user => 
-            user.id === tempId ? createdUser : user
-          ));
-          
-          if (allUsers.length > 0) {
-            setAllUsers(prevUsers => prevUsers.map(user => 
-              user.id === tempId ? createdUser : user
-            ));
-          }
+          updateUsersOptimistically(prevUsers => 
+            prevUsers.map(user => user.id === tempId ? createdUser : user)
+          );
         } catch (error) {
-          // Remove temp user on error
-          setUsers(prevUsers => prevUsers.filter(user => user.id !== tempId));
-          
-          if (allUsers.length > 0) {
-            setAllUsers(prevUsers => prevUsers.filter(user => user.id !== tempId));
-          }
-          
+          updateUsersOptimistically(prevUsers => 
+            prevUsers.filter(user => user.id !== tempId)
+          );
           throw error;
         }
       }
       
       resetForm();
     } catch (err: any) {
-      // Extract specific error messages from backend
       let errorMessage = err.message || 'Failed to save user';
       
-      // Check for specific error patterns from the backend
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (err.response?.data?.details) {
         errorMessage = err.response.data.details;
       }
       
-      // Handle specific error cases with user-friendly messages
       if (errorMessage.includes('already in use')) {
         if (errorMessage.includes('Email')) {
           errorMessage = 'This email address is already registered. Please use a different email address.';
         } else if (errorMessage.includes('Phone') || errorMessage.includes('phone')) {
           errorMessage = 'This phone number is already registered. Please use a different phone number.';
         }
-      } else if (errorMessage.includes('Failed to create Firebase account')) {
-        errorMessage = 'Unable to create account due to authentication issues. Please try again later.';
-      } else if (errorMessage.includes('Failed to save user to database')) {
-        errorMessage = 'Unable to save user information. Please try again later.';
-      } else if (errorMessage.includes('Invalid phone number')) {
-        errorMessage = 'Please enter a valid phone number in international format (e.g., +1234567890)';
-      } else if (errorMessage.toLowerCase().includes('duplicate')) {
-        if (errorMessage.toLowerCase().includes('email')) {
-          errorMessage = 'This email address is already registered. Please use a different email address.';
-        } else if (errorMessage.toLowerCase().includes('phone')) {
-          errorMessage = 'This phone number is already registered. Please use a different phone number.';
-        }
       }
       
       setError(errorMessage);
-      toast.error(errorMessage, {
-        duration: 5000, // Show error for 5 seconds
-        icon: '⚠️',
-      });
+      toast.error(errorMessage, { duration: 5000, icon: '⚠️' });
       console.error('Error saving user:', err);
     } finally {
       setIsSubmitting(false);
@@ -573,12 +443,11 @@ export const useUsers = () => {
     });
     setEditingUser(null);
     setError(null);
-    setGenerateTempPassword(true); // Reset this flag when form is reset
+    setGenerateTempPassword(true);
   };
 
   // Update roles for new user
   const updateNewUserRoles = (role: string, isChecked: boolean) => {
-    // First ensure we're working with the proper standardized format
     let normalizedRole = role;
     switch(role.toLowerCase()) {
       case 'admin': normalizedRole = 'Admin'; break;
@@ -597,7 +466,6 @@ export const useUsers = () => {
     
     setNewUser(prev => {
       if (isChecked) {
-        // Check if we already have this role (case-insensitive)
         const alreadyHasRole = prev.roles.some(r => 
           r.toLowerCase() === normalizedRole.toLowerCase()
         );
@@ -615,31 +483,22 @@ export const useUsers = () => {
     });
   };
 
-  // Custom function to handle user submission with password generation control
+  // Custom function to handle user submission
   const handleSubmitUser = async () => {
-    // If editing a user and not generating a temp password
     if (editingUser && !generateTempPassword) {
-      // Set password to 'NO_CHANGE' to indicate we don't want to change it
       setNewUser(prev => ({ ...prev, password: 'NO_CHANGE' }));
-      
-      // Call handleAddUser with skipPasswordGen=true to prevent showing temp password dialog
       await handleAddUser(true);
     } else {
-      // For new users or when generating a new password for existing users
       if (editingUser) {
-        // For existing users generating a new password, make sure password field is empty
-        // to signal the backend to generate a new password
         setNewUser(prev => ({ ...prev, password: '' }));
       }
-      
-      // Call handleAddUser normally to generate password and show dialog
       await handleAddUser(false);
     }
   };
 
   // Delete a user
   const handleDeleteUser = (id: string) => {
-    const userToDelete = users.find(user => user.id === id);
+    const userToDelete = allUsers.find(user => user.id === id);
     
     if (!userToDelete || !canDeleteUser(userToDelete)) {
       setError("You don't have permission to delete this user");
@@ -651,20 +510,16 @@ export const useUsers = () => {
     setShowDeleteModal(true);
   };
   
-  // Confirm deletion of a user
+  // Confirm deletion
   const confirmDelete = async () => {
-    if (userToDelete) {
+    if (userToDelete && !isDeleting) {
       try {
         setIsDeleting(true);
         
-        const userToDeleteRecord = users.find(user => user.id === userToDelete);
-        const userIndex = users.findIndex(user => user.id === userToDelete);
+        const userToDeleteRecord = allUsers.find(user => user.id === userToDelete);
+        const userIndex = allUsers.findIndex(user => user.id === userToDelete);
         
-        setUsers(prevUsers => prevUsers.filter(user => user.id !== userToDelete));
-        
-        if (allUsers.length > 0) {
-          setAllUsers(prevUsers => prevUsers.filter(user => user.id !== userToDelete));
-        }
+        updateUsersOptimistically(prevUsers => prevUsers.filter(user => user.id !== userToDelete));
         
         setShowDeleteModal(false);
         setUserToDelete(null);
@@ -673,21 +528,12 @@ export const useUsers = () => {
           await deleteUser(userToDelete);
           toast.success('User deleted successfully');
         } catch (error) {
-          // Revert on error
           if (userToDeleteRecord && userIndex !== -1) {
-            setUsers(prevUsers => {
+            setAllUsers(prevUsers => {
               const newUsers = [...prevUsers];
               newUsers.splice(userIndex, 0, userToDeleteRecord);
               return newUsers;
             });
-            
-            if (allUsers.length > 0) {
-              setAllUsers(prevUsers => {
-                const newUsers = [...prevUsers];
-                newUsers.splice(userIndex, 0, userToDeleteRecord);
-                return newUsers;
-              });
-            }
           }
           throw error;
         }
@@ -703,11 +549,12 @@ export const useUsers = () => {
 
   // Toggle user status
   const handleToggleStatus = async (userId: string) => {
+    if (loadingUserIds.includes(userId)) return;
+    
     try {
-      const targetUser = users.find(user => user.id === userId);
+      const targetUser = allUsers.find(user => user.id === userId);
       if (!targetUser) return;
       
-      // Check if the current user can edit this user
       if (!canEditUser(targetUser)) {
         toast.error("You don't have permission to change this user's status");
         return;
@@ -716,43 +563,24 @@ export const useUsers = () => {
       setLoadingUserIds(prev => [...prev, userId]);
       
       const newStatus = targetUser.status === 'active' ? 'inactive' : 'active';
+      const optimisticUser = { ...targetUser, status: newStatus };
       
-      setUsers(prevUsers => prevUsers.map(user => 
-        user.id === userId ? {...user, status: newStatus} : user
-      ));
-      
-      if (allUsers.length > 0) {
-        setAllUsers(prevUsers => prevUsers.map(user => 
-          user.id === userId ? {...user, status: newStatus} : user
-        ));
-      }
+      updateUsersOptimistically(prevUsers => 
+        prevUsers.map(user => user.id === userId ? optimisticUser : user)
+      );
       
       try {
         const updatedUser = await toggleUserStatus(userId);
         
-        setUsers(prevUsers => prevUsers.map(user => 
-          user.id === userId ? updatedUser : user
-        ));
-        
-        if (allUsers.length > 0) {
-          setAllUsers(prevUsers => prevUsers.map(user => 
-            user.id === userId ? updatedUser : user
-          ));
-        }
+        updateUsersOptimistically(prevUsers => 
+          prevUsers.map(user => user.id === userId ? updatedUser : user)
+        );
         
         toast.success(`User ${updatedUser.status === 'active' ? 'activated' : 'deactivated'}`);
       } catch (error) {
-        // Revert on error
-        setUsers(prevUsers => prevUsers.map(user => 
-          user.id === userId ? targetUser : user
-        ));
-        
-        if (allUsers.length > 0) {
-          setAllUsers(prevUsers => prevUsers.map(user => 
-            user.id === userId ? targetUser : user
-          ));
-        }
-        
+        updateUsersOptimistically(prevUsers => 
+          prevUsers.map(user => user.id === userId ? targetUser : user)
+        );
         throw error;
       }
     } catch (err) {
@@ -779,79 +607,57 @@ export const useUsers = () => {
       phone: user.phone || '',
       roles: [...user.roles],
       department: user.department || '',
-      password: '' // Clear password when editing
+      password: ''
     });
     setShowAddModal(true);
   };
 
-  // Promote user to SuperAdmin - UPDATED with improved handling for current user
+  // Promote user to SuperAdmin
   const handlePromoteToSuperAdmin = async (userId: string) => {
     if (!isSuperAdmin) {
       toast.error("Only SuperAdmin can promote users to SuperAdmin");
       return;
     }
     
+    if (loadingUserIds.includes(userId)) return;
+    
     try {
-      setIsPromotingToSuperAdmin(true);
       setLoadingUserIds(prev => [...prev, userId]);
       
-      const targetUser = users.find(user => user.id === userId);
+      const targetUser = allUsers.find(user => user.id === userId);
       if (!targetUser) return;
       
-      // Check if user already has SuperAdmin role
       if (targetUser.roles.some(r => r.toLowerCase() === 'superadmin')) {
         toast.info("User is already a SuperAdmin");
         return;
       }
       
-      // Don't update the UI optimistically for the current user
-      // This prevents token mismatch issues
       const isCurrentUser = targetUser.id === currentUser?.id;
       
-      // Only update UI optimistically for other users, not the current user
       if (!isCurrentUser) {
-        // Optimistic update for other users
         const updatedRoles = [...targetUser.roles, 'SuperAdmin'];
         const optimisticUser = { ...targetUser, roles: updatedRoles };
         
-        setUsers(prevUsers => prevUsers.map(user => 
-          user.id === userId ? optimisticUser : user
-        ));
-        
-        if (allUsers.length > 0) {
-          setAllUsers(prevUsers => prevUsers.map(user => 
-            user.id === userId ? optimisticUser : user
-          ));
-        }
+        updateUsersOptimistically(prevUsers => 
+          prevUsers.map(user => user.id === userId ? optimisticUser : user)
+        );
       }
       
       try {
-        // Call API to promote user
         await promoteToSuperAdmin(userId);
         
-        // If this is the current user, display message but don't update UI
         if (isCurrentUser) {
           toast.success("You have been promoted to SuperAdmin. Please log out and log back in for changes to take effect.");
         } else {
           toast.success(`User promoted to SuperAdmin successfully`);
-          
-          // Refresh the user list after promotion for non-current users
-          fetchUsers();
+          fetchAllUsers(); // Refresh the user list
         }
       } catch (error) {
-        // Revert UI changes on error (for non-current users)
         if (!isCurrentUser) {
-          setUsers(prevUsers => prevUsers.map(user => 
-            user.id === userId ? targetUser : user
-          ));
-          
-          if (allUsers.length > 0) {
-            setAllUsers(prevUsers => prevUsers.map(user => 
-              user.id === userId ? targetUser : user
-            ));
-          }
+          updateUsersOptimistically(prevUsers => 
+            prevUsers.map(user => user.id === userId ? targetUser : user)
+          );
         }
-        
         throw error;
       }
     } catch (err: any) {
@@ -860,7 +666,6 @@ export const useUsers = () => {
       toast.error(errorMessage);
       console.error('Error promoting user to SuperAdmin:', err);
     } finally {
-      setIsPromotingToSuperAdmin(false);
       setLoadingUserIds(prev => prev.filter(id => id !== userId));
     }
   };
@@ -870,10 +675,8 @@ export const useUsers = () => {
   // Format role name for display
   const formatRoleName = (role: string) => {
     switch(role.toLowerCase()) {
-      case 'superadmin':
-        return 'Super Admin';
-      case 'admin':
-        return 'Admin';
+      case 'superadmin': return 'Super Admin';
+      case 'admin': return 'Admin';
       case 'coursecoordinator': 
       case 'course coordinator': 
       case 'course_coordinator': 
@@ -882,22 +685,17 @@ export const useUsers = () => {
       case 'project manager': 
       case 'project_manager': 
         return 'Project Manager';
-      case 'learner': 
-        return 'Learner';
-      default: 
-        return role.charAt(0).toUpperCase() + role.slice(1);
+      case 'learner': return 'Learner';
+      default: return role.charAt(0).toUpperCase() + role.slice(1);
     }
   };
   
   // Get role color for UI display
   const getRoleColor = (role: string) => {
     switch (role.toLowerCase()) {
-      case 'superadmin':
-        return 'bg-purple-100 text-purple-800';
-      case 'admin': 
-        return 'bg-red-100 text-red-800';
-      case 'learner': 
-        return 'bg-green-100 text-green-800';
+      case 'superadmin': return 'bg-purple-100 text-purple-800';
+      case 'admin': return 'bg-red-100 text-red-800';
+      case 'learner': return 'bg-green-100 text-green-800';
       case 'coursecoordinator': 
       case 'course coordinator': 
       case 'course_coordinator': 
@@ -906,19 +704,17 @@ export const useUsers = () => {
       case 'project manager': 
       case 'project_manager': 
         return 'bg-yellow-100 text-yellow-800';
-      default: 
-        return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   return {
-    // Data
-    users,
-    filteredUsers,
+    // SIMPLIFIED DATA - Single source of truth
+    users: filteredUsers, // Always return filtered users
+    allUsers,
     
-    // States
-    isPageLoading,
-    isFetchingFilteredData,
+    // SIMPLIFIED LOADING STATES - No more double loading
+    isPageLoading: isLoading,
     isSubmitting,
     isDeleting,
     error,
@@ -974,7 +770,6 @@ export const useUsers = () => {
     getRoleColor,
     
     // SuperAdmin functions
-    handlePromoteToSuperAdmin,
-    isPromotingToSuperAdmin
+    handlePromoteToSuperAdmin
   };
 };
