@@ -1,3 +1,5 @@
+// src/features/Learner/LearnerCv/Cv.tsx
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -237,11 +239,12 @@ const CV: React.FC = () => {
                         {/* Technical Skills */}
                         <div className="mb-6">
                             <h3 className="text-sm font-bold mb-3 bg-blue-800 text-white p-2 text-center">Technical Skills</h3>
-                            <div className="space-y-2">
+                            <div>
                                 {cvData.skills.map((skill, index) => (
-                                    <div key={index} className="flex items-center">
-                                        <div className="w-2 h-2 bg-blue-300 rounded-full mr-2"></div>
-                                        <span className="text-xs text-blue-100 font-medium">{skill}</span>
+                                    <div key={index} className="mb-2">
+                                        <span className="cv-skill-item text-xs text-blue-100 font-medium">
+                                            {skill}
+                                        </span>
                                     </div>
                                 ))}
                             </div>
