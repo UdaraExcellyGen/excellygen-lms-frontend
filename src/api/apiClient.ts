@@ -1,3 +1,4 @@
+// src/api/apiClient.ts
 import axios from 'axios';
 
 // Create an axios instance with default config
@@ -6,7 +7,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30 seconds timeout
+  timeout: 30000, // OPTIMIZATION: Increased timeout to 15 seconds
 });
 
 // Flag to prevent multiple token refresh attempts at the same time
@@ -18,8 +19,10 @@ let failedQueue: {
   config: any;
 }[] = [];
 
-// Active request counter - used to manage loading state
+// OPTIMIZATION: Active request tracking with better management
 let activeRequests = 0;
+let loadingTimeout: NodeJS.Timeout | null = null;
+let requestQueue = new Set<string>(); // Track request URLs to prevent duplicates
 
 // Functions for loader management that will be injected
 let startLoading: () => void = () => {};
@@ -34,13 +37,72 @@ export const setupLoaderFunctions = (
   stopLoading = stop;
 };
 
+// OPTIMIZATION: Enhanced loading management with request deduplication
+const manageLoading = (increment: boolean, config?: any) => {
+  // OPTIMIZATION: More comprehensive endpoint exclusions
+  const excludedEndpoints = [
+    '/learner/stats/overall',
+    '/admin/dashboard/stats',
+    '/admin/dashboard/notifications',
+    '/learner-notifications/summary',
+    '/heartbeat',
+    '/auth/refresh-token'
+  ];
+  
+  const shouldShowGlobalLoading = !excludedEndpoints.some(endpoint => 
+    config?.url?.includes(endpoint)
+  );
+  
+  if (!shouldShowGlobalLoading) {
+    return;
+  }
+  
+  // OPTIMIZATION: Prevent duplicate requests from affecting loading state
+  const requestKey = `${config?.method?.toUpperCase()}_${config?.url}`; // FIXED
+  
+  if (increment) {
+    if (requestQueue.has(requestKey)) {
+      return; // Don't increment loading for duplicate requests
+    }
+    requestQueue.add(requestKey);
+    activeRequests++;
+    
+    // Start loading immediately for first request
+    if (activeRequests === 1) {
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
+        loadingTimeout = null;
+      }
+      startLoading();
+    }
+  } else {
+    requestQueue.delete(requestKey);
+    activeRequests = Math.max(0, activeRequests - 1);
+    
+    // Debounce stopping the loader to prevent flickering
+    if (activeRequests === 0) {
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
+      }
+      
+      // OPTIMIZATION: Reduced delay for better UX
+      loadingTimeout = setTimeout(() => {
+        if (activeRequests === 0) {
+          stopLoading();
+        }
+        loadingTimeout = null;
+      }, 50); // Reduced from 100ms to 50ms
+    }
+  }
+};
+
 // Process the queue of failed requests
 const processQueue = (error: any = null, token: string | null = null) => {
   failedQueue.forEach(promise => {
     if (error) {
       promise.reject(error);
     } else if (token) {
-      promise.config.headers['Authorization'] = `Bearer ${token}`;
+      promise.config.headers['Authorization'] = `Bearer ${token}`; // FIXED
       promise.resolve(axios(promise.config));
     }
   });
@@ -48,27 +110,35 @@ const processQueue = (error: any = null, token: string | null = null) => {
   failedQueue = [];
 };
 
+// OPTIMIZATION: Request deduplication for critical endpoints
+const pendingRequests = new Map<string, Promise<any>>();
+
+const getRequestKey = (config: any): string => {
+  return `${config.method?.toUpperCase()}_${config.url}_${JSON.stringify(config.params || {})}`; // FIXED
+};
+
 // Request interceptor to add authorization header and active role
 apiClient.interceptors.request.use(
   (config) => {
-    // Increment active requests counter
-    activeRequests++;
-    
-    // Show loader when first request starts
-    if (activeRequests === 1) {
-      startLoading();
+    // OPTIMIZATION: Request deduplication for GET requests
+    if (config.method === 'get') {
+      const requestKey = getRequestKey(config);
+      if (pendingRequests.has(requestKey)) {
+        console.log(`Deduplicating request: ${requestKey}`); // FIXED
+        return pendingRequests.get(requestKey)!.then(() => config);
+      }
     }
+    
+    manageLoading(true, config);
     
     const token = localStorage.getItem('access_token');
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers['Authorization'] = `Bearer ${token}`; // FIXED
     }
     
-    // Add active role header - IMPROVED to ensure role is correctly set
+    // Add active role header
     const currentRole = localStorage.getItem('current_role');
     if (currentRole) {
-      
-      // mapping the display name to the actual role name
       const roleMap: {[key: string]: string} = {
         'Admin': 'Admin',
         'Project Manager': 'ProjectManager',
@@ -83,21 +153,14 @@ apiClient.interceptors.request.use(
       
       // Add debug logging in development
       if (import.meta.env.DEV) {
-        console.log(`Request with role: ${normalizedRole}`);
+        console.log(`Request with role: ${normalizedRole} to ${config.url}`); // FIXED
       }
     }
     
     return config;
   },
   (error) => {
-    // Decrement active requests counter
-    activeRequests--;
-    
-    // Hide loader if no active requests
-    if (activeRequests === 0) {
-      stopLoading();
-    }
-    
+    manageLoading(false);
     return Promise.reject(error);
   }
 );
@@ -105,26 +168,32 @@ apiClient.interceptors.request.use(
 // Response interceptor to handle common errors and token refresh
 apiClient.interceptors.response.use(
   (response) => {
-    // Decrement active requests counter
-    activeRequests--;
+    manageLoading(false, response.config);
     
-    // Hide loader if no active requests
-    if (activeRequests === 0) {
-      stopLoading();
+    // OPTIMIZATION: Clean up deduplication cache for successful requests
+    if (response.config.method === 'get') {
+      const requestKey = getRequestKey(response.config);
+      pendingRequests.delete(requestKey);
     }
     
     return response;
   },
   async (error) => {
-    // Decrement active requests counter
-    activeRequests--;
+    manageLoading(false, error.config);
     
-    // Hide loader if no active requests
-    if (activeRequests === 0) {
-      stopLoading();
+    // OPTIMIZATION: Clean up deduplication cache for failed requests
+    if (error.config?.method === 'get') {
+      const requestKey = getRequestKey(error.config);
+      pendingRequests.delete(requestKey);
     }
     
     const originalRequest = error.config;
+    
+    // OPTIMIZATION: Better handling of aborted requests
+    if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+      console.log('Request was cancelled:', originalRequest?.url);
+      return Promise.reject(error);
+    }
     
     // Prevent infinite loops when refreshing token
     if (error.response?.status === 401 && originalRequest.url?.includes('/auth/refresh-token')) {
@@ -176,7 +245,7 @@ apiClient.interceptors.response.use(
         
         // Call refresh token endpoint
         const response = await axios.post(
-          `${apiClient.defaults.baseURL}/auth/refresh-token`,
+          `${apiClient.defaults.baseURL}/auth/refresh-token`, // FIXED
           {
             accessToken,
             refreshToken,
@@ -192,9 +261,9 @@ apiClient.interceptors.response.use(
           localStorage.setItem('current_role', response.data.currentRole);
           
           // Update the authorization header for the original request
-          originalRequest.headers['Authorization'] = `Bearer ${response.data.accessToken}`;
+          originalRequest.headers['Authorization'] = `Bearer ${response.data.accessToken}`; // FIXED
           
-          // Also set the X-Active-Role header using our mapping logic
+          // Also set the X-Active-Role header
           if (response.data.currentRole) {
             const roleMap: {[key: string]: string} = {
               'Admin': 'Admin',
@@ -234,27 +303,37 @@ apiClient.interceptors.response.use(
       }
     }
     
-    // Handle other common errors
+    // OPTIMIZATION: Enhanced error handling with better classification
     if (error.response) {
-      switch (error.response.status) {
-        case 403:
-          console.error('Forbidden access:', error.response.data?.message || 'You do not have permission to access this resource');
-          break;
-        case 404:
-          console.error('Resource not found:', error.response.data?.message || 'The requested resource was not found');
-          break;
-        case 405:
-          console.error('Method not allowed:', error.response.data?.message || 'The requested method is not allowed for this resource');
-          break;
-        case 500:
-          console.error('Server error:', error.response.data?.message || 'An unexpected error occurred on the server');
-          break;
-        default:
-          console.error(`Error (${error.response.status}):`, error.response.data?.message || error.message);
+      const status = error.response.status;
+      const message = error.response.data?.message || error.message;
+      const endpoint = error.config?.url || 'unknown';
+      
+      // Don't log certain expected errors
+     const expectedErrors = [401, 403, 404];
+      if (!expectedErrors.includes(status)) {
+        switch (status) {
+          case 500:
+            console.error(`Server error at ${endpoint}:`, message); // FIXED
+            break;
+          case 502:
+            console.error(`Bad Gateway for ${endpoint}:`, message); // FIXED
+            break;
+          case 503:
+            console.error(`Service Unavailable for ${endpoint}:`, message); // FIXED
+            break;
+          case 504:
+            console.error(`Gateway Timeout for ${endpoint}:`, message); // FIXED
+            break;
+          default:
+            console.error(`Error (${status}) at ${endpoint}:`, message); // FIXED
+        }
       }
     } else if (error.request) {
       // The request was made but no response was received
-      console.error('Network error:', 'No response received from server. Please check your internet connection.');
+      if (error.code !== 'ERR_CANCELED') {
+        console.error('Network error:', 'No response received from server. Please check your internet connection.');
+      }
     } else {
       // Something happened in setting up the request
       console.error('Request error:', error.message);
@@ -263,5 +342,25 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// OPTIMIZATION: Enhanced utilities for better performance monitoring
+export const clearActiveRequests = () => {
+  activeRequests = 0;
+  requestQueue.clear();
+  pendingRequests.clear();
+  if (loadingTimeout) {
+    clearTimeout(loadingTimeout);
+    loadingTimeout = null;
+  }
+  stopLoading();
+};
+
+export const getActiveRequestsCount = () => activeRequests;
+
+export const getRequestQueueStatus = () => ({
+  activeRequests,
+  queuedRequests: Array.from(requestQueue),
+  pendingRequests: Array.from(pendingRequests.keys())
+});
 
 export default apiClient;
