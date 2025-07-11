@@ -14,7 +14,7 @@ interface FilterBarProps {
   resetFilters: () => void;
   formatRoleName: (role: string) => string;
   getRoleColor: (role: string) => string;
-  isFetchingFilteredData: boolean;
+  isSuperAdmin?: boolean;
 }
 
 const FilterBar: React.FC<FilterBarProps> = ({
@@ -29,7 +29,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
   resetFilters,
   formatRoleName,
   getRoleColor,
-  isFetchingFilteredData
+  isSuperAdmin = false
 }) => {
   // Available roles with their normalized values and display names
   const availableRoles = [
@@ -239,16 +239,6 @@ const FilterBar: React.FC<FilterBarProps> = ({
           >
             Reset all
           </button>
-        </div>
-      )}
-
-      {/* Loading indicator */}
-      {isFetchingFilteredData && (
-        <div className="flex justify-center items-center py-2 mt-4">
-          <div className="flex items-center text-gray-500 text-sm">
-            <div className="animate-spin mr-2 h-4 w-4 border-b-2 border-gray-500 rounded-full"></div>
-            Updating results...
-          </div>
         </div>
       )}
     </div>

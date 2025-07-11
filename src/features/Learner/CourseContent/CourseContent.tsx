@@ -11,7 +11,7 @@ import CourseGrid from './components/CourseGrid';
 
 import { getAvailableCoursesForLearner, getEnrolledCoursesForLearner } from '../../../api/services/Course/learnerCourseService';
 import { createEnrollment, deleteEnrollment } from '../../../api/services/Course/enrollmentService';
-import { getCategories as getCourseCategoriesApi, CourseCategoryDtoBackend } from '../../../api/services/courseCategoryService'; 
+import { getCategories as getCourseCategoriesApi } from '../../../api/services/courseCategoryService'; 
 import { getOverallLmsStatsForLearner } from '../../../api/services/LearnerDashboard/learnerOverallStatsService'; 
 import { OverallLmsStatsDto as OverallLmsStatsBackendDto } from '../../../types/course.types';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -33,6 +33,35 @@ const CourseContent: React.FC = () => {
   const [overallLmsStats, setOverallLmsStats] = useState<OverallLmsStatsBackendDto | null>(null);
   const [totalCategoryDuration, setTotalCategoryDuration] = useState<string>('0 hours');
 
+  // OPTIMIZATION: Simple category name caching
+  const getCategoryName = useCallback(async (categoryId: string) => {
+    // Check sessionStorage first
+    const cachedCategories = sessionStorage.getItem('course_categories_simple');
+    if (cachedCategories) {
+      try {
+        const categories = JSON.parse(cachedCategories);
+        const category = categories.find((cat: any) => cat.id === categoryId);
+        if (category) {
+          return category.title;
+        }
+      } catch (error) {
+        console.error('Error parsing cached categories:', error);
+      }
+    }
+
+    // Fetch from API and cache
+    try {
+      const allCategories = await getCourseCategoriesApi();
+      sessionStorage.setItem('course_categories_simple', JSON.stringify(allCategories));
+      
+      const matchedCategory = allCategories.find(cat => cat.id === categoryId);
+      return matchedCategory ? matchedCategory.title : 'Unknown Category';
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      return 'Unknown Category';
+    }
+  }, []);
+
   const fetchCoursesAndCategory = useCallback(async () => {
     if (!user?.id || !categoryIdParam) {
       setError(null); 
@@ -42,45 +71,75 @@ const CourseContent: React.FC = () => {
 
     setLoading(true);
     setError(null);
+    
     try {
-      const allCategories = await getCourseCategoriesApi();
-      const matchedCategory = allCategories.find(cat => cat.id === categoryIdParam);
-
-      if (!matchedCategory) {
-        setError("Invalid category specified in URL.");
-        toast.error("Invalid category specified.");
-        navigate('/learner/course-categories', { replace: true });
-        return;
-      }
+      console.log('Fetching course data...');
       
-      setCategoryName(matchedCategory.title); 
+      // OPTIMIZATION: Start category name fetch immediately
+      const categoryNamePromise = getCategoryName(categoryIdParam);
+      categoryNamePromise.then(name => setCategoryName(name));
 
-      // Fetch courses and overall LMS stats concurrently
-      const [available, enrolled, overallStats] = await Promise.all([
+      // OPTIMIZATION: Use Promise.allSettled for graceful error handling
+      const [availableResult, enrolledResult, overallStatsResult] = await Promise.allSettled([
         getAvailableCoursesForLearner(categoryIdParam), 
         getEnrolledCoursesForLearner(),
         getOverallLmsStatsForLearner()
       ]);
 
-      setOverallLmsStats(overallStats); 
+      // Handle available courses
+      if (availableResult.status === 'fulfilled') {
+        setAvailableCourses(availableResult.value);
+      } else {
+        console.error('Failed to fetch available courses:', availableResult.reason);
+        setAvailableCourses([]);
+      }
 
-      setAvailableCourses(available);
-      const enrolledInThisCategory = enrolled.filter(c => c.category.id === categoryIdParam);
-      setEnrolledCourses(enrolledInThisCategory);
+      // Handle enrolled courses
+      if (enrolledResult.status === 'fulfilled') {
+        const allEnrolled = enrolledResult.value;
+        const enrolledInThisCategory = allEnrolled.filter(c => c.category.id === categoryIdParam);
+        setEnrolledCourses(enrolledInThisCategory);
+      } else {
+        console.error('Failed to fetch enrolled courses:', enrolledResult.reason);
+        setEnrolledCourses([]);
+      }
 
-      // Calculate total duration for all courses in this category
-      const allCategoryCoursesHours = [...available, ...enrolledInThisCategory]
+      // Handle overall stats
+      if (overallStatsResult.status === 'fulfilled') {
+        setOverallLmsStats(overallStatsResult.value);
+      } else {
+        console.warn('Failed to fetch overall stats, continuing without them');
+        setOverallLmsStats(null);
+      }
+
+      // Calculate total duration after both course arrays are set
+      const available = availableResult.status === 'fulfilled' ? availableResult.value : [];
+      const enrolled = enrolledResult.status === 'fulfilled' ? 
+        enrolledResult.value.filter(c => c.category.id === categoryIdParam) : [];
+      
+      const allCategoryCoursesHours = [...available, ...enrolled]
         .reduce((total, course) => total + course.estimatedTime, 0);
       
-      // Format as string with hours
       setTotalCategoryDuration(`${allCategoryCoursesHours} h`);
+
+      // Check if we have any critical errors
+      if (availableResult.status === 'rejected' && enrolledResult.status === 'rejected') {
+        if (availableResult.reason?.response?.status === 404) {
+          setError("Course category not found.");
+          toast.error("Course category not found.");
+          navigate('/learner/course-categories', { replace: true });
+          return;
+        } else {
+          setError("Failed to load courses. Please try again.");
+          toast.error("Failed to load courses.");
+        }
+      }
 
     } catch (err: any) {
       console.error("Failed to fetch courses or overall stats:", err);
       if (err.response?.status === 403) { 
-        setError("Access denied to overall statistics. Displaying category-specific content only.");
-        toast.error("Access denied to overall statistics.");
-        setOverallLmsStats(null); 
+        setError("Access denied to course data. Please contact your administrator.");
+        toast.error("Access denied to course data.");
       } else {
         setError(err.response?.data?.message || "Failed to load courses. Please try again.");
         toast.error(err.response?.data?.message || "Failed to load courses.");
@@ -88,7 +147,7 @@ const CourseContent: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, categoryIdParam, navigate]); 
+  }, [user?.id, categoryIdParam, navigate, getCategoryName]); 
 
   useEffect(() => {
     fetchCoursesAndCategory();
@@ -100,7 +159,6 @@ const CourseContent: React.FC = () => {
       return;
     }
 
-    setLoading(true);
     const enrollToast = toast.loading("Enrolling...");
     try {
       const newEnrollment = await createEnrollment(courseId); 
@@ -110,8 +168,6 @@ const CourseContent: React.FC = () => {
     } catch (err: any) {
       console.error("Failed to enroll:", err);
       toast.error(err.response?.data?.message || "Failed to enroll in the course. Please try again.", { id: enrollToast });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -123,7 +179,6 @@ const CourseContent: React.FC = () => {
   const handleUnenroll = async () => {
     if (!selectedCourseForUnenroll || !user?.id) return;
 
-    setLoading(true);
     const unenrollToast = toast.loading("Unenrolling...");
     try {
       if (selectedCourseForUnenroll.isEnrolled && selectedCourseForUnenroll.enrollmentId) {
@@ -139,8 +194,6 @@ const CourseContent: React.FC = () => {
     } catch (err: any) {
       console.error("Failed to unenroll:", err);
       toast.error(err.response?.data?.message || "Failed to unenroll from the course. Please try again.", { id: unenrollToast });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -153,80 +206,89 @@ const CourseContent: React.FC = () => {
   };
 
   return (
-  <Layout>
-    <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-3 sm:p-6">
-      <div className="max-w-7xl mx-auto px-3 sm:px-8 space-y-4 sm:space-y-8">
-        <button 
-          onClick={handleBack}
-          className="flex items-center text-[#D68BF9] hover:text-white transition-colors mb-3 sm:mb-6 font-nunito"
-          disabled={loading}
-        >
-          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
-          <span className="text-sm sm:text-base">Back to Course Categories</span>
-        </button>
-        
-        {/* Header Section */}
-        <div className="text-center mb-6 sm:mb-12">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold font-unbounded mb-2 sm:mb-4 bg-gradient-to-r from-white via-white to-[#D68BF9] bg-clip-text text-transparent">
-            {categoryName}
-          </h2>
-          <p className="text-[#D68BF9] text-sm sm:text-lg max-w-2xl mx-auto leading-relaxed font-nunito">
-            Explore our curated courses and start your learning journey
-          </p>
+    <Layout>
+      <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-3 sm:p-6">
+        <div className="max-w-7xl mx-auto px-3 sm:px-8 space-y-4 sm:space-y-8">
+          <button 
+            onClick={handleBack}
+            className="flex items-center text-[#D68BF9] hover:text-white transition-colors mb-3 sm:mb-6 font-nunito"
+            disabled={loading}
+          >
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
+            <span className="text-sm sm:text-base">Back to Course Categories</span>
+          </button>
+          
+          {/* Header Section */}
+          <div className="text-center mb-6 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold font-unbounded mb-2 sm:mb-4 bg-gradient-to-r from-white via-white to-[#D68BF9] bg-clip-text text-transparent">
+              {categoryName}
+            </h2>
+            <p className="text-[#D68BF9] text-sm sm:text-lg max-w-2xl mx-auto leading-relaxed font-nunito">
+              Explore our curated courses and start your learning journey
+            </p>
+          </div>
+
+          {/* Stats Overview */}
+          <StatsOverview 
+            availableCoursesCount={availableCourses.length}
+            enrolledCoursesCount={enrolledCourses.length}
+            totalCategoryDuration={totalCategoryDuration}
+          />
+
+          {/* Tabs */}
+          <CourseTabs 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab} 
+          />
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 border border-red-500 text-red-500 font-nunito text-sm sm:text-base">
+              {error}
+              <button 
+                onClick={fetchCoursesAndCategory}
+                className="ml-4 bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* Course Grid */}
+          {loading ? (
+            <div className="flex justify-center items-center h-40 sm:h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-t-2 border-b-2 border-white mx-auto"></div>
+                <p className="text-white mt-4 text-lg">Loading courses...</p>
+              </div>
+            </div>
+          ) : (
+            <CourseGrid
+              activeTab={activeTab}
+              availableCourses={availableCourses}
+              enrolledCourses={enrolledCourses}
+              loading={loading}
+              onEnroll={handleEnroll}
+              onUnenroll={handleUnenrollConfirmation}
+              onContinueLearning={handleContinueLearning}
+            />
+          )}
         </div>
 
-        {/* Stats Overview */}
-        <StatsOverview 
-          availableCoursesCount={availableCourses.length}
-          enrolledCoursesCount={enrolledCourses.length}
-          totalCategoryDuration={totalCategoryDuration}
+        {/* Unenroll Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={isUnenrollModalOpen}
+          onClose={() => {
+            setIsUnenrollModalOpen(false);
+            setSelectedCourseForUnenroll(null);
+          }}
+          onConfirm={handleUnenroll}
+          title="Confirm Unenrollment"
+          courseName={selectedCourseForUnenroll?.title || ''}
         />
-
-        {/* Tabs */}
-        <CourseTabs 
-          activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
-        />
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 border border-red-500 text-red-500 font-nunito text-sm sm:text-base">
-            {error}
-          </div>
-        )}
-
-        {/* Course Grid */}
-        {loading ? (
-          <div className="flex justify-center items-center h-40 sm:h-64">
-            <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-t-2 border-b-2 border-white"></div>
-          </div>
-        ) : (
-          <CourseGrid
-            activeTab={activeTab}
-            availableCourses={availableCourses}
-            enrolledCourses={enrolledCourses}
-            loading={loading}
-            onEnroll={handleEnroll}
-            onUnenroll={handleUnenrollConfirmation}
-            onContinueLearning={handleContinueLearning}
-          />
-        )}
       </div>
-
-      {/* Unenroll Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={isUnenrollModalOpen}
-        onClose={() => {
-          setIsUnenrollModalOpen(false);
-          setSelectedCourseForUnenroll(null);
-        }}
-        onConfirm={handleUnenroll}
-        title="Confirm Unenrollment"
-        courseName={selectedCourseForUnenroll?.title || ''}
-      />
-    </div>
-  </Layout>
-);
+    </Layout>
+  );
 };
 
 export default CourseContent;

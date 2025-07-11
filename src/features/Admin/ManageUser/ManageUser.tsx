@@ -19,7 +19,7 @@ const ManageUser: React.FC = () => {
   const navigate = useNavigate();
   const [showRoleFilter, setShowRoleFilter] = useState(false);
   const [showStatusFilter, setShowStatusFilter] = useState(false);
-  const { user: currentUser } = useAuth(); // Get current logged-in user
+  const { user: currentUser } = useAuth();
   const [showPromotionModal, setShowPromotionModal] = useState(false);
   const [loadingUserIds, setLoadingUserIds] = useState<string[]>([]);
   
@@ -28,10 +28,8 @@ const ManageUser: React.FC = () => {
   const usersPerPage = 10;
   
   const {
-    users,
-    setUsers,
-    isPageLoading,
-    isFetchingFilteredData,
+    users, // This now returns filtered users directly
+    isPageLoading, // Single loading state
     isSubmitting,
     isDeleting,
     error,
@@ -70,35 +68,21 @@ const ManageUser: React.FC = () => {
     canEditUser,
     formatRoleName,
     getRoleColor,
-    handlePromoteToSuperAdmin,
-    isPromotingToSuperAdmin
+    handlePromoteToSuperAdmin
   } = useUsers();
 
   // Function to handle promoting a user to SuperAdmin without auto-logout
   const safePromoteToSuperAdmin = async (userId: string) => {
-    // First check if this is the current user
     const isCurrentUser = userId === currentUser?.id;
     
     if (isCurrentUser) {
-      // If trying to promote yourself, show a modal with instructions instead
       setShowPromotionModal(true);
     } else {
-      // For other users, proceed with promotion
       try {
         setLoadingUserIds(prev => [...prev, userId]);
         
-        // Get the current access token from auth context
         const token = localStorage.getItem('access_token');
-        
-        // Call the API without triggering token refresh, but with the current token
         await promoteToSuperAdmin(userId, token);
-        
-        // Manually update the UI
-        setUsers(prevUsers => prevUsers.map(user => 
-          user.id === userId 
-            ? { ...user, roles: [...user.roles.filter(r => r !== 'SuperAdmin'), 'SuperAdmin'] } 
-            : user
-        ));
         
         toast.success(`User promoted to SuperAdmin successfully`);
       } catch (error) {
@@ -154,8 +138,6 @@ const ManageUser: React.FC = () => {
     return null;
   };
 
-  // Removed renderPromoteToSuperAdminButton function
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
       <div className="w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8 relative">
@@ -167,7 +149,6 @@ const ManageUser: React.FC = () => {
               className="flex items-center text-[#D68BF9] hover:text-white transition-colors"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
-              
             </button>
             <h1 className="text-xl sm:text-2xl font-bold text-white">User Management</h1>
             {isSuperAdmin && (
@@ -219,7 +200,7 @@ const ManageUser: React.FC = () => {
           </div>
         )}
 
-        {/* Filter Bar */}
+        {/* Filter Bar - SIMPLIFIED: Removed isFetchingFilteredData prop */}
         <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 sm:p-6 md:p-8 border border-[#BF4BF6]/20 shadow-lg relative z-[90]">
           <FilterBar 
             filterState={filterState}
@@ -233,14 +214,13 @@ const ManageUser: React.FC = () => {
             resetFilters={resetFilters}
             formatRoleName={formatRoleName}
             getRoleColor={getRoleColor}
-            isFetchingFilteredData={isFetchingFilteredData}
             isSuperAdmin={isSuperAdmin}
           />
         </div>
 
         {/* Users Table */}
         <div className="bg-white/90 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 shadow-lg relative z-[80]">
-          {/* Loading state */}
+          {/* SIMPLIFIED Loading state - Only one loading indicator */}
           {isPageLoading ? (
             <div className="flex flex-col items-center justify-center p-12">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#BF4BF6] mb-4"></div>
@@ -358,7 +338,6 @@ const ManageUser: React.FC = () => {
                               );
                             })}
                           </div>
-                          {/* SuperAdmin promotion button removed */}
                         </td>
                         
                         {/* Department Column */}

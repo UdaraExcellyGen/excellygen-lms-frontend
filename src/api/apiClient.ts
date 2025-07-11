@@ -20,6 +20,8 @@ let failedQueue: {
 
 // Active request counter - used to manage loading state
 let activeRequests = 0;
+// OPTIMIZATION: Add debounce for loading state to prevent flickering
+let loadingTimeout: NodeJS.Timeout | null = null;
 
 // Functions for loader management that will be injected
 let startLoading: () => void = () => {};
@@ -32,6 +34,55 @@ export const setupLoaderFunctions = (
 ) => {
   startLoading = start;
   stopLoading = stop;
+};
+
+// OPTIMIZATION: Enhanced loading management with endpoint-specific exclusions
+const manageLoading = (increment: boolean, config?: any) => {
+  // OPTIMIZATION: Exclude specific endpoints from global loading to prevent conflicts
+  const excludedEndpoints = [
+    '/learner/stats/overall',
+    '/admin/dashboard/stats',
+    '/admin/dashboard/notifications'
+  ];
+  
+  const shouldShowGlobalLoading = !excludedEndpoints.some(endpoint => 
+    config?.url?.includes(endpoint)
+  );
+  
+  if (!shouldShowGlobalLoading) {
+    console.log(`Skipping global loading for endpoint: ${config?.url}`);
+    return;
+  }
+  
+  if (increment) {
+    activeRequests++;
+    
+    // Start loading immediately for first request
+    if (activeRequests === 1) {
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
+        loadingTimeout = null;
+      }
+      startLoading();
+    }
+  } else {
+    activeRequests = Math.max(0, activeRequests - 1);
+    
+    // Debounce stopping the loader to prevent flickering
+    if (activeRequests === 0) {
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
+      }
+      
+      // Small delay before hiding loader to prevent flickering for quick consecutive requests
+      loadingTimeout = setTimeout(() => {
+        if (activeRequests === 0) {
+          stopLoading();
+        }
+        loadingTimeout = null;
+      }, 100); // 100ms delay
+    }
+  }
 };
 
 // Process the queue of failed requests
@@ -51,24 +102,17 @@ const processQueue = (error: any = null, token: string | null = null) => {
 // Request interceptor to add authorization header and active role
 apiClient.interceptors.request.use(
   (config) => {
-    // Increment active requests counter
-    activeRequests++;
-    
-    // Show loader when first request starts
-    if (activeRequests === 1) {
-      startLoading();
-    }
+    // OPTIMIZATION: Pass config to manageLoading for smart endpoint exclusion
+    manageLoading(true, config);
     
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
     
-    // Add active role header - IMPROVED to ensure role is correctly set
+    // Add active role header
     const currentRole = localStorage.getItem('current_role');
     if (currentRole) {
-      
-      // mapping the display name to the actual role name
       const roleMap: {[key: string]: string} = {
         'Admin': 'Admin',
         'Project Manager': 'ProjectManager',
@@ -83,21 +127,14 @@ apiClient.interceptors.request.use(
       
       // Add debug logging in development
       if (import.meta.env.DEV) {
-        console.log(`Request with role: ${normalizedRole}`);
+        console.log(`Request with role: ${normalizedRole} to ${config.url}`);
       }
     }
     
     return config;
   },
   (error) => {
-    // Decrement active requests counter
-    activeRequests--;
-    
-    // Hide loader if no active requests
-    if (activeRequests === 0) {
-      stopLoading();
-    }
-    
+    manageLoading(false);
     return Promise.reject(error);
   }
 );
@@ -105,24 +142,14 @@ apiClient.interceptors.request.use(
 // Response interceptor to handle common errors and token refresh
 apiClient.interceptors.response.use(
   (response) => {
-    // Decrement active requests counter
-    activeRequests--;
-    
-    // Hide loader if no active requests
-    if (activeRequests === 0) {
-      stopLoading();
-    }
+    // OPTIMIZATION: Pass response config to manageLoading for smart endpoint exclusion
+    manageLoading(false, response.config);
     
     return response;
   },
   async (error) => {
-    // Decrement active requests counter
-    activeRequests--;
-    
-    // Hide loader if no active requests
-    if (activeRequests === 0) {
-      stopLoading();
-    }
+    // OPTIMIZATION: Pass error config to manageLoading for smart endpoint exclusion
+    manageLoading(false, error.config);
     
     const originalRequest = error.config;
     
@@ -194,7 +221,7 @@ apiClient.interceptors.response.use(
           // Update the authorization header for the original request
           originalRequest.headers['Authorization'] = `Bearer ${response.data.accessToken}`;
           
-          // Also set the X-Active-Role header using our mapping logic
+          // Also set the X-Active-Role header
           if (response.data.currentRole) {
             const roleMap: {[key: string]: string} = {
               'Admin': 'Admin',
@@ -234,23 +261,36 @@ apiClient.interceptors.response.use(
       }
     }
     
-    // Handle other common errors
+    // OPTIMIZATION: Enhanced error handling with better logging
     if (error.response) {
-      switch (error.response.status) {
+      const status = error.response.status;
+      const message = error.response.data?.message || error.message;
+      const endpoint = error.config?.url || 'unknown';
+      
+      switch (status) {
         case 403:
-          console.error('Forbidden access:', error.response.data?.message || 'You do not have permission to access this resource');
+          console.error(`Forbidden access to ${endpoint}:`, message);
           break;
         case 404:
-          console.error('Resource not found:', error.response.data?.message || 'The requested resource was not found');
+          console.error(`Resource not found at ${endpoint}:`, message);
           break;
         case 405:
-          console.error('Method not allowed:', error.response.data?.message || 'The requested method is not allowed for this resource');
+          console.error(`Method not allowed for ${endpoint}:`, message);
           break;
         case 500:
-          console.error('Server error:', error.response.data?.message || 'An unexpected error occurred on the server');
+          console.error(`Server error at ${endpoint}:`, message);
+          break;
+        case 502:
+          console.error(`Bad Gateway for ${endpoint}:`, message);
+          break;
+        case 503:
+          console.error(`Service Unavailable for ${endpoint}:`, message);
+          break;
+        case 504:
+          console.error(`Gateway Timeout for ${endpoint}:`, message);
           break;
         default:
-          console.error(`Error (${error.response.status}):`, error.response.data?.message || error.message);
+          console.error(`Error (${status}) at ${endpoint}:`, message);
       }
     } else if (error.request) {
       // The request was made but no response was received
@@ -263,5 +303,17 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// OPTIMIZATION: Export utilities for cache management and preloading
+export const clearActiveRequests = () => {
+  activeRequests = 0;
+  if (loadingTimeout) {
+    clearTimeout(loadingTimeout);
+    loadingTimeout = null;
+  }
+  stopLoading();
+};
+
+export const getActiveRequestsCount = () => activeRequests;
 
 export default apiClient;

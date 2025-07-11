@@ -1,95 +1,113 @@
-// Path: vite.config.ts
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
   
-  // 🚀 PERFORMANCE OPTIMIZATION
   build: {
-    // Target modern browsers for smaller bundles
     target: 'esnext',
-    
-    // Optimize chunks
     rollupOptions: {
       output: {
-        // 📦 Split code into logical chunks
-        manualChunks: {
-          // React core
-          'react-vendor': ['react', 'react-dom'],
+        manualChunks: (id) => {
+          // More specific vendor chunking
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'react-vendor';
+          }
+          if (id.includes('node_modules/react-router-dom')) {
+            return 'router-vendor';
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'icons-vendor';
+          }
+          if (id.includes('node_modules/react-hot-toast')) {
+            return 'ui-vendor';
+          }
+          if (id.includes('node_modules/axios')) {
+            return 'api-vendor';
+          }
           
-          // Router
-          'router': ['react-router-dom'],
+          // Split large vendor packages
+          if (id.includes('node_modules/@tanstack') || id.includes('node_modules/recharts')) {
+            return 'charts-vendor';
+          }
+          if (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase')) {
+            return 'firebase-vendor';
+          }
+          if (id.includes('node_modules/framer-motion')) {
+            return 'animation-vendor';
+          }
           
-          // UI Libraries  
-          'ui-vendor': ['lucide-react', 'react-hot-toast'],
+          // Remaining node_modules
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
           
-          // Large libraries
-          'lottie': ['lottie-react'],
-          
-          // Admin features
-          'admin': [
-            './src/features/Admin/AdminDashboard/AdminDashboard.tsx',
-            './src/features/Admin/AdminAnalytics/Adminanalytics.tsx',
-            './src/features/Admin/ManageUser/ManageUser.tsx',
-            './src/features/Admin/ManageTech/ManageTech.tsx'
-          ],
-          
-          // Coordinator features
-          'coordinator': [
-            './src/features/Coordinator/CoordinatorDashboard/CourseCoordinatorDashboard.tsx',
-            './src/features/Coordinator/CoursesDisplayPage/CoursesDisplayPage.tsx',
-            './src/features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails.tsx'
-          ],
-          
-          // Project Manager features
-          'project-manager': [
-            './src/features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard.tsx',
-            './src/features/ProjectManager/Employee-assign/Employee-assign.tsx'
-          ],
-          
-          // Learner features - split into smaller chunks
-          'learner-dashboard': [
-            './src/features/Learner/LearnerDashboard/LearnerDashboard.tsx',
-            './src/features/Learner/LearnerProfile/LearnerProfile.tsx'
-          ],
-          
-          'learner-courses': [
-            './src/features/Learner/CourseCategories/CourseCategories.tsx',
-            './src/features/Learner/CourseContent/CourseContent.tsx',
-            './src/features/Learner/CourseContent/LearnerCourseOverview.tsx'
-          ],
-          
-          'learner-other': [
-            './src/features/Learner/BadgesAndRewards/BadgesAndRewards.tsx',
-            './src/features/Learner/Certificates/CertificatePage.tsx',
-            './src/features/Learner/LearnerProjects/LearnerProjects.tsx',
-            './src/features/Learner/LearnerNotifications/LearnerNotification.tsx'
-          ]
+          // Feature-based chunking
+          if (id.includes('src/features/Admin')) {
+            return 'admin';
+          }
+          if (id.includes('src/features/Coordinator')) {
+            return 'coordinator';
+          }
+          if (id.includes('src/features/Learner')) {
+            return 'learner';
+          }
+          if (id.includes('src/features/ProjectManager')) {
+            return 'project-manager';
+          }
+          if (id.includes('src/features/auth')) {
+            return 'auth';
+          }
+          if (id.includes('src/features/landing')) {
+            return 'landing';
+          }
         }
       }
     },
     
-    // Increase chunk size warning limit
-    chunkSizeWarningLimit: 500,
-    
-    // Minification options
+    chunkSizeWarningLimit: 250,
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true, // Remove console.logs in production
-        drop_debugger: true
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.debug', 'console.info'],
+        passes: 2,
+        dead_code: true,
+        unused: true
+      },
+      mangle: {
+        safari10: true
+      },
+      format: {
+        comments: false
       }
+    },
+    
+    sourcemap: false,
+    cssMinify: true,
+    assetsInlineLimit: 4096,
+  },
+  
+  server: {
+    port: 5173,
+    open: false,
+    hmr: {
+      overlay: false
     }
   },
   
-  // 🔄 Development optimizations
-  server: {
-    port: 5173,
-    open: true
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      'axios'
+    ],
+    exclude: ['lottie-react'],
+    force: true
   },
   
-  // 📁 Path resolution
   resolve: {
     alias: {
       '@': '/src'
