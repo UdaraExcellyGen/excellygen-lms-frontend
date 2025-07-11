@@ -1,6 +1,7 @@
 // ProjectCruds/components/DeleteConfirmationDialog.tsx
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle } from 'lucide-react';
 
 interface DeleteConfirmationDialogProps {
@@ -18,6 +19,8 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
     onCancel,
     onConfirm
 }) => {
+    const { t } = useTranslation();
+    
     if (!isOpen) return null;
 
     return createPortal(
@@ -35,7 +38,7 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
                         onClick={onCancel}
                         className="px-4 py-2 text-indigo hover:text-[#BF4BF6] transition-all-300"
                     >
-                        Cancel
+                        {t('projectManager.dialogs.cancel')}
                     </button>
                     <button
                         onClick={onConfirm}
