@@ -21,19 +21,19 @@ export interface ProfileProject {
   status: string; 
 }
 
-// Course/Certification structure for the CV
-export interface ProfileCourse { 
+// UPDATED: Replaced ProfileCourse with ProfileCertification
+// Certification structure for the CV
+export interface ProfileCertification { 
   title: string;
-  provider: string; 
+  issuer: string; 
   completionDate: string;
-  duration?: string | null;
-  certificate: boolean; 
 }
 
 // The main data structure for the CV page
 export interface UserData {
   personalInfo: PersonalInfo;
   projects: ProfileProject[];
-  courses: ProfileCourse[]; 
+  // UPDATED: Changed courses to certifications
+  certifications: ProfileCertification[]; 
   skills: string[];        
 }

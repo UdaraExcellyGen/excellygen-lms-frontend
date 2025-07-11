@@ -8,13 +8,13 @@ import html2canvas from 'html2canvas';
 
 import ProfessionalSummary from './Components/ProfessionalSummary';
 import ProjectsSection from './Components/ProjectsSection';
-import CoursesSection from './Components/CoursesSection';
-import SkillsSection from './Components/SkillsSection';
+import CertificationsSection from './Components/CertificationsSection'; // UPDATED: Using CertificationsSection
 import CVFooter from './Components/CVFooter';
 
 import { getCvData, CvDataResponse } from '../../../api/cvApi';
-import { UserData, ProfileProject } from './types/types';
+import { UserData, ProfileProject, ProfileCertification } from './types/types'; // UPDATED: Import new types
 import { learnerProjectApi } from '../../../api/services/learnerProjectService';
+import { getUserCertificates } from '../../../api/services/Course/certificateService'; // ADDED: To get certificate data
 import { Download } from 'lucide-react';
 
 const CV: React.FC = () => {
@@ -34,7 +34,6 @@ const CV: React.FC = () => {
         if (!userIdToFetch) {
             const storedUserId = localStorage.getItem('userId');
             if (storedUserId) {
-                console.warn("CV.tsx: userId not found in query params, using userId from localStorage as a fallback.");
                 userIdToFetch = storedUserId;
             } else {
                 toast.error('User ID not provided for CV.');
@@ -44,15 +43,17 @@ const CV: React.FC = () => {
             }
         }
 
-        const fetchCvAndProjects = async (id: string) => {
+        const fetchCvData = async (id: string) => {
             setLoading(true);
             setError(null);
             try {
-                console.log(`CV.tsx: Fetching CV data for userId: ${id}`);
-                const backendData: CvDataResponse = await getCvData(id);
-
-                console.log(`CV.tsx: Fetching project data for userId: ${id}`);
-                const projectsData = await learnerProjectApi.getUserProjects(id);
+                console.log(`CV.tsx: Fetching data for userId: ${id}`);
+                // Fetch all data in parallel
+                const [backendData, projectsData, certificatesData] = await Promise.all([
+                    getCvData(id),
+                    learnerProjectApi.getUserProjects(id),
+                    getUserCertificates() // Fetches certificates for the current user
+                ]);
 
                 const mappedProjects: ProfileProject[] = projectsData.map(p => ({
                     title: p.title,
@@ -62,25 +63,18 @@ const CV: React.FC = () => {
                     completionDate: p.endDate,
                     status: p.status,
                 }));
+                
+                // Map the fetched certificate data
+                const mappedCertifications: ProfileCertification[] = certificatesData.map(c => ({
+                    title: c.courseTitle,
+                    issuer: 'ExcellyGen Academy', // Or another field from your DTO if available
+                    completionDate: c.completionDate,
+                }));
 
                 const mappedData: UserData = {
-                    personalInfo: {
-                        name: backendData.personalInfo.name,
-                        position: backendData.personalInfo.position,
-                        email: backendData.personalInfo.email,
-                        phone: backendData.personalInfo.phone,
-                        department: backendData.personalInfo.department,
-                        photo: backendData.personalInfo.photo,
-                        summary: backendData.personalInfo.summary,
-                    },
+                    personalInfo: backendData.personalInfo,
                     projects: mappedProjects,
-                    courses: backendData.courses.map(c => ({
-                        title: c.title,
-                        provider: c.provider,
-                        completionDate: c.completionDate,
-                        duration: c.duration,
-                        certificate: c.certificate,
-                    })),
+                    certifications: mappedCertifications, // Using new certifications data
                     skills: backendData.skills,
                 };
 
@@ -97,44 +91,29 @@ const CV: React.FC = () => {
         };
 
         if (userIdToFetch) {
-            fetchCvAndProjects(userIdToFetch);
+            fetchCvData(userIdToFetch);
         }
     }, [location.search]);
 
     const handleDownloadCV = async (): Promise<void> => {
-        console.log('Downloading CV...');
-
         if (!cvData || !cvRef.current) {
             toast.error('CV data not loaded or CV not available for download.');
             return;
         }
-
+        // ... (rest of the download function remains the same)
         try {
             const element = cvRef.current;
             const downloadButton = element.querySelector('.download-button') as HTMLElement;
-
-            if (downloadButton) {
-                downloadButton.style.display = 'none';
-            }
-
-            const canvas = await html2canvas(element, {
-                scale: 2,
-                useCORS: true,
-            });
+            if (downloadButton) downloadButton.style.display = 'none';
+            const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+            if (downloadButton) downloadButton.style.display = '';
             const data = canvas.toDataURL('image/png');
-
-            if (downloadButton) {
-                downloadButton.style.display = '';
-            }
-
             const pdf = new jsPDF('p', 'mm', 'a4');
             const imgProps = pdf.getImageProperties(data);
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
             pdf.addImage(data, 'PNG', 0, 0, pdfWidth, pdfHeight);
             pdf.save(`CV_${cvData.personalInfo.name}.pdf`);
-
             toast.success('CV downloaded successfully!');
         } catch (e: any) {
             console.error("Error downloading CV:", e);
@@ -149,13 +128,14 @@ const CV: React.FC = () => {
             </div>
         );
     }
-
-    if (error || !cvData) {
+    
+    // FIX: This robustly handles the error state before attempting to render
+    if (error) {
         return (
             <div className="min-h-screen bg-gray-200 p-6 flex flex-col items-center justify-center">
                 <div className="text-center bg-white p-8 rounded-lg shadow-xl">
                     <h2 className="text-2xl font-bold text-red-600 mb-4">Error Loading CV</h2>
-                    <p className="text-red-500 mb-6">{error || 'An unexpected error occurred and CV data could not be loaded.'}</p>
+                    <p className="text-red-500 mb-6">{error}</p>
                     <button
                         onClick={() => navigate(-1)}
                         className="px-6 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg transition-colors"
@@ -167,12 +147,15 @@ const CV: React.FC = () => {
         );
     }
 
+    // FIX: This guard prevents rendering with null data, solving the crash.
+    if (!cvData) {
+        // This can be a loading indicator or null, as the main loading/error states are handled above
+        return null;
+    }
+
     return (
         <div className="min-h-screen bg-gray-200 p-4">
-            {/* A4 size container: 210mm x 297mm = 794px x 1123px at 96dpi */}
             <div className="max-w-4xl mx-auto bg-white shadow-2xl overflow-hidden" style={{ width: '794px', minHeight: '1123px' }} ref={cvRef}>
-                
-                {/* Download Button */}
                 <div className="absolute top-4 right-4 z-10">
                     <button
                         onClick={handleDownloadCV}
@@ -182,13 +165,8 @@ const CV: React.FC = () => {
                         Download CV
                     </button>
                 </div>
-
-                {/* Main Flex Container */}
                 <div className="flex" style={{ minHeight: '1123px' }}>
-                    
-                    {/* Left Sidebar - Dark Blue */}
                     <div className="w-1/3 bg-blue-900 text-white p-6">
-                        {/* Profile Photo */}
                         <div className="mb-6">
                             <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-white shadow-lg mx-auto">
                                 {cvData.personalInfo.photo ? (
@@ -206,8 +184,6 @@ const CV: React.FC = () => {
                                 )}
                             </div>
                         </div>
-
-                        {/* Name */}
                         <div className="mb-6 text-center">
                             <h1 className="text-xl font-bold text-white mb-2 uppercase tracking-wide">
                                 {cvData.personalInfo.name}
@@ -216,8 +192,6 @@ const CV: React.FC = () => {
                                 {cvData.personalInfo.position}
                             </h2>
                         </div>
-
-                        {/* Contact Section */}
                         <div className="mb-6">
                             <h3 className="text-sm font-bold mb-3 bg-blue-800 text-white p-2 text-center">Contact</h3>
                             <div className="space-y-3">
@@ -235,29 +209,22 @@ const CV: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-
-                        {/* Technical Skills */}
                         <div className="mb-6">
                             <h3 className="text-sm font-bold mb-3 bg-blue-800 text-white p-2 text-center">Technical Skills</h3>
                             <div>
                                 {cvData.skills.map((skill, index) => (
                                     <div key={index} className="mb-2">
-                                        <span className="cv-skill-item text-xs text-blue-100 font-medium">
-                                            {skill}
-                                        </span>
+                                        <span className="cv-skill-item text-xs text-blue-100 font-medium">{skill}</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     </div>
-
-                    {/* Right Content Area */}
                     <div className="w-2/3 bg-gray-50 p-6 flex flex-col">
                         <ProfessionalSummary summary={cvData.personalInfo.summary} />
                         <ProjectsSection projects={cvData.projects} />
-                        <CoursesSection courses={cvData.courses} />
-                        
-                        {/* Footer at bottom */}
+                        {/* UPDATED: Rendering the new certifications section */}
+                        <CertificationsSection certifications={cvData.certifications} />
                         <div className="mt-auto">
                             <CVFooter />
                         </div>
