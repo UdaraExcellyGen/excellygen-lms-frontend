@@ -1,5 +1,5 @@
 // src/features/Learner/CourseContent/CourseContent.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import Layout from '../../../components/Sidebar/Layout';
@@ -9,7 +9,7 @@ import StatsOverview from './components/StatsOverview';
 import CourseTabs from './components/CourseTabs';
 import CourseGrid from './components/CourseGrid';
 
-import { getAvailableCoursesForLearner, getEnrolledCoursesForLearner } from '../../../api/services/Course/learnerCourseService';
+import { getCoursesForCategory, clearCourseCaches } from '../../../api/services/Course/learnerCourseService';
 import { createEnrollment, deleteEnrollment } from '../../../api/services/Course/enrollmentService';
 import { getCategories as getCourseCategoriesApi } from '../../../api/services/courseCategoryService'; 
 import { getOverallLmsStatsForLearner } from '../../../api/services/LearnerDashboard/learnerOverallStatsService'; 
@@ -22,6 +22,10 @@ const CourseContent: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth(); 
 
+  // OPTIMIZATION: Use refs to prevent unnecessary re-renders
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
+
   const [activeTab, setActiveTab] = useState<'courses' | 'learning'>('courses');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,27 +37,33 @@ const CourseContent: React.FC = () => {
   const [overallLmsStats, setOverallLmsStats] = useState<OverallLmsStatsBackendDto | null>(null);
   const [totalCategoryDuration, setTotalCategoryDuration] = useState<string>('0 hours');
 
-  // OPTIMIZATION: Simple category name caching
-  const getCategoryName = useCallback(async (categoryId: string) => {
-    // Check sessionStorage first
+  // OPTIMIZATION: Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  // OPTIMIZATION: Memoized category name fetching
+  const getCategoryName = useCallback(async (categoryId: string): Promise<string> => {
     const cachedCategories = sessionStorage.getItem('course_categories_simple');
     if (cachedCategories) {
       try {
         const categories = JSON.parse(cachedCategories);
         const category = categories.find((cat: any) => cat.id === categoryId);
-        if (category) {
-          return category.title;
-        }
+        if (category) return category.title;
       } catch (error) {
         console.error('Error parsing cached categories:', error);
       }
     }
 
-    // Fetch from API and cache
     try {
       const allCategories = await getCourseCategoriesApi();
       sessionStorage.setItem('course_categories_simple', JSON.stringify(allCategories));
-      
       const matchedCategory = allCategories.find(cat => cat.id === categoryId);
       return matchedCategory ? matchedCategory.title : 'Unknown Category';
     } catch (error) {
@@ -62,69 +72,52 @@ const CourseContent: React.FC = () => {
     }
   }, []);
 
-  const fetchCoursesAndCategory = useCallback(async () => {
-    if (!user?.id || !categoryIdParam) {
-      setError(null); 
-      setLoading(true); 
-      return; 
+  // OPTIMIZATION: Single optimized data fetching function
+  const fetchData = useCallback(async () => {
+    if (!user?.id || !categoryIdParam || !isMountedRef.current) {
+      return;
     }
+
+    // Cancel any ongoing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
 
     setLoading(true);
     setError(null);
     
     try {
-      console.log('Fetching course data...');
+      console.log('Fetching course data optimized...');
       
-      // OPTIMIZATION: Start category name fetch immediately
-      const categoryNamePromise = getCategoryName(categoryIdParam);
-      categoryNamePromise.then(name => setCategoryName(name));
+      // OPTIMIZATION: Start category name fetch early
+      getCategoryName(categoryIdParam).then(name => {
+        if (isMountedRef.current) setCategoryName(name);
+      });
 
-      // OPTIMIZATION: Use Promise.allSettled for graceful error handling
-      const [availableResult, enrolledResult, overallStatsResult] = await Promise.allSettled([
-        getAvailableCoursesForLearner(categoryIdParam), 
-        getEnrolledCoursesForLearner(),
+      // OPTIMIZATION: Single batch request for courses + parallel stats request
+      const [coursesResult, statsResult] = await Promise.allSettled([
+        getCoursesForCategory(categoryIdParam),
         getOverallLmsStatsForLearner()
       ]);
 
-      // Handle available courses
-      if (availableResult.status === 'fulfilled') {
-        setAvailableCourses(availableResult.value);
+      // Check if component is still mounted
+      if (!isMountedRef.current) return;
+
+      // Handle courses data
+      if (coursesResult.status === 'fulfilled') {
+        const { available, enrolled, categoryEnrolled } = coursesResult.value;
+        setAvailableCourses(available);
+        setEnrolledCourses(categoryEnrolled);
+        
+        // Calculate total duration
+        const allCategoryCoursesHours = [...available, ...categoryEnrolled]
+          .reduce((total, course) => total + course.estimatedTime, 0);
+        setTotalCategoryDuration(`${allCategoryCoursesHours} h`);
       } else {
-        console.error('Failed to fetch available courses:', availableResult.reason);
-        setAvailableCourses([]);
-      }
-
-      // Handle enrolled courses
-      if (enrolledResult.status === 'fulfilled') {
-        const allEnrolled = enrolledResult.value;
-        const enrolledInThisCategory = allEnrolled.filter(c => c.category.id === categoryIdParam);
-        setEnrolledCourses(enrolledInThisCategory);
-      } else {
-        console.error('Failed to fetch enrolled courses:', enrolledResult.reason);
-        setEnrolledCourses([]);
-      }
-
-      // Handle overall stats
-      if (overallStatsResult.status === 'fulfilled') {
-        setOverallLmsStats(overallStatsResult.value);
-      } else {
-        console.warn('Failed to fetch overall stats, continuing without them');
-        setOverallLmsStats(null);
-      }
-
-      // Calculate total duration after both course arrays are set
-      const available = availableResult.status === 'fulfilled' ? availableResult.value : [];
-      const enrolled = enrolledResult.status === 'fulfilled' ? 
-        enrolledResult.value.filter(c => c.category.id === categoryIdParam) : [];
-      
-      const allCategoryCoursesHours = [...available, ...enrolled]
-        .reduce((total, course) => total + course.estimatedTime, 0);
-      
-      setTotalCategoryDuration(`${allCategoryCoursesHours} h`);
-
-      // Check if we have any critical errors
-      if (availableResult.status === 'rejected' && enrolledResult.status === 'rejected') {
-        if (availableResult.reason?.response?.status === 404) {
+        console.error('Failed to fetch courses:', coursesResult.reason);
+        
+        if (coursesResult.reason?.response?.status === 404) {
           setError("Course category not found.");
           toast.error("Course category not found.");
           navigate('/learner/course-categories', { replace: true });
@@ -135,8 +128,24 @@ const CourseContent: React.FC = () => {
         }
       }
 
+      // Handle stats data (non-critical)
+      if (statsResult.status === 'fulfilled') {
+        setOverallLmsStats(statsResult.value);
+      } else {
+        console.warn('Failed to fetch stats, continuing without them');
+        setOverallLmsStats(null);
+      }
+
     } catch (err: any) {
-      console.error("Failed to fetch courses or overall stats:", err);
+      if (!isMountedRef.current) return;
+      
+      console.error("Failed to fetch data:", err);
+      
+      if (err.name === 'AbortError') {
+        console.log('Request was aborted');
+        return;
+      }
+      
       if (err.response?.status === 403) { 
         setError("Access denied to course data. Please contact your administrator.");
         toast.error("Access denied to course data.");
@@ -145,15 +154,19 @@ const CourseContent: React.FC = () => {
         toast.error(err.response?.data?.message || "Failed to load courses.");
       }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
-  }, [user?.id, categoryIdParam, navigate, getCategoryName]); 
+  }, [user?.id, categoryIdParam, navigate, getCategoryName]);
 
+  // OPTIMIZATION: Effect with dependency array
   useEffect(() => {
-    fetchCoursesAndCategory();
-  }, [fetchCoursesAndCategory]);
+    fetchData();
+  }, [fetchData]);
 
-  const handleEnroll = async (courseId: number) => {
+  // OPTIMIZATION: Optimized enrollment handlers
+  const handleEnroll = useCallback(async (courseId: number) => {
     if (!user?.id) {
       toast.error("You must be logged in to enroll in courses.");
       return;
@@ -163,47 +176,57 @@ const CourseContent: React.FC = () => {
     try {
       const newEnrollment = await createEnrollment(courseId); 
       toast.success(`Enrolled in "${newEnrollment.courseTitle}" successfully!`, { id: enrollToast });
-      await fetchCoursesAndCategory(); 
+      
+      // OPTIMIZATION: Clear caches and refetch data
+      clearCourseCaches();
+      await fetchData();
       setActiveTab('learning'); 
     } catch (err: any) {
       console.error("Failed to enroll:", err);
       toast.error(err.response?.data?.message || "Failed to enroll in the course. Please try again.", { id: enrollToast });
     }
-  };
+  }, [user?.id, fetchData]);
 
-  const handleUnenrollConfirmation = (course: LearnerCourseDto) => {
+  const handleUnenrollConfirmation = useCallback((course: LearnerCourseDto) => {
     setSelectedCourseForUnenroll(course);
     setIsUnenrollModalOpen(true);
-  };
+  }, []);
 
-  const handleUnenroll = async () => {
+  const handleUnenroll = useCallback(async () => {
     if (!selectedCourseForUnenroll || !user?.id) return;
 
     const unenrollToast = toast.loading("Unenrolling...");
     try {
       if (selectedCourseForUnenroll.isEnrolled && selectedCourseForUnenroll.enrollmentId) {
-          await deleteEnrollment(selectedCourseForUnenroll.enrollmentId); 
-          toast.success(`Unenrolled from "${selectedCourseForUnenroll.title}" successfully!`, { id: unenrollToast });
+        await deleteEnrollment(selectedCourseForUnenroll.enrollmentId); 
+        toast.success(`Unenrolled from "${selectedCourseForUnenroll.title}" successfully!`, { id: unenrollToast });
       } else {
-          throw new Error("Enrollment ID not found for unenrollment. Course may not be correctly enrolled.");
+        throw new Error("Enrollment ID not found for unenrollment. Course may not be correctly enrolled.");
       }
       
-      await fetchCoursesAndCategory(); 
+      // OPTIMIZATION: Clear caches and refetch data
+      clearCourseCaches();
+      await fetchData();
       setIsUnenrollModalOpen(false);
       setSelectedCourseForUnenroll(null);
     } catch (err: any) {
       console.error("Failed to unenroll:", err);
       toast.error(err.response?.data?.message || "Failed to unenroll from the course. Please try again.", { id: unenrollToast });
     }
-  };
+  }, [selectedCourseForUnenroll, user?.id, fetchData]);
 
-  const handleContinueLearning = (courseId: number) => {
+  const handleContinueLearning = useCallback((courseId: number) => {
     navigate(`/learner/course-view/${courseId}`); 
-  };
+  }, [navigate]);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     navigate('/learner/course-categories'); 
-  };
+  }, [navigate]);
+
+  const handleRetry = useCallback(() => {
+    clearCourseCaches();
+    fetchData();
+  }, [fetchData]);
 
   return (
     <Layout>
@@ -246,10 +269,11 @@ const CourseContent: React.FC = () => {
             <div className="bg-white/95 backdrop-blur-sm rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 border border-red-500 text-red-500 font-nunito text-sm sm:text-base">
               {error}
               <button 
-                onClick={fetchCoursesAndCategory}
+                onClick={handleRetry}
                 className="ml-4 bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors"
+                disabled={loading}
               >
-                Retry
+                {loading ? 'Retrying...' : 'Retry'}
               </button>
             </div>
           )}
