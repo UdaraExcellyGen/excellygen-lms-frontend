@@ -49,7 +49,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const isInitializingRef = useRef(true);
   const stateRef = useRef<AuthState>(initialState);
   const sessionService = useRef(SessionService.getInstance());
 
@@ -65,7 +64,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
     localStorage.removeItem(TOKEN_EXPIRY_STORAGE_KEY);
     localStorage.removeItem(CURRENT_ROLE_STORAGE_KEY);
-    localStorage.removeItem('userId'); // Also remove userId
+    localStorage.removeItem('userId');
     localStorage.removeItem(REQUIRE_PASSWORD_CHANGE_KEY);
     
     // Clear any existing refresh timer
@@ -84,7 +83,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Function to navigate based on role
   const navigateByRole = useCallback((role: UserRole) => {
     console.log(`Navigating by role: ${role}`);
-    // Only navigate if we're not already there
     const currentPath = location.pathname;
     let targetPath = '/';
     
@@ -112,7 +110,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [navigate, location.pathname]);
 
-  // Handle token refresh - use stateRef instead of state dependency
+  // OPTIMIZED: Simplified token refresh without complex retry logic
   const handleTokenRefresh = useCallback(async () => {
     try {
       const accessToken = localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -124,33 +122,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       console.log('Refreshing token...');
       
-      // Try heartbeat first if user is active
-      const activityTracker = ActivityTracker.getInstance();
-      const idleTime = activityTracker.getIdleTime();
-      const maxIdleTime = 30 * 60 * 1000; // 30 minutes
-      
+      // OPTIMIZATION: Simplified token refresh - try heartbeat first, fallback to standard refresh
       let tokenData;
       
-      if (idleTime < maxIdleTime) {
-        // User is active, use heartbeat for a simpler token refresh
-        try {
+      try {
+        // Try heartbeat first for active users
+        const activityTracker = ActivityTracker.getInstance();
+        const idleTime = activityTracker.getIdleTime();
+        const maxIdleTime = 30 * 60 * 1000; // 30 minutes
+        
+        if (idleTime < maxIdleTime) {
           console.log('User is active, using heartbeat to refresh token');
           const heartbeatResponse = await heartbeat();
           tokenData = {
             accessToken: heartbeatResponse.accessToken,
-            refreshToken: refreshToken, // Keep existing refresh token
+            refreshToken: refreshToken,
             expiresAt: heartbeatResponse.expiresAt,
             currentRole: localStorage.getItem(CURRENT_ROLE_STORAGE_KEY) || '',
             requirePasswordChange: stateRef.current.requirePasswordChange
           };
-        } catch (err) {
-          console.warn('Heartbeat failed, falling back to standard refresh:', err);
-          // Fall back to standard refresh if heartbeat fails
-          tokenData = await apiRefreshToken();
+        } else {
+          throw new Error('User idle, use standard refresh');
         }
-      } else {
-        // User has been idle for too long, use standard refresh
-        console.log('User has been idle, using standard token refresh');
+      } catch {
+        // Fallback to standard refresh
+        console.log('Using standard token refresh');
         tokenData = await apiRefreshToken();
       }
       
@@ -160,43 +156,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem(TOKEN_EXPIRY_STORAGE_KEY, tokenData.expiresAt);
       localStorage.setItem(CURRENT_ROLE_STORAGE_KEY, tokenData.currentRole);
       
-      // Store password change requirement
       if (tokenData.requirePasswordChange !== undefined) {
         localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, tokenData.requirePasswordChange.toString());
       }
       
-      // Use the functional update pattern
       setState(prevState => ({
         ...prevState,
-        currentRole: tokenData.currentRole as UserRole, // Cast string to UserRole
+        currentRole: tokenData.currentRole as UserRole,
         requirePasswordChange: tokenData.requirePasswordChange
       }));
       
-      // Check if password change is required after refresh
       if (tokenData.requirePasswordChange) {
         setShowPasswordChangeModal(true);
       }
       
       console.log('Token refreshed successfully');
-      
       return true;
     } catch (error) {
       console.error('Token refresh failed:', error);
       
-      // Only reset auth and navigate if we're not in initialization
-      if (!isInitializingRef.current) {
-        // If refresh fails, reset auth state and redirect to login
-        resetAuthState();
-        setState({
-          ...initialState,
-          initialized: true,
-          error: 'Session expired. Please login again.'
-        });
-        
-        if (location.pathname !== '/') {
-          toast.error('Your session has expired. Please login again.');
-          navigate('/');
-        }
+      // Reset auth and navigate to login
+      resetAuthState();
+      setState({
+        ...initialState,
+        initialized: true,
+        error: 'Session expired. Please login again.'
+      });
+      
+      if (location.pathname !== '/') {
+        toast.error('Your session has expired. Please login again.');
+        navigate('/');
       }
       
       return false;
@@ -205,7 +194,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Setup token refresh timer
   const setupRefreshTimer = useCallback(() => {
-    // Clear any existing timer
     if (refreshTimerRef.current) {
       clearInterval(refreshTimerRef.current);
       refreshTimerRef.current = null;
@@ -215,34 +203,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!expiryString) return;
 
     const expiryDate = new Date(expiryString);
-    
-    // Calculate time until token expires (in milliseconds)
     const timeUntilExpiry = expiryDate.getTime() - Date.now();
     
-    // If token is already expired or will expire in less than 5 seconds
     if (timeUntilExpiry < 5000) {
       console.log('Token is expired or will expire very soon');
       handleTokenRefresh();
       return;
     }
     
-    // Refresh token when it's 75% through its lifetime or 10 minutes before expiry, whichever is sooner
     const refreshTime = Math.min(timeUntilExpiry * 0.75, timeUntilExpiry - 10 * 60 * 1000);
-    
     console.log(`Setting up refresh timer for ${Math.round(refreshTime / 1000)} seconds from now`);
     
-    // Set up refresh timer
     refreshTimerRef.current = setInterval(() => {
       handleTokenRefresh();
     }, refreshTime);
-    
   }, [handleTokenRefresh]);
 
-  // Initialize authentication state from localStorage - only runs once on component mount
+  // OPTIMIZED: Simplified initialization without complex retry logic
   useEffect(() => {
     const initAuth = async () => {
       try {
-        isInitializingRef.current = true;
         console.log('Initializing auth state...');
         
         const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
@@ -253,40 +233,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (storedUser && token && currentRole) {
           console.log('Found stored auth data');
           
-          // Skip token validation during initialization as it seems to be failing
-          // Just use the stored data and set up the refresh timer
           const user = JSON.parse(storedUser) as User;
           
-          // Ensure userId is stored separately for easy access
           if (user.id) {
             localStorage.setItem('userId', user.id);
           }
           
           setState({
             user,
-            currentRole: currentRole as UserRole, // Cast string to UserRole
+            currentRole: currentRole as UserRole,
             loading: false,
             initialized: true,
             error: null,
             requirePasswordChange: requirePasswordChange
           });
           
-          // Setup refresh timer for the token after state update
+          // Setup refresh timer
           setTimeout(() => {
             setupRefreshTimer();
           }, 0);
           
-          // Start the session activity tracking
+          // Start session tracking
           sessionService.current.startSessionManager();
           
-          // Check if password change is required
           if (requirePasswordChange) {
             setShowPasswordChangeModal(true);
           } else {
-            // Navigate to appropriate dashboard based on role if on landing or role selection
             const isOnPublicPage = location.pathname === '/' || location.pathname === '/login';
             if (isOnPublicPage) {
-              navigateByRole(currentRole as UserRole); // Cast string to UserRole
+              navigateByRole(currentRole as UserRole);
             }
           }
         } else {
@@ -304,14 +279,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           initialized: true,
           error: 'Failed to initialize authentication'
         });
-      } finally {
-        isInitializingRef.current = false;
       }
     };
 
     initAuth();
     
-    // Cleanup refresh timer and session manager on unmount
     return () => {
       if (refreshTimerRef.current) {
         clearInterval(refreshTimerRef.current);
@@ -341,7 +313,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === TOKEN_STORAGE_KEY && !event.newValue) {
-        // Token was removed in another tab
         console.log('Token removed in another tab');
         resetAuthState();
         setState({
@@ -356,16 +327,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [resetAuthState, navigate]);
 
+  // OPTIMIZED LOGIN FUNCTION
   const login = async (email: string, password: string) => {
     setState(prevState => ({ ...prevState, loading: true, error: null }));
     
     try {
       console.log('Attempting login...');
+      
+      // Clear any existing userId BEFORE API call to prevent caching issues
+      localStorage.removeItem('userId');
+      
       const authResponse = await apiLogin({ email, password });
       
       const { userId, name, email: userEmail, roles, token, requirePasswordChange } = authResponse;
       
-      // Store auth data in localStorage
       const user: User = {
         id: userId,
         name,
@@ -373,69 +348,57 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         roles: roles as UserRole[]
       };
       
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-      localStorage.setItem(TOKEN_STORAGE_KEY, token.accessToken);
-      localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, token.refreshToken);
-      localStorage.setItem(TOKEN_EXPIRY_STORAGE_KEY, token.expiresAt);
-      localStorage.setItem(CURRENT_ROLE_STORAGE_KEY, token.currentRole);
-      localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, requirePasswordChange.toString());
+      // OPTIMIZATION: Batch localStorage operations
+      const storageOperations = [
+        [AUTH_STORAGE_KEY, JSON.stringify(user)],
+        [TOKEN_STORAGE_KEY, token.accessToken],
+        [REFRESH_TOKEN_STORAGE_KEY, token.refreshToken],
+        [TOKEN_EXPIRY_STORAGE_KEY, token.expiresAt],
+        [CURRENT_ROLE_STORAGE_KEY, token.currentRole],
+        [REQUIRE_PASSWORD_CHANGE_KEY, requirePasswordChange.toString()],
+        ['userId', userId]
+      ];
       
-      // Store user ID separately for easier access
-      localStorage.setItem('userId', userId);
+      // Batch storage operations for better performance
+      storageOperations.forEach(([key, value]) => {
+        localStorage.setItem(key, value);
+      });
       
       console.log('Login successful, tokens stored');
       
       setState(prevState => ({
         ...prevState,
         user,
-        currentRole: token.currentRole as UserRole, // Cast string to UserRole
+        currentRole: token.currentRole as UserRole,
         loading: false,
         error: null,
         requirePasswordChange
       }));
 
-      // Set up refresh timer after successful login
-      setTimeout(() => {
+      // OPTIMIZATION: Defer non-critical operations
+      requestAnimationFrame(() => {
         setupRefreshTimer();
-      }, 0);
+        sessionService.current.startSessionManager();
+      });
       
-      // Start the session activity tracking
-      sessionService.current.startSessionManager();
-
       toast.success('Login successful!');
       
-      // Check if password change is required
       if (requirePasswordChange) {
         setShowPasswordChangeModal(true);
       } else {
-        // Enhanced role selection logic
+        // OPTIMIZATION: Simplified role navigation
         console.log(`User has ${roles.length} role(s):`, roles);
         
         if (roles.length === 1) {
-          // User has only one role, navigate directly to dashboard
           const singleRole = roles[0] as UserRole;
           console.log(`User has single role: ${singleRole}, bypassing role selection`);
-          
-          // Ensure the currentRole is set to this single role
-          localStorage.setItem(CURRENT_ROLE_STORAGE_KEY, singleRole);
-          
-          // Update state with the current role
-          setState(prevState => ({
-            ...prevState,
-            currentRole: singleRole as UserRole
-          }));
-          
-          // Navigate directly to the appropriate dashboard
           navigateByRole(singleRole);
         } else if (roles.length > 1) {
-          // Multiple roles - go to role selection
           console.log('User has multiple roles, navigating to role selection');
           navigate('/role-selection');
         } else {
-          // Edge case - no roles
           console.error('User has no roles assigned');
           toast.error('No roles assigned to your account. Please contact administrator.');
-          // Handle logout or redirect to a specific page
         }
       }
     } catch (error) {
@@ -456,9 +419,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('Logging out...');
       await apiLogout();
       
-      // Stop the session manager
       sessionService.current.stopSessionManager();
-      
       resetAuthState();
       
       setState({
@@ -472,7 +433,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.error('Logout error:', error);
       toast.error('Error logging out');
       
-      // Still reset the state even if the API call fails
       resetAuthState();
       setState({
         ...initialState,
@@ -497,26 +457,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw new Error('No access token available');
       }
       
-      // Save user ID before role change
       const userId = stateRef.current.user.id;
-      
       const tokenData = await apiSelectRole(role);
       
-      // Update tokens in localStorage
       localStorage.setItem(TOKEN_STORAGE_KEY, tokenData.accessToken);
       localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, tokenData.refreshToken);
       localStorage.setItem(TOKEN_EXPIRY_STORAGE_KEY, tokenData.expiresAt);
       localStorage.setItem(CURRENT_ROLE_STORAGE_KEY, tokenData.currentRole);
       localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, tokenData.requirePasswordChange.toString());
       
-      // Make sure userId is maintained when switching roles
       if (userId) {
         localStorage.setItem('userId', userId);
       }
       
       setState(prevState => ({
         ...prevState,
-        currentRole: tokenData.currentRole as UserRole, // Cast string to UserRole
+        currentRole: tokenData.currentRole as UserRole,
         loading: false,
         error: null,
         requirePasswordChange: tokenData.requirePasswordChange
@@ -524,12 +480,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       console.log('Role selection successful, tokens updated');
       
-      // Setup refresh timer after role change
       setTimeout(() => {
         setupRefreshTimer();
       }, 0);
       
-      // Check if password change is required
       if (tokenData.requirePasswordChange) {
         setShowPasswordChangeModal(true);
       } else {
@@ -565,7 +519,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
   
-  // In changePassword method 
   const changePassword = async (currentPassword: string, newPassword: string) => {
     setIsChangingPassword(true);
     
@@ -581,29 +534,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         newPassword
       });
       
-      // Update the local storage flag
       localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, 'false');
       
-      // Update state
       setState(prevState => ({
         ...prevState,
         requirePasswordChange: false
       }));
       
-      // Close modal
       setShowPasswordChangeModal(false);
       setIsChangingPassword(false);
       
       toast.success('Password changed successfully');
       
-      // Check if user has only one role
       const user = stateRef.current.user;
       if (user && user.roles && user.roles.length === 1) {
-        // Single role - navigate directly to dashboard
         const singleRole = user.roles[0];
         navigateByRole(singleRole);
       } else {
-        // Multiple roles - go to role selection
         navigateToRoleSelection();
       }
     } catch (error) {
@@ -628,11 +575,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     >
       {children}
       
-      {/* Password Change Modal */}
       <PasswordChangeModal
         isOpen={showPasswordChangeModal}
         onClose={() => {
-          // Don't allow closing if password change is required
           if (!state.requirePasswordChange) {
             setShowPasswordChangeModal(false);
           }

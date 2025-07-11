@@ -1,11 +1,11 @@
-// Path: src/App.tsx - Add lazy loading to reduce initial bundle size
+// src/App.tsx - Simplified Enterprise Version
 
 import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 // Auth Provider
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // Loading Provider and Book Loader
 import { LoadingProvider, useLoading } from './contexts/LoadingContext';
@@ -102,6 +102,26 @@ const ApiLoadingInterceptor: React.FC = () => {
   return null; 
 };
 
+// ENTERPRISE APPROACH: Simple cleanup on logout
+const AuthCleanup: React.FC = () => {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) {
+      console.log('User logged out, clearing session data...');
+      // Simple cleanup - only clear what's necessary
+      try {
+        sessionStorage.removeItem('course_categories');
+        console.log('Session data cleared');
+      } catch (error) {
+        console.log('Session cleanup failed:', error);
+      }
+    }
+  }, [user]);
+
+  return null;
+};
+
 function AppWrapper() {
   return (
     <BrowserRouter>
@@ -109,6 +129,7 @@ function AppWrapper() {
         <AuthProvider>
           <NotificationProvider>
             <ApiLoadingInterceptor />
+            <AuthCleanup />
             <BookLoader />
             <App />
             <Toaster position="top-right" />

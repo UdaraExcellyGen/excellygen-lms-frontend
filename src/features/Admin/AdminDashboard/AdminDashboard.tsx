@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Book, 
   Users, 
-  Cpu, 
-  Loader
+  Cpu
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
-import { getDashboardStats, getDashboardNotifications } from '../../../api/services/AdminDashboard/dashboardService';
+import { getDashboardData } from '../../../api/services/AdminDashboard/dashboardService';
 import { getUserProfile } from '../../../api/services/LearnerProfile/userProfileService';
 import Header from './components/Header';
 import StatCard from './components/StatCard';
@@ -26,19 +25,16 @@ const AdminDashboard: React.FC = () => {
     technologies: { total: 0, active: 0 }
   });
   const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  // FIXED: Restore avatar state management
   const [userAvatar, setUserAvatar] = useState(null);
   const [userData, setUserData] = useState(null);
   
   // Use memoized values for better performance
   const quickActions = useMemo(() => getQuickActions(navigate), [navigate]);
 
-  // Use a counter to avoid infinite loops
-  const retryCountRef = useRef(0);
-  const maxRetries = 5;
-
-  // Helper function to fetch user profile and update avatar
+  // FIXED: Restore avatar fetching function
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log(`Fetching user profile for user ${userId} to get avatar...`);
@@ -59,16 +55,11 @@ const AdminDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    // Only proceed if auth is initialized
-    if (!initialized) {
-      return;
-    }
-
     const fetchDashboardData = async () => {
       try {
-        setLoading(true);
+        console.log('Starting dashboard data fetch...');
         
-        // Get user data from context or local state
+        // FIXED: Restore user data and avatar logic while keeping optimizations
         let user = userDetails;
         
         // Try to get user from localStorage as fallback
@@ -84,94 +75,51 @@ const AdminDashboard: React.FC = () => {
           }
         }
         
-        // If we have user but no avatar, fetch the profile to get the avatar
+        // FIXED: Restore avatar fetching logic
         if (user && user.id && (!user.avatar || user.avatar === undefined || user.avatar === null)) {
           await fetchUserProfile(user.id);
         }
         
-        // If we still don't have user details and haven't exceeded max retries
-        if (!userDetails && !user && retryCountRef.current < maxRetries) {
-          console.log(`User details not yet loaded, retrying... (${retryCountRef.current + 1}/${maxRetries})`);
-          retryCountRef.current += 1;
-          setTimeout(fetchDashboardData, 500); // Longer delay for retry
-          return;
-        }
+        // OPTIMIZATION: Use the new parallel fetch function
+        const { stats: dashboardStats, notifications: notificationsData } = await getDashboardData();
         
-        // If we've exceeded max retries, continue anyway
-        if (retryCountRef.current >= maxRetries) {
-          console.log('Max retries reached, continuing without full user details');
-        }
+        console.log('Dashboard data fetched successfully');
+        setStats(dashboardStats);
+        setNotifications(notificationsData);
+        setError(null);
         
-        const displayName = userDetails?.name || user?.name || "Admin";
-        console.log('Proceeding with data fetch, using name:', displayName);
-        
-        // Fetch fresh data
-        try {
-          const [dashboardStats, notificationsData] = await Promise.all([
-            getDashboardStats(),
-            getDashboardNotifications()
-          ]);
-          
-          console.log('Fresh data fetched:', dashboardStats);
-          setStats(dashboardStats);
-          setNotifications(notificationsData);
-        } catch (fetchError) {
-          console.error('Error in main data fetch:', fetchError);
-          setError('Failed to load dashboard data. Please try again later.');
-        } finally {
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error('Error in fetchDashboardData outer block:', err);
-        setError('Failed to load dashboard data. Please try again later.');
-        setLoading(false);
+      } catch (err: any) {
+        console.error('Error fetching dashboard data:', err);
+        const errorMessage = 'Failed to load dashboard data. Please try again later.';
+        setError(errorMessage);
+      } finally {
+        setIsInitialized(true);
+        console.log('Dashboard initialization completed');
       }
     };
-    
+
     fetchDashboardData();
     
-    // Set up refresh interval
+    // OPTIMIZATION: Set up refresh interval with longer duration
     const refreshInterval = setInterval(() => {
-      const fetchFreshData = async () => {
-        try {
-          // Refresh data in background
-          console.log('Fetching fresh data in background...');
-          const [dashboardStats, notificationsData] = await Promise.all([
-            getDashboardStats(),
-            getDashboardNotifications()
-          ]);
-          
-          console.log('Background fetch completed:', dashboardStats);
-          setStats(dashboardStats);
-          setNotifications(notificationsData);
-        } catch (err) {
-          console.error('Error updating dashboard data in background:', err);
-          // Don't show error for background updates
-        }
-      };
-      
-      fetchFreshData();
+      // Background refresh without showing loading
+      getDashboardData().then(({ stats: dashboardStats, notifications: notificationsData }) => {
+        console.log('Background dashboard refresh completed');
+        setStats(dashboardStats);
+        setNotifications(notificationsData);
+      }).catch(err => {
+        console.error('Background refresh failed:', err);
+        // Don't show error for background updates
+      });
     }, 300000); // Every 5 minutes
     
     return () => {
       clearInterval(refreshInterval);
     };
-  }, [userDetails, initialized]);
+  }, [userDetails]); // Keep userDetails dependency for avatar updates
 
-  // Loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-4 sm:p-6 lg:p-8 flex items-center justify-center">
-        <div className="text-white text-center">
-          <Loader className="w-12 h-12 animate-spin mx-auto mb-4" />
-          <div className="text-xl">Loading dashboard data...</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
+  // FIXED: Show error state only after initialization
+  if (isInitialized && error) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-4 sm:p-6 lg:p-8 flex items-center justify-center">
         <div className="bg-white/90 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg text-red-700 px-6 py-4 max-w-lg">
@@ -188,17 +136,28 @@ const AdminDashboard: React.FC = () => {
     );
   }
 
-  // Get the user data from context or state
+  // FIXED: Show minimal loading state only when not initialized
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-4 sm:p-6 lg:p-8 flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="text-xl">Loading dashboard...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // FIXED: Get current user data with proper avatar handling
   const currentUserData = userDetails || userData;
-  
-  // Log avatar information to help debug
   const currentAvatar = userAvatar || currentUserData?.avatar;
-  console.log('User avatar path:', currentAvatar);
+  
+  console.log('Current user data:', currentUserData);
+  console.log('Current avatar:', currentAvatar);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
       <div className="w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8 relative">
-        {/* Header Section - REMOVED overflow-hidden */}
+        {/* Header Section */}
         <div className="bg-white/90 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg relative z-50">
           <Header
             notifications={notifications}

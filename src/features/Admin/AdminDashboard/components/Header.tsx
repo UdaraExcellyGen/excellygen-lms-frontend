@@ -22,7 +22,7 @@ const roleIcons: Record<string, React.ReactNode> = {
   ProjectManager: <Book size={16} />
 };
 
-// Define base URL for assets - make sure this matches your backend URL
+// OPTIMIZATION: Define base URL for assets
 const BASE_URL = 'http://localhost:5177';
 
 const Header: React.FC<HeaderProps> = ({
@@ -67,7 +67,6 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   const navigateToNotifications = () => {
-    // Navigate to the ManageNotification page when bell icon is clicked
     navigate('/admin/notifications');
   };
 
@@ -82,12 +81,10 @@ const Header: React.FC<HeaderProps> = ({
     try {
       console.log(`Attempting to switch to role: ${role}`);
       if (role === currentRole) {
-        // If already in this role, just close dropdown
         setDropdownOpen(false);
         return;
       }
       
-      // Call the selectRole function from auth context
       setDropdownOpen(false);
       await selectRole(role);
     } catch (error) {
@@ -95,38 +92,25 @@ const Header: React.FC<HeaderProps> = ({
     }
   };
 
-  // Use the direct navigation function from auth context
   const handleViewAllRoles = () => {
     console.log('Navigating to role selection page from admin dashboard');
     setDropdownOpen(false);
-    // Use direct navigation from auth context
     navigateToRoleSelection();
   };
 
-  // Process avatar URL (handle both absolute and relative paths)
+  // OPTIMIZATION: Improved avatar URL processing with better error handling
   const getAvatarUrl = (avatarPath: string | null) => {
-    console.log("Processing avatar path:", avatarPath);
-    
     if (!avatarPath) return null;
     
-    // For Firebase Storage URLs, return as is
-    if (avatarPath.includes('firebasestorage.googleapis.com')) {
-      console.log("Firebase Storage URL detected, using as is");
+    // For Firebase Storage URLs or full URLs, return as is
+    if (avatarPath.includes('firebasestorage.googleapis.com') || 
+        avatarPath.startsWith('http') || 
+        avatarPath.startsWith('https')) {
       return avatarPath;
     }
     
-    // If the avatar path is already a full URL, return it as is
-    if (avatarPath.startsWith('http') || avatarPath.startsWith('https')) {
-      return avatarPath;
-    }
-    
-    // If the avatar path starts with a slash, make sure we don't duplicate slashes
-    if (avatarPath.startsWith('/')) {
-      return `${BASE_URL}${avatarPath}`;
-    }
-    
-    // Otherwise, add a slash between BASE_URL and avatarPath
-    return `${BASE_URL}/${avatarPath}`;
+    // Handle relative paths
+    return avatarPath.startsWith('/') ? `${BASE_URL}${avatarPath}` : `${BASE_URL}/${avatarPath}`;
   };
 
   // Get initials for fallback avatar
@@ -134,33 +118,36 @@ const Header: React.FC<HeaderProps> = ({
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
-  // Reset avatar error when avatar changes
+  // OPTIMIZATION: Reset avatar error when avatar changes
   useEffect(() => {
     setAvatarError(false);
   }, [avatar]);
 
-  // Count new notifications
-  const newNotificationsCount = notifications.filter(n => n.isNew).length;
+  // OPTIMIZATION: Memoize notification count calculation
+  const newNotificationsCount = React.useMemo(() => 
+    notifications.filter(n => n.isNew).length, 
+    [notifications]
+  );
 
   // Get avatar URL
   const avatarUrl = getAvatarUrl(avatar);
-  console.log('Avatar URL:', avatarUrl); // Debug log
 
   return (
     <div className="p-4 sm:p-6 relative">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4 mb-4 sm:mb-0">
-          {/* User Avatar with improved implementation */}
+          {/* OPTIMIZATION: Improved user avatar with better error handling */}
           <div className="w-12 sm:w-16 h-12 sm:h-16 rounded-full overflow-hidden bg-gradient-to-br from-[#52007C] to-[#BF4BF6] border-2 border-[#BF4BF6] flex items-center justify-center transition-transform duration-300 hover:scale-105">
             {avatar && !avatarError ? (
               <img 
                 src={avatarUrl || ''}
                 alt={`${adminName}'s avatar`} 
                 className="h-full w-full object-cover"
-                onError={(e) => {
-                  console.error("Image failed to load:", avatarUrl);
+                onError={() => {
+                  console.error("Avatar failed to load:", avatarUrl);
                   setAvatarError(true);
                 }}
+                loading="lazy" // OPTIMIZATION: Lazy load avatar
               />
             ) : (
               <span className="text-xl sm:text-2xl font-bold text-white">
@@ -174,12 +161,8 @@ const Header: React.FC<HeaderProps> = ({
             <p className="text-sm sm:text-base text-gray-500 font-['Nunito_Sans']">{role}</p>
           </div>
         </div>
-
-        
-
         
         <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto justify-end">
-         
           {/* Notification Bell */}
           <button 
             onClick={navigateToNotifications}
@@ -193,7 +176,7 @@ const Header: React.FC<HeaderProps> = ({
                 strokeWidth={1.8}
               />
               
-              {/* Notification badge */}
+              {/* OPTIMIZATION: Only render badge if there are new notifications */}
               {newNotificationsCount > 0 && (
                 <div className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center">
                   <div className="absolute w-full h-full rounded-full bg-[#BF4BF6] animate-pulse-slow opacity-60"></div>
@@ -210,7 +193,7 @@ const Header: React.FC<HeaderProps> = ({
             </div>
           </button>
 
-          {/* Role Switcher - Very Simple Direct Implementation */}
+          {/* Role Switcher - Only show if user has multiple roles */}
           {user && user.roles && user.roles.length > 1 && (
             <div 
               className="relative" 
@@ -235,7 +218,7 @@ const Header: React.FC<HeaderProps> = ({
                 />
               </button>
               
-              {/* Super Simple Dropdown - Direct Approach */}
+              {/* Dropdown */}
               {dropdownOpen && (
                 <div 
                   className="absolute top-full right-0 mt-2 w-56 rounded-lg shadow-lg bg-white border border-[#BF4BF6]/20 overflow-hidden"

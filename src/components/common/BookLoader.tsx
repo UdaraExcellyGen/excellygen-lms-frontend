@@ -1,39 +1,23 @@
 import React from 'react';
-import Lottie from 'react-lottie';
 import { useLoading } from '../../contexts/LoadingContext';
-import bookAnimation from '../../assets/animations/book-animation.json';
 
 interface BookLoaderProps {
   containerClassName?: string;
-  size?: number;
 }
 
 const BookLoader: React.FC<BookLoaderProps> = ({ 
-  containerClassName = "", 
-  size = 200 
+  containerClassName = "" 
 }) => {
   const { isLoading } = useLoading();
 
   if (!isLoading) return null;
 
-  const defaultOptions = {
-    loop: true,
-    autoplay: true,
-    animationData: bookAnimation,
-    rendererSettings: {
-      preserveAspectRatio: 'xMidYMid slice'
-    }
-  };
-
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-[#1B0A3F]/70 backdrop-blur-sm ${containerClassName}`}>
-      <div className="relative flex flex-col items-center">
-        <Lottie 
-          options={defaultOptions}
-          height={size}
-          width={size}
-        />
-        <p className="mt-4 text-white font-medium text-lg animate-pulse">Loading...</p>
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/5 backdrop-blur-sm ${containerClassName}`}>
+      <div className="bg-white rounded-lg p-4 shadow-lg border">
+        {/* Pure CSS spinner - 0KB, no external dependencies */}
+        <div className="w-6 h-6 mx-auto mb-2 border-2 border-gray-200 border-t-[#52007C] rounded-full animate-spin"></div>
+        <p className="text-xs text-gray-600 text-center">Loading...</p>
       </div>
     </div>
   );
