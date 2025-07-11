@@ -17,7 +17,7 @@ interface SubtopicSectionProps {
     isEditMode?: boolean;
     onEditQuiz?: (lessonId: number) => void;
     onRemoveQuiz?: (lessonId: number) => void;
-    courseId?: number;
+    courseId?: number|null;
     isLearnerView?: boolean;
 }
 
@@ -49,7 +49,7 @@ const SubtopicSection: React.FC<SubtopicSectionProps> = ({
                 <div className="flex items-center gap-2">
                     <span className="text-xs text-[#1B0A3F] text-bold border border-[#52007C] px-2 py-0.5 rounded-full">{subtopic.lessonPoints} Points</span>
                     {hasQuiz && (
-                        <span className="text-xs text-purple-400 bg-[#2D1B59] px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="text-xs text-[#1B0A3F] border border-[#52007C] px-2 py-0.5 rounded-full flex items-center gap-1">
                             <BookCheck size={12} />
                             Quiz
                         </span>

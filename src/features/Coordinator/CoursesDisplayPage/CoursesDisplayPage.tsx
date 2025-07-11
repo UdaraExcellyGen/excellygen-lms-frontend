@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, Search, RefreshCw, Plus, Trash2, Edit, BookOpen, Clock, Award, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Search, RefreshCw, Plus, Trash2, BookOpen, Clock, Award, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -213,7 +213,10 @@ const CoursesDisplayPage: React.FC = () => {
       
       try {
         const fetchedCourses = await getAllCourses();
-        setAllFetchedCourses(fetchedCourses);
+        const sortedCourses = fetchedCourses.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+        setAllFetchedCourses(sortedCourses);
       } catch (error) {
         console.error("Failed to fetch courses:", error);
         setHasError(true);

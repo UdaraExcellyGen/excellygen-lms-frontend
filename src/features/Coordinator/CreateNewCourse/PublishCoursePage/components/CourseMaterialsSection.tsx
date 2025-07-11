@@ -22,7 +22,7 @@ interface CourseMaterialsSectionProps {
     showQuizOverviewPage: any | null;
     handleCloseQuizOverview: () => void;
     handleSaveOverviewQuizDetails: (updatedQuizBank: any) => void;
-    courseId?: number;
+    courseId?: number|null;
     isLearnerView?: boolean;
 }
 

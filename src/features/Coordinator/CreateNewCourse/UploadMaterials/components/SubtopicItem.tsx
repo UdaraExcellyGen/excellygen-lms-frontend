@@ -264,7 +264,7 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
               )}
             </div>
 
-            {/* Upload Section */}
+            {/* Upload area */}
             {showUploadSection && (
               <div className="border border-[#BF4BF6]/30 rounded-lg p-4">
                 <div 
@@ -383,26 +383,26 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                 quizzes.map((quiz) => (
                   <div 
                     key={quiz.quizId} 
-                    className="bg-[#34137C]/30 p-2 rounded-md flex justify-between items-center"
+                    className="bg-[#52007C]/20 p-2 rounded-md flex justify-between items-center"
                   >
                     <div className="flex items-center">
-                      <List className="w-4 h-4 text-[#D68BF9] mr-2" />
-                      <span className="text-white text-sm">{quiz.quizTitle}</span>
-                      <span className="text-gray-400 text-xs ml-2">
+                      <List className="w-4 h-4 text-[#52007C] mr-2" />
+                      <span className="text-[#52007C] text-sm">{quiz.quizTitle}</span>
+                      <span className="text-gray-800 text-xs ml-2">
                         ({quiz.quizSize} questions • {quiz.timeLimitMinutes} min)
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <button 
                         onClick={handleEditQuiz}
-                        className="text-[#D68BF9] hover:text-white"
+                        className="text-[#52007C] hover:text-[#52007C]/80"
                         disabled={isSubmitting}
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={handleRemoveQuiz}
-                        className="text-red-400 hover:text-red-300"
+                        className="text-red-500 hover:text-red-400"
                         disabled={isSubmitting}
                       >
                         <Trash className="w-4 h-4" />

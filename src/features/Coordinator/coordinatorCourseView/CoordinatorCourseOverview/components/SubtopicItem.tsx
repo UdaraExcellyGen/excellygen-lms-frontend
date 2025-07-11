@@ -3,7 +3,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Edit, Trash, Download, Plus, Video, FileText, List } from 'lucide-react';
 import { LessonDto, CourseDocumentDto } from '../../../../../types/course.types';
 import { getQuizzesByLessonId } from '../../../../../api/services/Course/quizService';
-import QuizItem from '../../../CreateNewCourse/PublishCoursePage/components/QuizItem';
+import QuizList from './QuizList';
+import { QuizDto } from '../../../../../types/quiz.types';
 
 interface SubtopicItemProps {
   lesson: LessonDto;
@@ -55,7 +56,7 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
   lessonPointsDisplay,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [actualQuizzes, setActualQuizzes] = useState<any[]>([]);
+  const [actualQuizzes, setActualQuizzes] = useState<QuizDto[]>([]);
   const [loadingQuizzes, setLoadingQuizzes] = useState(false);
 
   // Guard clause
@@ -89,12 +90,6 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
 
   const hasQuizzes = actualQuizzes.length > 0;
   const materialsList = materials || [];
-
-  // Handler to view quiz details - can be expanded if needed
-  const handleViewQuiz = (lessonId: number) => {
-    // For now, just delegate to edit quiz which will open the quiz editor
-    onEditQuiz(lessonId);
-  };
 
   return (
     <div className="bg-[#1B0A3F]/50 rounded-lg mb-4 overflow-hidden">
@@ -271,15 +266,10 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
             <div className="space-y-2">
               {hasQuizzes ? (
                 actualQuizzes.map((quiz) => (
-                  <QuizItem
-                    key={quiz.quizId}
-                    lessonId={lesson.id}
-                    quiz={quiz}
-                    handleViewQuiz={handleViewQuiz}
-                    isEditMode={isEditMode}
-                    onEditQuiz={onEditQuiz}
-                    onRemoveQuiz={onRemoveQuiz}
-                  />
+                  <QuizList
+                      quizzes={actualQuizzes}
+                      handleEditQuiz={() => onEditQuiz(lesson.id)}
+                    />
                 ))
               ) : (
                 <p className="text-gray-400 text-sm italic">

@@ -4,14 +4,6 @@ import React from 'react';
 import { ExistingMaterialFile, SubtopicFE } from '../../../../../types/course.types'; // Adjust path
 import { FileText, X } from 'lucide-react';
 
-// interface MaterialItemProps {
-//     lessonId: number; // Need lessonId to help identify which lesson this material belongs to
-//     material: ExistingMaterialFile; // Use ExistingMaterialFile
-//     handleDeleteMaterial: (lessonId: number, documentId: number, documentName: string) => void;
-//     // Quiz related props - keep if you implement quizzes
-//     // handleViewQuiz: (quizBank: QuizBank | undefined) => void;
-//     // subtopic?: SubtopicFE;
-// }
 interface MaterialItemProps {
     lessonId: number;
     material: ExistingMaterialFile;
@@ -37,7 +29,6 @@ const MaterialItem: React.FC<MaterialItemProps> = ({
         }
     };
 
-    // const handleQuizClick = () => { /* ... if quizzes implemented ... */ };
 
     return (
         <div className="border border-[#52007C] rounded-lg p-3 flex items-center justify-between group hover:border border-[#52007C] transition-all duration-300">

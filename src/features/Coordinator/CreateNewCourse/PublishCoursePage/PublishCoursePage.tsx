@@ -24,7 +24,7 @@ import ProgressSteps from '../BasicCourseDetails/components/ProgressSteps';
 import CourseMaterialsSection from './components/CourseMaterialsSection';
 import ConfirmationDialog from './components/ConfirmationDialog';
 import PublishButton from './components/PublishButton';
-import QuizOverviewModal from './components/QuizOverviewModal';
+//import QuizOverviewModal from './components/QuizOverviewModal';
 
 // Local interface for the course data displayed on this page
 interface DisplayCourseData {
@@ -179,8 +179,8 @@ const PublishCoursePage: React.FC = () => {
                     lessonPoints: l.lessonPoints,
                     courseId: l.courseId,
                     documents: l.documents.map(d => ({
-                        id: d.id, name: d.name, type: 'document', fileUrl: d.fileUrl,
-                        documentType: d.documentType, fileSize: d.fileSize, lessonId: d.lessonId
+                        id: d.id, name: d.name, fileUrl: d.fileUrl,
+                        documentType: d.documentType, fileSize: d.fileSize, lessonId: d.lessonId, lastUpdatedDate: d.lastUpdatedDate
                     })),
                     isEditing: false,
                     originalName: l.lessonName,
@@ -327,6 +327,10 @@ const PublishCoursePage: React.FC = () => {
 
     const handleSaveDraft = () => {
         toast.success('Course saved as draft.');
+        resetCourseContext(); 
+        
+        // Navigate to the course display page.
+        navigate('/coordinator/course-display-page'); 
     };
 
     const handlePublish = async () => {
@@ -446,7 +450,7 @@ const PublishCoursePage: React.FC = () => {
             .then(quizzesResp => {
                 if (quizzesResp.length > 0) {
                     const quizId = quizzesResp[0].quizId;
-                    navigate(`/coordinator/edit-quiz/${quizId}?lessonId=${lessonId}&courseId=${courseId}`);
+                    navigate(`/coordinator/edit-quiz/${quizId}?lessonId=${lessonId}&courseId=${courseId}&source=publish-course`);
                 } else {
                     toast.error("No quiz found for this lesson to edit. Please create one first.");
                 }
@@ -578,7 +582,7 @@ const PublishCoursePage: React.FC = () => {
                     message="Are you sure you want to delete this quiz? This action cannot be undone."
                 />
 
-                {showQuizOverviewPage && (
+                {/* {showQuizOverviewPage && (
                     <QuizOverviewModal
                         quizBank={showQuizOverviewPage}
                         onClose={handleCloseQuizOverview}
@@ -586,7 +590,7 @@ const PublishCoursePage: React.FC = () => {
                         isFullScreen={true}
                         subtopicId={showQuizOverviewPage.lessonId.toString()}
                     />
-                )}
+                )} */}
             </div>
 
             <PublishButton

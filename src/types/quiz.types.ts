@@ -113,7 +113,7 @@ export interface CreateQuizBankQuestionDto {
   questionContent: string;
   questionType?: string; // Optional, defaults to "mcq"
   questionBankOrder?: number; // Optional
-  options: CreateMCQOptionDto[];
+  options: (CreateMCQOptionDto & { mcqOptionId?: number })[];
 }
 
 export interface CreateMCQOptionDto {
@@ -153,7 +153,7 @@ export interface QuizCreationState {
   timeLimitMinutes: number;
   quizSize: number;
   quizBankSize: number;
-  questions: CreateQuizBankQuestionDto[];
+  questions: (CreateQuizBankQuestionDto & { questionBankQuestionId?: number })[];
   currentQuestionIndex: number;
   lessonId: number;
 }

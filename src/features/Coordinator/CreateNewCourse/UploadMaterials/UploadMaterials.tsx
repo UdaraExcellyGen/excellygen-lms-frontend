@@ -370,7 +370,25 @@ const UploadMaterials: React.FC = () => {
         }
     }, [courseId, navigate, pendingUploadFiles, courseData.lessons]);
 
-    const handleSaveDraftAction = useCallback(() => { toast.error("Save as Draft feature is not implemented yet."); }, []);
+    const handleSaveDraftAction = useCallback(() => {
+         //toast.error("Save as Draft feature is not implemented yet."); 
+        const hasPendingUploads = Object.values(pendingUploadFiles).some(fileList => fileList && fileList.length > 0);
+        if (hasPendingUploads) {
+            toast.error("You have pending documents that are not uploaded. Please upload or remove them before saving a draft.");
+            return;
+        }
+
+        if (courseData.lessons.some(l => l.isEditing)) {
+            toast.error("Please save or cancel changes on all subtopics before saving a draft.");
+            return;
+        }
+        
+        // If all checks pass, it's safe to leave.
+        toast.success('Your progress has been saved. You can continue later.');
+        navigate('/coordinator/course-display-page');
+
+    }, [navigate, pendingUploadFiles, courseData.lessons]);
+        
     
     const handleCreateQuizAction = useCallback((lessonId: number) => {
         if (!courseId) {
@@ -453,7 +471,7 @@ const handleRemoveQuizAction = useCallback((lessonId: number) => {
 
     return (
         <div className="min-h-screen bg-[#52007C] p-6">
-            <Header onSaveDraft={handleSaveDraftAction} navigateToCreateCourse={handleBackNavigation} />
+            <Header onSaveDraft={handleSaveDraftAction} navigateToCreateCourse={handleBackNavigation} isSubmitting={isSubmittingAction} />
             <ProgressBar stage={2} />
             <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
                 <div className="bg-white/90 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg overflow-hidden mb-6">

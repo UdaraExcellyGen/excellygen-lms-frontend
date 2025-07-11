@@ -540,7 +540,7 @@ const CoordinatorCourseOverview: React.FC = () => {
             .then(quizzes => {
                 if (quizzes.length > 0) {
                     const quizId = quizzes[0].quizId;
-                    navigate(`/coordinator/edit-quiz/${quizId}?lessonId=${lessonId}&courseId=${courseId}`);
+                    navigate(`/coordinator/edit-quiz/${quizId}?lessonId=${lessonId}&courseId=${courseId}&source=course-view`);
                 } else {
                     toast.error("No quiz found for this lesson to edit. Please create one first.");
                 }
