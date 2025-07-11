@@ -8,26 +8,21 @@ interface ProjectsSectionProps {
 const ProjectsSection: React.FC<ProjectsSectionProps> = ({ projects }) => {
   return (
     <section className="mb-4">
-      <div className="bg-blue-900 text-white p-2 mb-3">
+      {/* UPDATED: Header background, border, and text color */}
+      <div className="bg-[#03045e] text-white p-2 mb-3">
         <h3 className="text-base font-bold">Projects</h3>
       </div>
       <div className="bg-white">
         {projects.map((project, index) => (
-          <div key={index} className="border-l-4 border-blue-900 p-4 mb-3 bg-white">
+          <div key={index} className="border-l-4 border-[#03045e] p-4 mb-3 bg-white">
             <div className="flex justify-between items-start mb-2">
               <div className="flex-1">
                 <h4 className="text-sm font-bold text-gray-800 mb-1">{project.title}</h4>
                 <p className="text-gray-600 text-xs mb-2">{project.description}</p>
-                
-                {/* ================================================================= */}
-                {/* THE FIX: Replaced blue boxes with a bold, separated string. */}
-                {/* ================================================================= */}
-                <p className="text-xs font-bold text-blue-900">
+                <p className="text-xs font-bold text-[#03045e]">
                   {project.technologies.join(' • ')}
                 </p>
-
               </div>
-              
               <div className="ml-4 text-right">
                 <div className="text-xs text-gray-500">
                   <p className="font-bold">{new Date(project.startDate).toLocaleDateString()}</p>
