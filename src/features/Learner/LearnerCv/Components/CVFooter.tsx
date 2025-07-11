@@ -14,7 +14,7 @@ const CVFooter: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           {/* UPDATED: Logo background color */}
-          <div className="w-6 h-6 bg-[#03045e] rounded flex items-center justify-center">
+          <div className="w-6 h-6 bg-[#2a135b] rounded flex items-center justify-center">
             <span className="text-white text-xs font-bold">EG</span>
           </div>
           <span className="text-xs font-bold text-gray-700">ExcellyGen</span>

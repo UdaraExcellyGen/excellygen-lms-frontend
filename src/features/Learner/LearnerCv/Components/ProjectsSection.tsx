@@ -9,17 +9,17 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({ projects }) => {
   return (
     <section className="mb-4">
       {/* UPDATED: Header background, border, and text color */}
-      <div className="bg-[#03045e] text-white p-2 mb-3">
+      <div className="bg-[#2a135b] text-white p-2 mb-3">
         <h3 className="text-base font-bold">Projects</h3>
       </div>
       <div className="bg-white">
         {projects.map((project, index) => (
-          <div key={index} className="border-l-4 border-[#03045e] p-4 mb-3 bg-white">
+          <div key={index} className="border-l-4 border-[#1B0A3F] p-4 mb-3 bg-white">
             <div className="flex justify-between items-start mb-2">
               <div className="flex-1">
                 <h4 className="text-sm font-bold text-gray-800 mb-1">{project.title}</h4>
                 <p className="text-gray-600 text-xs mb-2">{project.description}</p>
-                <p className="text-xs font-bold text-[#03045e]">
+                <p className="text-xs font-bold text-[#1B0A3F]">
                   {project.technologies.join(' • ')}
                 </p>
               </div>
