@@ -1,6 +1,5 @@
-// src/features/Learner/LearnerCv/Components/CVHeader.tsx
 import React from 'react';
-import { Mail, Phone, Briefcase, User, Download } from 'lucide-react';
+import { Mail, Phone, Download, MapPin } from 'lucide-react';
 import { PersonalInfo } from '../types/types';
 
 interface CVHeaderProps {
@@ -10,56 +9,64 @@ interface CVHeaderProps {
 
 const CVHeader: React.FC<CVHeaderProps> = ({ personalInfo, onDownloadCV }) => {
   return (
-    <div className="bg-gradient-to-r from-purple-900 to-indigo-800 text-white p-8 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-purple-400 rounded-full opacity-20 transform translate-x-16 -translate-y-16"></div>
-      <div className="absolute bottom-0 left-0 w-24 h-24 bg-pink-400 rounded-full opacity-20 transform -translate-x-12 translate-y-12"></div>
-      
-      <div className="relative z-10 flex justify-between items-start">
-        <div className="flex items-start gap-6 flex-1">
-          <div className="flex-shrink-0">
-            <div className="w-24 h-24 rounded-full border-4 border-purple-200 overflow-hidden bg-white shadow-lg">
-              {personalInfo.photo ? (
-                <img 
-                  src={personalInfo.photo} 
-                  alt={personalInfo.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-purple-100 flex items-center justify-center">
-                  <User size={32} className="text-purple-400" />
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex-1">
-            <h1 className="text-4xl font-bold mb-2 text-white">{personalInfo.name}</h1>
-            <h2 className="text-xl text-purple-200 mb-4 font-medium">{personalInfo.position}</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-              <div className="flex items-center gap-2">
-                <Mail size={16} className="text-purple-300" />
-                <span>{personalInfo.email}</span>
+    <div className="bg-white flex min-h-[200px]">
+      {/* Left side - Contact Info (Dark Blue Background) */}
+      <div className="w-1/3 bg-blue-900 text-white p-6 flex flex-col">
+        {/* Profile Photo */}
+        <div className="mb-6">
+          <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-white shadow-lg mx-auto">
+            {personalInfo.photo ? (
+              <img 
+                src={personalInfo.photo} 
+                alt={personalInfo.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                <span className="text-gray-400 text-2xl font-bold">
+                  {personalInfo.name.split(' ').map(n => n[0]).join('')}
+                </span>
               </div>
-              <div className="flex items-center gap-2">
-                <Phone size={16} className="text-purple-300" />
-                <span>{personalInfo.phone}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Briefcase size={16} className="text-purple-300" />
-                <span>Department of {personalInfo.department}</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
         
-        <button
-          onClick={onDownloadCV}
-          className="download-button bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200 shadow-lg flex-shrink-0"  //Added download-button class
-        >
-          <Download size={16} />
-          Download CV
-        </button>
+        {/* Contact Section */}
+        <div>
+          <h3 className="text-sm font-bold mb-3 bg-blue-800 text-white p-2 text-center">Contact</h3>
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-bold text-white mb-1">Phone</p>
+              <p className="text-xs text-blue-100">{personalInfo.phone}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white mb-1">Email</p>
+              <p className="text-xs text-blue-100 break-all">{personalInfo.email}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white mb-1">Department</p>
+              <p className="text-xs text-blue-100">{personalInfo.department}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Right side - Name and Position */}
+      <div className="w-2/3 bg-gray-50 p-6 flex flex-col justify-center relative">
+        <div className="absolute top-4 right-4">
+          <button
+            onClick={onDownloadCV}
+            className="download-button bg-blue-900 hover:bg-blue-800 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200 shadow-lg text-white text-sm"
+          >
+            <Download size={16} />
+            Download CV
+          </button>
+        </div>
+        
+        <div className="mt-4">
+          <h1 className="text-3xl font-bold text-blue-900 mb-2 uppercase tracking-wide">{personalInfo.name}</h1>
+          <h2 className="text-lg text-gray-600 font-medium">{personalInfo.position}</h2>
+        </div>
       </div>
     </div>
   );

@@ -1,11 +1,9 @@
-// src/features/Learner/LearnerCv/Cv.tsx
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
-import CVHeader from './Components/CVHeader';
 import ProfessionalSummary from './Components/ProfessionalSummary';
 import ProjectsSection from './Components/ProjectsSection';
 import CoursesSection from './Components/CoursesSection';
@@ -15,6 +13,7 @@ import CVFooter from './Components/CVFooter';
 import { getCvData, CvDataResponse } from '../../../api/cvApi';
 import { UserData, ProfileProject } from './types/types';
 import { learnerProjectApi } from '../../../api/services/learnerProjectService';
+import { Download } from 'lucide-react';
 
 const CV: React.FC = () => {
     const [cvData, setCvData] = useState<UserData | null>(null);
@@ -47,16 +46,12 @@ const CV: React.FC = () => {
             setLoading(true);
             setError(null);
             try {
-                // 1. Fetch CV Data (personal info, courses, skills)
                 console.log(`CV.tsx: Fetching CV data for userId: ${id}`);
-                const backendData: CvDataResponse = await getCvData(id);  // Assuming getCvData now returns only the personal info, courses, and skills
+                const backendData: CvDataResponse = await getCvData(id);
 
-                // 2. Fetch Projects Data from learnerProjectApi
                 console.log(`CV.tsx: Fetching project data for userId: ${id}`);
                 const projectsData = await learnerProjectApi.getUserProjects(id);
 
-
-                // 3. Map and Combine the Data
                 const mappedProjects: ProfileProject[] = projectsData.map(p => ({
                     title: p.title,
                     description: p.description,
@@ -65,7 +60,6 @@ const CV: React.FC = () => {
                     completionDate: p.endDate,
                     status: p.status,
                 }));
-
 
                 const mappedData: UserData = {
                     personalInfo: {
@@ -77,7 +71,7 @@ const CV: React.FC = () => {
                         photo: backendData.personalInfo.photo,
                         summary: backendData.personalInfo.summary,
                     },
-                    projects: mappedProjects, // Use mapped projects fetched from learnerProjectApi
+                    projects: mappedProjects,
                     courses: backendData.courses.map(c => ({
                         title: c.title,
                         provider: c.provider,
@@ -142,27 +136,27 @@ const CV: React.FC = () => {
             toast.success('CV downloaded successfully!');
         } catch (e: any) {
             console.error("Error downloading CV:", e);
-            toast.error('Failed to download CV.  See console for details.');
+            toast.error('Failed to download CV. See console for details.');
         }
     };
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-[#1B0A3F] to-[#52007C] p-6 flex items-center justify-center">
-                <div className="text-white text-xl animate-pulse">Loading CV...</div>
+            <div className="min-h-screen bg-gray-200 p-6 flex items-center justify-center">
+                <div className="text-gray-600 text-xl animate-pulse">Loading CV...</div>
             </div>
         );
     }
 
     if (error || !cvData) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-[#1B0A3F] to-[#52007C] p-6 flex flex-col items-center justify-center">
-                <div className="text-center bg-white/10 p-8 rounded-lg shadow-xl">
-                    <h2 className="text-2xl font-bold text-red-400 mb-4">Error Loading CV</h2>
-                    <p className="text-red-200 mb-6">{error || 'An unexpected error occurred and CV data could not be loaded.'}</p>
+            <div className="min-h-screen bg-gray-200 p-6 flex flex-col items-center justify-center">
+                <div className="text-center bg-white p-8 rounded-lg shadow-xl">
+                    <h2 className="text-2xl font-bold text-red-600 mb-4">Error Loading CV</h2>
+                    <p className="text-red-500 mb-6">{error || 'An unexpected error occurred and CV data could not be loaded.'}</p>
                     <button
                         onClick={() => navigate(-1)}
-                        className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                        className="px-6 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg transition-colors"
                     >
                         Go Back
                     </button>
@@ -172,19 +166,100 @@ const CV: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#1B0A3F] to-[#52007C] p-6">
-            <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden" ref={cvRef}>
-                <CVHeader
-                    personalInfo={cvData.personalInfo}
-                    onDownloadCV={handleDownloadCV}
-                />
-                <div className="p-8 space-y-8">
-                    <ProfessionalSummary summary={cvData.personalInfo.summary} />
-                    <ProjectsSection projects={cvData.projects} />
-                    <CoursesSection courses={cvData.courses} />
-                    <SkillsSection skills={cvData.skills} />
+        <div className="min-h-screen bg-gray-200 p-4">
+            {/* A4 size container: 210mm x 297mm = 794px x 1123px at 96dpi */}
+            <div className="max-w-4xl mx-auto bg-white shadow-2xl overflow-hidden" style={{ width: '794px', minHeight: '1123px' }} ref={cvRef}>
+                
+                {/* Download Button */}
+                <div className="absolute top-4 right-4 z-10">
+                    <button
+                        onClick={handleDownloadCV}
+                        className="download-button bg-blue-900 hover:bg-blue-800 px-3 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200 shadow-lg text-white text-xs"
+                    >
+                        <Download size={14} />
+                        Download CV
+                    </button>
                 </div>
-                <CVFooter />
+
+                {/* Main Flex Container */}
+                <div className="flex" style={{ minHeight: '1123px' }}>
+                    
+                    {/* Left Sidebar - Dark Blue */}
+                    <div className="w-1/3 bg-blue-900 text-white p-6">
+                        {/* Profile Photo */}
+                        <div className="mb-6">
+                            <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-white shadow-lg mx-auto">
+                                {cvData.personalInfo.photo ? (
+                                    <img 
+                                        src={cvData.personalInfo.photo} 
+                                        alt={cvData.personalInfo.name}
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                                        <span className="text-gray-400 text-2xl font-bold">
+                                            {cvData.personalInfo.name.split(' ').map(n => n[0]).join('')}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Name */}
+                        <div className="mb-6 text-center">
+                            <h1 className="text-xl font-bold text-white mb-2 uppercase tracking-wide">
+                                {cvData.personalInfo.name}
+                            </h1>
+                            <h2 className="text-sm text-blue-200 font-medium">
+                                {cvData.personalInfo.position}
+                            </h2>
+                        </div>
+
+                        {/* Contact Section */}
+                        <div className="mb-6">
+                            <h3 className="text-sm font-bold mb-3 bg-blue-800 text-white p-2 text-center">Contact</h3>
+                            <div className="space-y-3">
+                                <div>
+                                    <p className="text-xs font-bold text-white mb-1">Phone</p>
+                                    <p className="text-xs text-blue-100">{cvData.personalInfo.phone}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-white mb-1">Email</p>
+                                    <p className="text-xs text-blue-100 break-all">{cvData.personalInfo.email}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-white mb-1">Department</p>
+                                    <p className="text-xs text-blue-100">{cvData.personalInfo.department}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Technical Skills */}
+                        <div className="mb-6">
+                            <h3 className="text-sm font-bold mb-3 bg-blue-800 text-white p-2 text-center">Technical Skills</h3>
+                            <div className="space-y-2">
+                                {cvData.skills.map((skill, index) => (
+                                    <div key={index} className="flex items-center">
+                                        <div className="w-2 h-2 bg-blue-300 rounded-full mr-2"></div>
+                                        <span className="text-xs text-blue-100 font-medium">{skill}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Content Area */}
+                    <div className="w-2/3 bg-gray-50 p-6 flex flex-col">
+                        <ProfessionalSummary summary={cvData.personalInfo.summary} />
+                        <ProjectsSection projects={cvData.projects} />
+                        <CoursesSection courses={cvData.courses} />
+                        
+                        {/* Footer at bottom */}
+                        <div className="mt-auto">
+                            <CVFooter />
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

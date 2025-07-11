@@ -1,5 +1,4 @@
 import React from 'react';
-import { User } from 'lucide-react';
 
 interface ProfessionalSummaryProps {
   summary: string;
@@ -7,16 +6,15 @@ interface ProfessionalSummaryProps {
 
 const ProfessionalSummary: React.FC<ProfessionalSummaryProps> = ({ summary }) => {
   return (
-    <section>
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-pink-500 rounded-lg flex items-center justify-center">
-          <User size={16} className="text-white" />
-        </div>
-        <h3 className="text-xl font-bold text-gray-800">Professional Summary</h3>
+    <section className="mb-4">
+      <div className="bg-blue-900 text-white p-2 mb-3">
+        <h3 className="text-base font-bold">Professional Summary</h3>
       </div>
-      <p className="text-gray-600 leading-relaxed bg-purple-50 p-4 rounded-lg border-l-4 border-purple-500">
-        {summary}
-      </p>
+      <div className="bg-white p-4 border-l-4 border-blue-900">
+        <p className="text-gray-700 leading-relaxed text-xs">
+          {summary}
+        </p>
+      </div>
     </section>
   );
 };
