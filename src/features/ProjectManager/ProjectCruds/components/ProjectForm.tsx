@@ -391,7 +391,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                 {/* Fixed Header */}
                 <div className="flex justify-between items-center p-6 border-b border-gray-200 flex-shrink-0">
                     <h2 className="text-xl text-russian-violet font-['Unbounded']">
-                        {isEditing ? 'Edit Project' : t('projectManager.projectCruds.addProject')}
+                        {isEditing ? t('projectManager.projectCruds.editProject') : t('projectManager.projectCruds.addProject')}
                     </h2>
                     <button
                         type="button"
@@ -431,7 +431,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                         <div className="space-y-4">
                             <div>
                                 <label htmlFor="project-name" className="block text-sm font-medium text-russian-violet mb-1">
-                                    Project Name<span className="text-red-500">*</span>
+                                    {t('projectManager.projectCruds.projectName')}<span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     id="project-name"
@@ -448,7 +448,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                                 {formErrors.name && (
                                     <p className="mt-1 text-xs text-red-500 flex items-center gap-1" role="alert">
                                         <AlertCircle size={12} />
-                                        Project name is required
+                                        {t('projectManager.projectCruds.projectNameRequired')}
                                     </p>
                                 )}
                             </div>
@@ -456,7 +456,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label htmlFor="project-status" className="block text-sm font-medium text-russian-violet mb-1">
-                                        Status
+                                        {t('projectManager.projectCruds.status')}
                                     </label>
                                     <select
                                         id="project-status"
@@ -474,7 +474,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label htmlFor="project-start-date" className="block text-sm font-medium text-russian-violet mb-1">
-                                        Start Date<span className="text-red-500">*</span>
+                                        {t('projectManager.projectCruds.startDate')}<span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         id="project-start-date"
@@ -490,7 +490,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                                     {formErrors.startDate && (
                                         <p className="mt-1 text-xs text-red-500 flex items-center gap-1" role="alert">
                                             <AlertCircle size={12} />
-                                            Start date is required
+                                            {t('projectManager.projectCruds.startDateRequired')}
                                         </p>
                                     )}
                                 </div>
@@ -514,13 +514,13 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                                     {formErrors.deadline && (
                                         <p className="mt-1 text-xs text-red-500 flex items-center gap-1" role="alert">
                                             <AlertCircle size={12} />
-                                            Deadline is required
+                                            {t('projectManager.projectCruds.deadlineRequired')}
                                         </p>
                                     )}
                                     {formErrors.dateOrder && (
                                         <p className="mt-1 text-xs text-red-500 flex items-center gap-1" role="alert">
                                             <AlertCircle size={12} />
-                                            Deadline must be after the start date
+                                            {t('projectManager.projectCruds.deadlineAfterStart')}
                                         </p>
                                     )}
                                 </div>
@@ -528,13 +528,13 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 
                             {formData.startDate && (
                                 <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded-lg">
-                                    <strong>Note:</strong> Deadline must be set to a date after {new Date(formData.startDate).toLocaleDateString()}
+                                    <strong>{t('projectManager.projectCruds.note')}</strong> {t('projectManager.projectCruds.deadlineNote')} {new Date(formData.startDate).toLocaleDateString()}
                                 </div>
                             )}
 
                             <div>
                                 <label htmlFor="project-description" className="block text-sm font-medium text-russian-violet mb-1">
-                                    Description
+                                    {t('projectManager.projectCruds.description')}
                                 </label>
                                 <textarea
                                     id="project-description"
@@ -548,7 +548,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 
                             <div>
                                 <label htmlFor="project-short-description" className="block text-sm font-medium text-russian-violet mb-1">
-                                    Short Description
+                                    {t('projectManager.projectCruds.shortDescription')}
                                 </label>
                                 <textarea
                                     id="project-short-description"
@@ -603,7 +603,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                                     aria-label="Add role assignment"
                                     title="Add role assignment"
                                 >
-                                    <PlusCircle size={18} /> Add Role
+                                    <PlusCircle size={18} /> {t('projectManager.projectCruds.addRole')}
                                 </button>
                                 <div>
                                     {formData.assignedRoles.map((roleAssignment, index) => (
@@ -627,7 +627,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                                                     />
                                                 </div>
                                                 <div className="w-24">
-                                                    <label htmlFor={`role-amount-${index}`} className="block text-sm text-russian-violet mb-1">Amount</label>
+                                                    <label htmlFor={`role-amount-${index}`} className="block text-sm text-russian-violet mb-1">{t('projectManager.projectCruds.amount')}</label>
                                                     <input
                                                         id={`role-amount-${index}`}
                                                         type="number"
@@ -672,10 +672,10 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                         disabled={isSubmitting}
                         className={`px-6 py-2 ${isSubmitting ? 'bg-gray-400' : 'bg-gradient-primary'} text-white rounded-full
                                  hover:bg-pale-purple transition-all duration-300 flex items-center gap-2 shadow-soft ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        title={isSubmitting ? 'Processing...' : (isEditing ? 'Update project' : 'Add project')}
+                        title={isSubmitting ? t('projectManager.projectCruds.processing') : (isEditing ? t('projectManager.projectCruds.updateProject') : t('projectManager.projectCruds.addProject'))}
                     >
                         <Save size={18} />
-                        {isSubmitting ? 'Processing...' : (isEditing ? 'Update' : 'Add')} Project
+                        {isSubmitting ? t('projectManager.projectCruds.processing') : (isEditing ? `${t('projectManager.projectCruds.update')} Project` : `${t('projectManager.projectCruds.add')} Project`)}
                     </button>
                 </div>
             </div>

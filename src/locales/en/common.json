@@ -223,7 +223,25 @@
       "confirmDeleteTechnology": "Confirm Delete Technology",
       "confirmDeleteRole": "Confirm Delete Role",
       "confirmDeleteMessage": "Are you sure you want to delete this",
-      "actionCannotBeUndone": "This action cannot be undone."
+      "actionCannotBeUndone": "This action cannot be undone.",
+         "editProject": "Edit Project",
+      "projectName": "Project Name", 
+      "status": "Status",
+      "startDate": "Start Date",
+      "description": "Description",
+      "shortDescription": "Short Description",
+      "updateProject": "Update Project",
+      "deadlineNote": "Deadline must be set to a date after",
+      "projectNameRequired": "Project name is required",
+      "startDateRequired": "Start date is required",
+      "deadlineRequired": "Deadline is required",
+      "deadlineAfterStart": "Deadline must be after the start date",
+      "amount": "Amount",
+      "note": "Note:",
+      "processing": "Processing...",
+      "update": "Update",
+      "add": "Add"
+      
     }
   }
 }

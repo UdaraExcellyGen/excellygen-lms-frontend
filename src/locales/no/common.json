@@ -223,7 +223,24 @@
       "confirmDeleteTechnology": "Bekreft sletting av teknologi",
       "confirmDeleteRole": "Bekreft sletting av rolle",
       "confirmDeleteMessage": "Er du sikker på at du vil slette denne",
-      "actionCannotBeUndone": "Denne handlingen kan ikke angres."
+      "actionCannotBeUndone": "Denne handlingen kan ikke angres.",
+      "editProject": "Rediger prosjekt",
+      "projectName": "Prosjektnavn",
+      "status": "Status", 
+      "startDate": "Startdato",
+      "description": "Beskrivelse",
+      "shortDescription": "Kort beskrivelse",
+      "updateProject": "Oppdater prosjekt",
+      "deadlineNote": "Fristen må settes til en dato etter",
+      "projectNameRequired": "Prosjektnavn er påkrevd",
+      "startDateRequired": "Startdato er påkrevd", 
+      "deadlineRequired": "Frist er påkrevd",
+      "deadlineAfterStart": "Fristen må være etter startdatoen",
+      "amount": "Antall",
+      "note": "Merk:",
+      "processing": "Behandler...",
+      "update": "Oppdater",
+      "add": "Legg til"
     }
   }
 }
