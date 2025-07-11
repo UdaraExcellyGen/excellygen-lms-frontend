@@ -6,7 +6,6 @@ import Header from './components/Header';
 import StatsOverview from './components/StatsOverview'; 
 import SearchBar from './components/SearchBar';
 import PathGrid from './components/PathGrid';
-// FIXED: Removed CourseCategoryDtoBackend from import as it's unused
 import { getCategories as getCategoriesApi } from '../../../api/services/courseCategoryService'; 
 import { PathCard } from './types/PathCard'; 
 import { getOverallLmsStatsForLearner } from '../../../api/services/LearnerDashboard/learnerOverallStatsService'; 
@@ -16,14 +15,13 @@ import {
   Code2, Target, ClipboardList, Settings, Palette, LineChart, Cloud, Shield
 } from 'lucide-react';
 
-// REMOVED: The duplicate local interface CourseCategoryDtoBackend was here. It's now removed.
-
 const CourseCategories: React.FC = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [paths, setPaths] = useState<PathCard[]>([]);
-  const [loading, setLoading] = useState(true);
+  // FIXED: Remove local loading state to prevent conflicts with global loading
   const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false); // Track if data is loaded
   const [overallLmsStats, setOverallLmsStats] = useState<OverallLmsStatsDto>({
     totalCategories: 0,
     totalPublishedCourses: 0,
@@ -32,7 +30,6 @@ const CourseCategories: React.FC = () => {
     totalProjectManagers: 0,
     averageCourseDurationOverall: 'N/A'
   });
-
 
   // Map icon names (strings from backend) to React components (for frontend display)
   const getIconComponent = (iconName: string) => {
@@ -54,36 +51,57 @@ const CourseCategories: React.FC = () => {
   useEffect(() => {
     const fetchCategoriesAndStats = async () => { 
       try {
-        setLoading(true);
-        // Fetch categories and overall LMS stats concurrently
-        const [categoriesData, fetchedOverallStats] = await Promise.all([ 
+        // FIXED: Don't set loading state here, let global loading handle it
+        console.log('Starting to fetch categories and stats...');
+        
+        // OPTIMIZATION: Use Promise.allSettled instead of Promise.all to handle partial failures
+        const [categoriesResult, statsResult] = await Promise.allSettled([
           getCategoriesApi(), 
           getOverallLmsStatsForLearner() 
         ]);
         
-        setOverallLmsStats(fetchedOverallStats); 
+        // Handle categories result
+        if (categoriesResult.status === 'fulfilled') {
+          // Map backend data to frontend PathCard format
+          const pathsWithIcons: PathCard[] = categoriesResult.value.map(category => {
+            return {
+              id: category.id, 
+              title: category.title,
+              icon: getIconComponent(category.icon), 
+              description: category.description,
+              totalCourses: category.totalCourses,
+              activeUsers: category.activeLearnersCount, 
+              avgDuration: category.avgDuration 
+            };
+          });
+          
+          setPaths(pathsWithIcons);
+          console.log('Categories loaded successfully:', pathsWithIcons.length);
+        } else {
+          console.error('Failed to fetch categories:', categoriesResult.reason);
+          throw categoriesResult.reason;
+        }
 
-        // Map backend data to frontend PathCard format
-        const pathsWithIcons: PathCard[] = categoriesData.map(category => {
-          return {
-            id: category.id, 
-            title: category.title,
-            icon: getIconComponent(category.icon), 
-            description: category.description,
-            totalCourses: category.totalCourses,
-            activeUsers: category.activeLearnersCount, 
-            avgDuration: category.avgDuration 
-          };
-        });
+        // Handle stats result
+        if (statsResult.status === 'fulfilled') {
+          setOverallLmsStats(statsResult.value);
+          console.log('Stats loaded successfully');
+        } else {
+          console.error('Failed to fetch stats:', statsResult.reason);
+          // Don't throw error for stats failure, use default values
+          toast.error('Could not load statistics, but categories are available');
+        }
         
-        setPaths(pathsWithIcons);
         setError(null);
       } catch (err: any) {
-        console.error('Failed to fetch categories or overall stats:', err);
-        setError(err.response?.data?.message || 'Failed to load course categories or overall statistics.');
-        toast.error(err.response?.data?.message || 'Failed to load course categories or overall statistics.');
+        console.error('Failed to fetch categories:', err);
+        const errorMessage = err.response?.data?.message || 'Failed to load course categories.';
+        setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
-        setLoading(false);
+        // FIXED: Use isInitialized instead of loading to track completion
+        setIsInitialized(true);
+        console.log('Data fetching completed');
       }
     };
 
@@ -105,21 +123,28 @@ const CourseCategories: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-6">
         <div className="max-w-7xl mx-auto px-8 space-y-8">
           <Header />
-          {/* Pass overall LMS stats to StatsOverview */}
-          <StatsOverview 
-            totalCoursesOverall={overallLmsStats.totalPublishedCourses} 
-            totalActiveLearnersOverall={overallLmsStats.totalActiveLearners} 
-          />
-          <SearchBar 
-            searchQuery={searchQuery} 
-            setSearchQuery={setSearchQuery} 
-          />
           
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
-            </div>
-          ) : error ? (
+          {/* FIXED: Only show content after initialization and no error */}
+          {isInitialized && !error && (
+            <>
+              {/* Pass overall LMS stats to StatsOverview */}
+              <StatsOverview 
+                totalCoursesOverall={overallLmsStats.totalPublishedCourses} 
+                totalActiveLearnersOverall={overallLmsStats.totalActiveLearners} 
+              />
+              <SearchBar 
+                searchQuery={searchQuery} 
+                setSearchQuery={setSearchQuery} 
+              />
+              <PathGrid 
+                paths={filteredPaths} 
+                onExplore={(pathId) => handleExplore(pathId)} 
+              />
+            </>
+          )}
+          
+          {/* FIXED: Show error state only after initialization */}
+          {isInitialized && error && (
             <div className="text-white text-center py-10">
               <p className="text-xl">{error}</p>
               <button 
@@ -129,11 +154,13 @@ const CourseCategories: React.FC = () => {
                 Retry
               </button>
             </div>
-          ) : (
-            <PathGrid 
-              paths={filteredPaths} 
-              onExplore={(pathId) => handleExplore(pathId)} 
-            />
+          )}
+          
+          {/* FIXED: Show minimal loading state only when not initialized */}
+          {!isInitialized && !error && (
+            <div className="text-white text-center py-10">
+              <p className="text-lg">Loading course categories...</p>
+            </div>
           )}
         </div>
       </div>
