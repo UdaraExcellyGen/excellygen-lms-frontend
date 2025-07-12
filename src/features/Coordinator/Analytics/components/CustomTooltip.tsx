@@ -6,7 +6,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload }) => {
     return (
       <div className="bg-white p-2 rounded shadow-lg border border-gray-100">
         <p className="text-sm font-semibold">{payload[0].name || payload[0].payload.course}</p>
-        <p className="text-sm text-[#52007C]">Count: {payload[0].value}</p>
+        <p className="text-sm text-[#52007C]">Learners: {payload[0].value}</p>
       </div>
     );
   }

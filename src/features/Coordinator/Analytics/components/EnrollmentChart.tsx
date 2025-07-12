@@ -21,7 +21,6 @@ const EnrollmentChart: React.FC<EnrollmentChartProps> = ({ data }) => (
         >
           <XAxis 
             dataKey="course" 
-            //angle={-180}
             textAnchor="middle"
             height={80}
             interval={0}
@@ -34,13 +33,22 @@ const EnrollmentChart: React.FC<EnrollmentChartProps> = ({ data }) => (
             }}
           />
           <YAxis 
-            label={{ 
-              value: 'Number of Learners', 
-              angle: -90, 
-              position: 'insideLeft',
-              style: { textAnchor: 'middle', fontSize: '14px', fontWeight: 'bold' }
-            }}
-          />
+              allowDecimals={false}
+              domain={[0, 'dataMax']}
+              tickCount={5}
+              tick={{ fontSize: 12, fill: "#1B0A3F" }}
+              tickMargin={10}
+              tickFormatter={(value) => Math.floor(value).toString()}
+
+              axisLine={false}
+              label={{ 
+                value: "No of Learners", 
+                position: "insideLeft",
+                angle: -90,
+                style: { textAnchor: 'middle', fill: "#1B0A3F" },
+                offset: 0
+              }}
+            />
           <Tooltip content={<CustomTooltip />} />
           <Bar 
             dataKey="count" 
