@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom'; // Removed unused Link import
+import { useNavigate } from 'react-router-dom';
 import { Book, Clock, BarChart2 } from 'lucide-react';
 import { 
   BarChart, 
@@ -17,12 +17,20 @@ import {
   LearningActivityChartProps,
 } from '../types/types';
 
-export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses }) => {
+// A simple skeleton loader for the courses
+const CourseSkeleton = () => (
+  <div className="bg-[#F6E6FF] rounded-xl p-4 animate-pulse">
+    <div className="h-5 bg-gray-300 rounded w-3/4 mb-4"></div>
+    <div className="relative mt-6">
+      <div className="h-2 bg-gray-300 rounded-full"></div>
+    </div>
+  </div>
+);
+
+export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses, isLoading }) => {
   const navigate = useNavigate();
 
-  // Function to handle course click and navigation
   const handleCourseClick = (courseId: number) => {
-    // Navigate to the course overview page using the course's actual ID
     navigate(`/learner/course-view/${courseId}`);
   };
 
@@ -36,42 +44,51 @@ export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses }) => {
             </div>
             Active Courses
           </CardTitle>
-          {/* The "View All" link has been removed */}
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {courses.map(course => (
-            <div 
-              key={course.id} 
-              className="bg-[#F6E6FF] rounded-xl p-4 hover:bg-[#F0D6FF] transition-colors cursor-pointer shadow-sm hover:shadow"
-              onClick={() => handleCourseClick(course.id)} // Simplified onClick handler
-              role="button"
-              tabIndex={0}
-              aria-label={`View ${course.title} course`}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleCourseClick(course.id); // Simplified onKeyDown handler
-                }
-              }}
-            >
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="font-medium text-[#1B0A3F]">{course.title}</h3>
-              </div>
-              <div className="relative">
-                <div className="h-2 bg-white rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-[#52007C] to-[#BF4BF6] transition-all duration-300"
-                    style={{ width: `${course.progress}%` }}
-                  />
+          {isLoading ? (
+            <>
+              <CourseSkeleton />
+              <CourseSkeleton />
+              <CourseSkeleton />
+            </>
+          ) : courses.length > 0 ? (
+            courses.map(course => (
+              <div 
+                key={course.id} 
+                className="bg-[#F6E6FF] rounded-xl p-4 hover:bg-[#F0D6FF] transition-colors cursor-pointer shadow-sm hover:shadow"
+                onClick={() => handleCourseClick(course.id)}
+                role="button"
+                tabIndex={0}
+                aria-label={`View ${course.title} course`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleCourseClick(course.id);
+                  }
+                }}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-medium text-[#1B0A3F]">{course.title}</h3>
                 </div>
-                <span className="absolute right-0 -top-6 text-sm font-medium text-[#52007C]">
-                  {course.progress}%
-                </span>
+                <div className="relative mt-6">
+                  <div className="h-2 bg-white rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#52007C] to-[#BF4BF6] transition-all duration-300"
+                      style={{ width: `${course.progress}%` }}
+                    />
+                  </div>
+                  <span className="absolute right-0 -top-6 text-sm font-medium text-[#52007C]">
+                    {course.progress}%
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-center text-gray-500 py-4">No active courses found.</p>
+          )}
         </div>
       </CardContent>
     </Card>

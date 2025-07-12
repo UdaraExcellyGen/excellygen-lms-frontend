@@ -11,7 +11,6 @@ import {
 } from './components/Sections';
 import { activities, weeklyTimeData } from './data/mockData';
 import LearnerHeaderImage from '../../../assets/LearnerHeader.svg';
-// Import getLearnerCourseDetails to fetch accurate progress
 import { getEnrolledCoursesForLearner, getLearnerCourseDetails } from '../../../api/services/Course/learnerCourseService';
 import { getRecentlyAccessedCourseIds } from '../../../api/services/Course/courseAccessService';
 
@@ -31,17 +30,17 @@ const LearnerDashboard: React.FC = () => {
     const fetchActiveCourses = async () => {
       setIsLoadingCourses(true);
       try {
-        const allEnrolledCourses = await getEnrolledCoursesForLearner(controller.signal);
+        // FIX: Call the function without arguments to match the expected signature
+        const allEnrolledCourses = await getEnrolledCoursesForLearner();
         
         if (!allEnrolledCourses || allEnrolledCourses.length === 0) {
           setActiveCourses([]);
+          setIsLoadingCourses(false); // Stop loading if no courses
           return;
         }
 
-        // 1. Get the recently accessed course IDs, sorted from most to least recent
         const recentIds = getRecentlyAccessedCourseIds();
 
-        // 2. Sort all enrolled courses to find the top 3 most recent
         const sortedCourses = [...allEnrolledCourses].sort((a, b) => {
           const indexA = recentIds.indexOf(a.id);
           const indexB = recentIds.indexOf(b.id);
@@ -52,15 +51,12 @@ const LearnerDashboard: React.FC = () => {
         
         const topThreeCourses = sortedCourses.slice(0, 3);
 
-        // 3. Fetch detailed data for ONLY the top 3 courses to get accurate progress
-        // This ensures the progress is always up-to-date on the dashboard.
         const detailedCoursePromises = topThreeCourses.map(course =>
-          getLearnerCourseDetails(course.id) // This function is cached, so it's efficient
+          getLearnerCourseDetails(course.id)
         );
 
         const detailedCourses = await Promise.all(detailedCoursePromises);
 
-        // 4. Format the final list using the fresh, detailed data
         const formattedActiveCourses: Course[] = detailedCourses.map(course => ({
           id: course.id,
           title: course.title,
@@ -248,7 +244,8 @@ const LearnerDashboard: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <ActiveCourses courses={activeCourses} />
+            {/* FIX: Pass the isLoadingCourses prop */}
+            <ActiveCourses courses={activeCourses} isLoading={isLoadingCourses} />
             <RecentActivities activities={activities} />
             <LearningActivityChart data={weeklyTimeData} />
           </div>
