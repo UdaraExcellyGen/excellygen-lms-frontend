@@ -1,5 +1,3 @@
-// src/features/Learner/LearnerCv/Cv.tsx
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -11,7 +9,8 @@ import ProjectsSection from './Components/ProjectsSection';
 import CertificationsSection from './Components/CertificationsSection';
 import CVFooter from './Components/CVFooter';
 
-import { getCvData, CvDataResponse } from '../../../api/cvApi';
+// FIXED: Removed unused CvDataResponse
+import { getCvData } from '../../../api/cvApi'; 
 import { UserData, ProfileProject, ProfileCertification } from './types/types';
 import { learnerProjectApi } from '../../../api/services/learnerProjectService';
 import { getUserCertificates } from '../../../api/services/Course/certificateService';
@@ -24,7 +23,8 @@ const CV: React.FC = () => {
     const cvRef = useRef<HTMLDivElement>(null);
 
     const location = useLocation();
-    const navigate = useNavigate();
+    // FIXED: navigate is now used in the error block
+    const navigate = useNavigate(); 
 
     useEffect(() => {
         // Data fetching logic remains the same
@@ -132,9 +132,34 @@ const CV: React.FC = () => {
         }
     };
 
-    if (loading) { /* ... loading UI ... */ }
-    if (error) { /* ... error UI ... */ }
-    if (!cvData) { return null; }
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-[#f5f3f9] p-6 flex items-center justify-center">
+                <div className="text-gray-600 text-xl animate-pulse">Loading CV...</div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-[#f5f3f9] p-6 flex flex-col items-center justify-center">
+                <div className="text-center bg-white p-8 rounded-lg shadow-xl">
+                    <h2 className="text-2xl font-bold text-red-600 mb-4">Error Loading CV</h2>
+                    <p className="text-red-500 mb-6">{error}</p>
+                    <button
+                        onClick={() => navigate(-1)} // FIXED: Using navigate here
+                        className="px-6 py-2 bg-[#2a135b] hover:bg-[#4F2B9A] text-white rounded-lg transition-colors"
+                    >
+                        Go Back
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!cvData) {
+        return null;
+    }
 
     return (
         <div className="min-h-screen bg-[#f5f3f9] p-4">
@@ -143,7 +168,6 @@ const CV: React.FC = () => {
                 <div className="absolute top-4 right-4 z-10">
                     <button
                         onClick={handleDownloadCV}
-                        // UPDATED: Button colors
                         className="download-button bg-[#2a135b] hover:bg-[#4F2B9A] px-3 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200 shadow-lg text-white text-xs"
                     >
                         <Download size={14} />
@@ -153,7 +177,6 @@ const CV: React.FC = () => {
 
                 <div className="flex" style={{ minHeight: '1123px' }}>
                     
-                    {/* UPDATED: Sidebar background color */}
                     <div className="w-1/3 bg-[#2a135b] text-white p-6">
                         <div className="mb-6">
                             <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-white shadow-lg mx-auto">
@@ -183,7 +206,6 @@ const CV: React.FC = () => {
                         </div>
 
                         <div className="mb-6">
-                            {/* UPDATED: Section header color */}
                             <h3 className="text-sm font-bold mb-3 bg-[#4F2B9A] text-white p-2 text-center">Contact</h3>
                             <div className="space-y-3">
                                 <div>

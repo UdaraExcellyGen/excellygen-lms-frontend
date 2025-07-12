@@ -36,34 +36,27 @@ export const sampleUserData: UserData = {
       status: "Completed"
     }
   ],
-  courses: [
+  // FIXED: Renamed 'courses' to 'certifications' and updated the data structure
+  certifications: [
     {
       title: "Advanced React Development",
-      provider: "Excelly Gen Academy",
+      issuer: "ExcellyGen Academy",
       completionDate: "2024-03-15",
-      duration: "8 weeks",
-      certificate: true
     },
     {
       title: "AI & Machine Learning Fundamentals",
-      provider: "Excelly Gen Academy",
+      issuer: "ExcellyGen Academy",
       completionDate: "2024-02-20",
-      duration: "12 weeks",
-      certificate: true
     },
     {
       title: "Cloud Architecture with AWS",
-      provider: "Excelly Gen Academy",
+      issuer: "ExcellyGen Academy",
       completionDate: "2024-01-10",
-      duration: "6 weeks",
-      certificate: true
     },
     {
       title: "Data Science with Python",
-      provider: "Excelly Gen Academy",
+      issuer: "ExcellyGen Academy",
       completionDate: "2023-12-05",
-      duration: "10 weeks",
-      certificate: true
     }
   ],
   skills: [
