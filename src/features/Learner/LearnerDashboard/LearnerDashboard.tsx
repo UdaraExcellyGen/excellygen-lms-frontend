@@ -11,7 +11,8 @@ import {
 } from './components/Sections';
 import { activities, weeklyTimeData } from './data/mockData';
 import LearnerHeaderImage from '../../../assets/LearnerHeader.svg';
-import { getEnrolledCoursesForLearner } from '../../../api/services/Course/learnerCourseService';
+// Import getLearnerCourseDetails to fetch accurate progress
+import { getEnrolledCoursesForLearner, getLearnerCourseDetails } from '../../../api/services/Course/learnerCourseService';
 import { getRecentlyAccessedCourseIds } from '../../../api/services/Course/courseAccessService';
 
 const LearnerDashboard: React.FC = () => {
@@ -37,23 +38,30 @@ const LearnerDashboard: React.FC = () => {
           return;
         }
 
-        // Get the recently accessed course IDs, sorted from most to least recent
+        // 1. Get the recently accessed course IDs, sorted from most to least recent
         const recentIds = getRecentlyAccessedCourseIds();
 
-        // Sort the enrolled courses based on the recent access list
+        // 2. Sort all enrolled courses to find the top 3 most recent
         const sortedCourses = [...allEnrolledCourses].sort((a, b) => {
           const indexA = recentIds.indexOf(a.id);
           const indexB = recentIds.indexOf(b.id);
-
-          // If a course is not in the recent list, it should go to the end
           const sortA = indexA === -1 ? Infinity : indexA;
           const sortB = indexB === -1 ? Infinity : indexB;
-
           return sortA - sortB;
         });
         
-        // Take the top 3 and format them for the component
-        const formattedActiveCourses: Course[] = sortedCourses.slice(0, 3).map(course => ({
+        const topThreeCourses = sortedCourses.slice(0, 3);
+
+        // 3. Fetch detailed data for ONLY the top 3 courses to get accurate progress
+        // This ensures the progress is always up-to-date on the dashboard.
+        const detailedCoursePromises = topThreeCourses.map(course =>
+          getLearnerCourseDetails(course.id) // This function is cached, so it's efficient
+        );
+
+        const detailedCourses = await Promise.all(detailedCoursePromises);
+
+        // 4. Format the final list using the fresh, detailed data
+        const formattedActiveCourses: Course[] = detailedCourses.map(course => ({
           id: course.id,
           title: course.title,
           progress: course.progressPercentage,
