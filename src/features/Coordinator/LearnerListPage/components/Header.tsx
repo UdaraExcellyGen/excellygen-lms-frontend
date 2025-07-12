@@ -13,7 +13,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ selectedCourseTitle, courses, onCourseFilterChange,handleNavigate, }) => {
     return (
-        <header className="bg-white shadow-md py-6 rounded-2xl mt-4">
+        <header className="bg-white shadow-md py-6 rounded-xl mt-4">
             <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between">
                 <h1 className="text-2xl font-display font-bold text-indigo mb-4 md:mb-0 flex items-center"><span className="mr-2"></span>
                 <button
