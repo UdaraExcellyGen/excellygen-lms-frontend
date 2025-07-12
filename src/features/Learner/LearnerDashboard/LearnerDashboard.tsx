@@ -12,6 +12,7 @@ import {
 import { activities, weeklyTimeData } from './data/mockData';
 import LearnerHeaderImage from '../../../assets/LearnerHeader.svg';
 import { getEnrolledCoursesForLearner } from '../../../api/services/Course/learnerCourseService';
+import { getRecentlyAccessedCourseIds } from '../../../api/services/Course/courseAccessService';
 
 const LearnerDashboard: React.FC = () => {
   const { user, currentRole, selectRole, navigateToRoleSelection } = useAuth();
@@ -30,20 +31,34 @@ const LearnerDashboard: React.FC = () => {
       setIsLoadingCourses(true);
       try {
         const allEnrolledCourses = await getEnrolledCoursesForLearner(controller.signal);
-
+        
         if (!allEnrolledCourses || allEnrolledCourses.length === 0) {
           setActiveCourses([]);
           return;
         }
 
-        const formattedActiveCourses: Course[] = allEnrolledCourses
-          .slice(0, 3)
-          .map(course => ({
-            id: course.id,
-            title: course.title,
-            progress: course.progressPercentage,
-          }));
+        // Get the recently accessed course IDs, sorted from most to least recent
+        const recentIds = getRecentlyAccessedCourseIds();
+
+        // Sort the enrolled courses based on the recent access list
+        const sortedCourses = [...allEnrolledCourses].sort((a, b) => {
+          const indexA = recentIds.indexOf(a.id);
+          const indexB = recentIds.indexOf(b.id);
+
+          // If a course is not in the recent list, it should go to the end
+          const sortA = indexA === -1 ? Infinity : indexA;
+          const sortB = indexB === -1 ? Infinity : indexB;
+
+          return sortA - sortB;
+        });
         
+        // Take the top 3 and format them for the component
+        const formattedActiveCourses: Course[] = sortedCourses.slice(0, 3).map(course => ({
+          id: course.id,
+          title: course.title,
+          progress: course.progressPercentage,
+        }));
+
         setActiveCourses(formattedActiveCourses);
       } catch (error: any) {
         if (error.name === 'CanceledError') {
