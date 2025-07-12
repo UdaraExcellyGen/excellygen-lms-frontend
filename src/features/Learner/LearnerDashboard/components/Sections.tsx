@@ -1,8 +1,7 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Book, Clock, BarChart2 } from 'lucide-react'; // Removed Trophy
+import { useNavigate } from 'react-router-dom'; // Removed unused Link import
+import { Book, Clock, BarChart2 } from 'lucide-react';
 import { 
-  // Removed LineChart, Line
   BarChart, 
   Bar, 
   XAxis, 
@@ -16,28 +15,15 @@ import {
   ActiveCoursesProps, 
   RecentActivitiesProps, 
   LearningActivityChartProps,
-  // Removed RecentAchievementsProps
 } from '../types/types';
 
 export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses }) => {
   const navigate = useNavigate();
 
   // Function to handle course click and navigation
-  const handleCourseClick = (courseId: number) => { // Added type for courseId
-    // Navigate to the course overview page
-    navigate(`/course/${courseId}`);
-  };
-
-  // Function to determine the course ID based on course title
-  const getCourseId = (title: string): number => { // Added type for title and return type
-    // Map course titles to IDs
-    const courseIdMap: Record<string, number> = { // Added explicit type for courseIdMap
-      "Web Development Fundamentals": 4,
-      "Machine Learning Fundamentals": 2,
-      "Cloud Architecture": 3
-    };
-    
-    return courseIdMap[title] || 1; // Default to 1 if title not found
+  const handleCourseClick = (courseId: number) => {
+    // Navigate to the course overview page using the course's actual ID
+    navigate(`/learner/course-view/${courseId}`);
   };
 
   return (
@@ -50,9 +36,7 @@ export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses }) => {
             </div>
             Active Courses
           </CardTitle>
-          <Link to="/active-courses" className="text-sm text-[#52007C] hover:text-[#BF4BF6] transition-colors">
-            View All
-          </Link>
+          {/* The "View All" link has been removed */}
         </div>
       </CardHeader>
       <CardContent>
@@ -61,14 +45,14 @@ export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses }) => {
             <div 
               key={course.id} 
               className="bg-[#F6E6FF] rounded-xl p-4 hover:bg-[#F0D6FF] transition-colors cursor-pointer shadow-sm hover:shadow"
-              onClick={() => handleCourseClick(getCourseId(course.title))}
+              onClick={() => handleCourseClick(course.id)} // Simplified onClick handler
               role="button"
               tabIndex={0}
               aria-label={`View ${course.title} course`}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  handleCourseClick(getCourseId(course.title));
+                  handleCourseClick(course.id); // Simplified onKeyDown handler
                 }
               }}
             >
