@@ -1,5 +1,6 @@
 // ProjectCruds/components/RoleForm.tsx
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Save } from 'lucide-react';
 
 interface RoleFormProps {
@@ -27,6 +28,8 @@ const RoleForm: React.FC<RoleFormProps> = ({
     onSubmit,
     onInputChange
 }) => {
+    const { t } = useTranslation();
+    
     if (!isOpen) return null;
 
     return (
@@ -34,7 +37,7 @@ const RoleForm: React.FC<RoleFormProps> = ({
             <div className="bg-white rounded-2xl p-6 w-full max-w-md animate-modalEnter">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl text-russian-violet font-['Unbounded']">
-                        {isEditing ? 'Edit Role' : 'Add New Role'}
+                        {isEditing ? 'Edit Role' : t('projectManager.projectCruds.addRole')}
                     </h2>
                     <button
                         type="button"
@@ -55,7 +58,7 @@ const RoleForm: React.FC<RoleFormProps> = ({
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-russian-violet mb-1">
-                            Role Name<span className="text-red-500">*</span>
+                            {t('projectManager.projectCruds.roleName')}<span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
@@ -78,7 +81,7 @@ const RoleForm: React.FC<RoleFormProps> = ({
                         onClick={onClose}
                         className="px-4 py-2 text-indigo hover:text-[#BF4BF6] transition-all duration-300"
                     >
-                        Cancel
+                        {t('projectManager.dialogs.cancel')}
                     </button>
                     <button
                         type="button"

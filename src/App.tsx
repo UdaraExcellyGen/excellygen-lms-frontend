@@ -3,6 +3,8 @@
 import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { I18nextProvider } from 'react-i18next'; // ADDED
+import i18n from './i18n'; // ADDED
 
 // Auth Provider
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -126,19 +128,21 @@ const AuthCleanup: React.FC = () => {
 
 function AppWrapper() {
   return (
-    <BrowserRouter>
-      <LoadingProvider>
-        <AuthProvider>
+    <I18nextProvider i18n={i18n}> {/* CRITICAL: This wraps the entire app */}
+      <BrowserRouter>
+        <LoadingProvider>
+          <AuthProvider>
           <NotificationProvider>
-            <ApiLoadingInterceptor />
+              <ApiLoadingInterceptor />
             <AuthCleanup />
-            <BookLoader />
-            <App />
-            <Toaster position="top-right" />
+              <BookLoader />
+              <App />
+              <Toaster position="top-right" />
           </NotificationProvider>
-        </AuthProvider>
-      </LoadingProvider>
-    </BrowserRouter>
+          </AuthProvider>
+        </LoadingProvider>
+      </BrowserRouter>
+    </I18nextProvider>
   );
 }
 

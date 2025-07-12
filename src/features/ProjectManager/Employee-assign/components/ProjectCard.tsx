@@ -1,6 +1,7 @@
 // Path: src/features/ProjectManager/Employee-assign/components/ProjectCard.tsx
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FaProjectDiagram, FaChevronUp, FaChevronDown, FaUserCircle, FaTrashAlt, FaLaptopCode, FaEdit } from 'react-icons/fa';
 import { Project, Employee } from '../types/types';
 
@@ -32,6 +33,8 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   triggerRemoveConfirmation,
   triggerEditAssignment
 }) => {
+  const { t } = useTranslation();
+  
   const getRoleCount = (roleName: string) => {
     return project.employeeAssignments.filter(assignment => assignment.role === roleName).length;
   };
@@ -46,7 +49,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
     >
       {isSelected && (
         <div className="bg-[#BF4BF6] p-2 text-white text-xs font-bold text-center">
-          Selected Project
+          {t('projectManager.cards.selectedProject')}
         </div>
       )}
       <div className={isSelected ? 'p-6' : ''}>
@@ -77,7 +80,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                             : 'bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-300'
                     }`}
                 >
-                  {project.status === "Active" ? "Active" : "Completed"}
+                  {project.status === "Active" ? t('projectManager.employeeAssign.active') : t('projectManager.employeeAssign.completed')}
                 </span>
                 <span>•</span>
                 <span>{new Date(project.deadline).toLocaleDateString()}</span>
@@ -107,7 +110,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 rounded-lg bg-[#F6E6FF]">
                 <div className="text-sm text-[#52007C] dark:text-[#D68BF9] mb-2">
-                  Deadline
+                  {t('projectManager.cards.deadline')}
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-semibold text-[#52007C] dark:text-white">
@@ -118,7 +121,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
 
               <div className="p-4 rounded-lg bg-[#F6E6FF]">
                 <h5 className="text-sm font-semibold text-[#52007C] dark:text-[#D68BF9] mb-1">
-                  Required Technologies
+                  {t('projectManager.cards.requiredTechnologies')}
                 </h5>
                 <div className="flex flex-wrap gap-2">
                   {project.requiredSkills.map((skill) => (
@@ -136,7 +139,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
 
             <div>
               <h5 className="text-sm font-semibold text-[#52007C] dark:text-[#D68BF9] mb-3">
-                Required Roles
+                {t('projectManager.cards.requiredRoles')}
               </h5>
               <div className="space-y-2 p-4 rounded-lg bg-[#F6E6FF]">
                 {project.requiredRoles.map((roleItem, index) => {
@@ -148,7 +151,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                         {roleItem.roleName}:
                       </span>
                       <span className="font-medium text-[#52007C] dark:text-white">
-                        Needed: {remainingCount} (Total: {roleItem.count})
+                        {t('projectManager.cards.needed')} {remainingCount} ({t('projectManager.cards.total')} {roleItem.count})
                       </span>
                     </div>
                   );
@@ -158,13 +161,13 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
 
             <div>
               <h5 className="text-sm font-semibold text-[#52007C] dark:text-[#D68BF9] mb-3">
-                Team Members ({project.employeeAssignments.length})
+                {t('projectManager.cards.teamMembers')} ({project.employeeAssignments.length})
               </h5>
               
               {project.employeeAssignments.length > 0 && (
                 <div className="mb-4 p-4 rounded-lg bg-[#F6E6FF]">
                   <h6 className="text-sm font-semibold text-[#52007C] dark:text-[#D68BF9] mb-2">
-                    Workload Distribution
+                    {t('projectManager.dialogs.workloadDistribution')}
                   </h6>
                   <div className="space-y-3">
                     {/* Group assignments by employee */}
@@ -187,7 +190,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                         <div key={`workload-${employeeId}`} className="space-y-1">
                           <div className="flex justify-between text-xs">
                             <span className="text-[#52007C] dark:text-white font-medium">{employee.name}</span>
-                            <span className="text-[#7A00B8] dark:text-[#D68BF9]">{totalAllocation}% total</span>
+                            <span className="text-[#7A00B8] dark:text-[#D68BF9]">{totalAllocation}% {t('projectManager.cards.total')}</span>
                           </div>
                           <div className="w-full h-3 bg-white rounded-full overflow-hidden">
                             <div
@@ -227,9 +230,9 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                             {assignment.employeeName}
                           </span>
                           <p className="text-xs text-[#7A00B8] dark:text-[#D68BF9]">
-                            {assignment.role} • {assignment.workloadPercentage}% allocation
+                            {assignment.role} • {assignment.workloadPercentage}% {t('projectManager.cards.allocation')}
                           </p>
-                          <span className="text-xs text-[#7A00B8] dark:text-[#D68BF9]">(ID: {employee.id})</span>
+                          <span className="text-xs text-[#7A00B8] dark:text-[#D68BF9]">({t('projectManager.employeeAssign.id')}: {employee.id})</span>
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -247,10 +250,10 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                           }}
                           className="px-2 py-1 hover:bg-[#F6E6FF] dark:hover:bg-[#1B0A3F]
                             rounded transition-colors text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-500"
-                          title="Edit Assignment"
+                          title={t('projectManager.cards.edit')}
                         >
                           <FaEdit className="w-4 h-4" />
-                          <span className="sr-only">Edit</span>
+                          <span className="sr-only">{t('projectManager.cards.edit')}</span>
                         </button>
                         <button
                           onClick={(e) => {
@@ -259,10 +262,10 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                           }}
                           className="px-2 py-1 hover:bg-[#F6E6FF] dark:hover:bg-[#1B0A3F]
                             rounded transition-colors text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-500"
-                          title="Remove Assignment"
+                          title={t('projectManager.cards.remove')}
                         >
                           <FaTrashAlt className="w-4 h-4" />
-                          <span className="sr-only">Remove</span>
+                          <span className="sr-only">{t('projectManager.cards.remove')}</span>
                         </button>
                       </div>
                     </div>

@@ -25,8 +25,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   projectRoles,
   assignmentError
 }) => {
-  if (!isOpen) return null;
-
+  // ✅ ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY CONDITIONAL LOGIC
   const selectedEmployeeData = selectedEmployees.map(empId => employees.find(emp => emp.id === empId)).filter(Boolean) as Employee[];
   const [employeeAssignments, setEmployeeAssignments] = useState<Record<string, { role: string, workloadPercentage: number }>>({});
   const [isConfirmDisabled, setIsConfirmDisabled] = useState(true);
@@ -52,6 +51,9 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
       );
       setIsConfirmDisabled(!allRolesSelected);
   }, [employeeAssignments, selectedEmployees]);
+
+  // ✅ NOW conditional logic can happen AFTER all hooks
+  if (!isOpen) return null;
 
   const handleRoleChange = (employeeId: string, role: string) => {
       setEmployeeAssignments(prev => ({
