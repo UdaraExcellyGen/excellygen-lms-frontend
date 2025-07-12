@@ -246,7 +246,10 @@
       "note": "Merk:",
       "processing": "Behandler...",
       "update": "Oppdater",
-      "add": "Legg til"
+      "add": "Legg til",
+      "allStatuses": "Alle statuser",
+      "activeStatuses": "Aktive statuser",
+      "completedStatuses": "Fullførte statuser"
     }
   }
 }

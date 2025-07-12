@@ -1180,7 +1180,14 @@ const ProjectCRUD: React.FC = () => {
                                     className="w-full sm:w-auto px-4 py-2 bg-white rounded-lg border border-gray-200 text-[#1B0A3F] hover:bg-pale-purple transition-all duration-300 focus-ring flex items-center justify-between"
                                     onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
                                 >
-                                    <span>{projectStatusFilter} Statuses</span>
+                                    <span>
+                                        {projectStatusFilter === 'All' 
+                                            ? t('projectManager.projectCruds.allStatuses')
+                                            : projectStatusFilter === 'Active' 
+                                                ? t('projectManager.projectCruds.activeStatuses') 
+                                                : t('projectManager.projectCruds.completedStatuses')
+                                        }
+                                    </span>
                                     <ChevronDown size={16} className="ml-2" />
                                 </button>
                                 {isStatusDropdownOpen && (
@@ -1207,7 +1214,12 @@ const ProjectCRUD: React.FC = () => {
                                                     }}
                                                     className={`w-full px-4 py-2 text-left text-sm transition-all duration-200 ${projectStatusFilter === status ? 'bg-gradient-primary text-white' : 'hover:bg-pale-purple text-[#1B0A3F]'}`}
                                                 >
-                                                    {status} Statuses
+                                                    {status === 'All' 
+                                                        ? t('projectManager.projectCruds.allStatuses')
+                                                        : status === 'Active' 
+                                                            ? t('projectManager.projectCruds.activeStatuses')
+                                                            : t('projectManager.projectCruds.completedStatuses')
+                                                    }
                                                 </button>
                                             ))}
                                         </div>
@@ -1306,7 +1318,12 @@ const ProjectCRUD: React.FC = () => {
                                                 <td className="px-2 sm:px-4 py-3 text-indigo font-medium text-sm">{project.name}</td>
                                                 <td className="px-2 sm:px-4 py-3">
                                                     <span className={`px-2 py-1 rounded-full text-xs ${project.status === 'Active' ? 'bg-green-100 text-green-600 badge-pulse' : project.status === 'Completed' ? 'bg-gray-100 text-gray-600' : 'bg-gray-100 text-gray-600'}`}>
-                                                        {project.status}
+                                                        {project.status === 'Active' 
+                                                            ? t('projectManager.employeeAssign.active') 
+                                                            : project.status === 'Completed' 
+                                                                ? t('projectManager.employeeAssign.completed')
+                                                                : project.status
+                                                        }
                                                     </span>
                                                 </td>
                                                 <td className="px-2 sm:px-4 py-3 text-indigo text-sm">

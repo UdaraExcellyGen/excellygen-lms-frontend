@@ -1,44 +1,31 @@
-export interface Notification {
+// Path: src/features/Learner/LearnerNotifications/types/learnerNotification.ts
+
+export interface LearnerNotification {
   id: number;
-  type: 'course' | 'achievement' | 'discussion' | 'Project';
+  userId: string;
   title: string;
   message: string;
-  time: string;
+  type: 'project_assignment' | 'project_update' | 'project_removal' | 'general';
   isRead: boolean;
-  projectDetails?: {
-    name: string;
-    technologies: string[];
-    assignedEmployees: string[];
-  };
-  accepted?: boolean;
+  createdAt: string;
+  projectId?: string;
+  projectName?: string;
+  assignerName?: string;
+  role?: string;
+  workloadPercentage?: number;
 }
 
-export interface NotificationItemProps {
-  notification: Notification;
-  onMarkRead: (id: number) => void;
-  onRemove: (id: number) => void;
-}
-
-export interface NotificationGroupProps {
+export interface NotificationGroup {
   title: string;
-  notifications: Notification[];
-  onMarkRead: (id: number) => void;
-  onRemove: (id: number) => void;
+  notifications: LearnerNotification[];
+  icon: string;
+  color: string;
 }
 
-export interface NotificationsState {
-  today: Notification[];
-  yesterday: Notification[];
-  earlier: Notification[];
-}
-
-export interface ProjectDetailsPopupProps {
-  project: {
-    name: string;
-    technologies: string[];
-    assignedEmployees: string[];
-  };
-  isAccepted: boolean;
-  onClose: () => void;
-  onAccept: () => void;
+export interface NotificationStats {
+  total: number;
+  unread: number;
+  projectAssignments: number;
+  projectUpdates: number;
+  projectRemovals: number;
 }

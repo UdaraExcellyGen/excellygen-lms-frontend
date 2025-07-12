@@ -19,26 +19,14 @@ const LoginForm: React.FC<LoginFormProps> = ({ onClose, onForgotPassword }) => {
     setError(null);
     
     try {
-      // Clear any existing userId to prevent using cached values
-      localStorage.removeItem('userId');
-      
+      // OPTIMIZATION: Don't clear userId here - let AuthContext handle it
       console.log('Attempting login with email:', email);
+      
+      // OPTIMIZATION: Single login call
       await login(email, password);
       
-      // At this point, login was successful
-      // The auth context should have stored the user ID
-      const userJson = localStorage.getItem('user');
-      if (userJson) {
-        try {
-          const user = JSON.parse(userJson);
-          if (user && user.id) {
-            console.log('Login successful, ensured userId is stored:', user.id);
-            localStorage.setItem('userId', user.id);
-          }
-        } catch (e) {
-          console.error('Error parsing user after login:', e);
-        }
-      }
+      // OPTIMIZATION: Don't manually manage localStorage here
+      // AuthContext handles all storage operations
       
       onClose(); // Close the modal on successful login
     } catch (error) {

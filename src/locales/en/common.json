@@ -230,7 +230,7 @@
       "confirmDeleteRole": "Confirm Delete Role",
       "confirmDeleteMessage": "Are you sure you want to delete this",
       "actionCannotBeUndone": "This action cannot be undone.",
-         "editProject": "Edit Project",
+      "editProject": "Edit Project",
       "projectName": "Project Name", 
       "status": "Status",
       "startDate": "Start Date",
@@ -246,8 +246,10 @@
       "note": "Note:",
       "processing": "Processing...",
       "update": "Update",
-      "add": "Add"
-      
+      "add": "Add",
+      "allStatuses": "All Statuses",
+      "activeStatuses": "Active Statuses", 
+      "completedStatuses": "Completed Statuses"
     }
   }
 }

@@ -1,6 +1,6 @@
 // Path: src/features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard.tsx
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -39,6 +39,11 @@ const ProjectManagerDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // Refs to prevent duplicate API calls
+  const isFetchingRef = useRef(false);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const mountedRef = useRef(true);
+  
   // Use memoized values for better performance (matching Admin)
   const quickActions: QuickAction[] = useMemo(() => [
     {
@@ -67,66 +72,93 @@ const ProjectManagerDashboard: React.FC = () => {
     }
   ], [navigate, t]);
 
+  // Memoized fetch function to prevent duplicate calls
+  const fetchDashboardData = useCallback(async (isBackground = false) => {
+    // Prevent duplicate calls
+    if (isFetchingRef.current) {
+      console.log('Dashboard fetch already in progress, skipping...');
+      return;
+    }
+
+    try {
+      isFetchingRef.current = true;
+      
+      if (!isBackground) {
+        setLoading(true);
+        setError(null);
+      }
+      
+      console.log(`Fetching Project Manager dashboard data... (background: ${isBackground})`);
+      
+      // Fetch fresh data (matching Admin pattern)
+      const [dashboardStats, notificationsData] = await Promise.all([
+        getDashboardStats(),
+        getDashboardNotifications()
+      ]);
+      
+      // Only update state if component is still mounted
+      if (mountedRef.current) {
+        console.log('Fresh PM data fetched:', dashboardStats);
+        setStats(dashboardStats);
+        setNotifications(notificationsData);
+        
+        if (!isBackground) {
+          setLoading(false);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching Project Manager dashboard data:', err);
+      
+      // Only update state if component is still mounted
+      if (mountedRef.current) {
+        if (!isBackground) {
+          setError('Failed to load dashboard data. Please try again later.');
+          setLoading(false);
+        }
+        // For background errors, don't show error to user
+      }
+    } finally {
+      isFetchingRef.current = false;
+    }
+  }, []);
+
   useEffect(() => {
+    // Set mounted ref
+    mountedRef.current = true;
+    
     // Get user data from localStorage
     const userDataString = localStorage.getItem('user');
     if (userDataString) {
       setCurrentUser(JSON.parse(userDataString));
     }
 
-    // Fetch dashboard data (matching Admin pattern)
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        console.log('Fetching Project Manager dashboard data...');
-        
-        // Fetch fresh data (matching Admin pattern)
-        const [dashboardStats, notificationsData] = await Promise.all([
-          getDashboardStats(),
-          getDashboardNotifications()
-        ]);
-        
-        console.log('Fresh PM data fetched:', dashboardStats);
-        setStats(dashboardStats);
-        setNotifications(notificationsData);
-      } catch (err) {
-        console.error('Error fetching Project Manager dashboard data:', err);
-        setError('Failed to load dashboard data. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchDashboardData();
+    // Initial fetch
+    fetchDashboardData(false);
     
     // Set up refresh interval (matching Admin - every 5 minutes)
-    const refreshInterval = setInterval(() => {
-      const fetchFreshData = async () => {
-        try {
-          console.log('Fetching fresh PM data in background...');
-          const [dashboardStats, notificationsData] = await Promise.all([
-            getDashboardStats(),
-            getDashboardNotifications()
-          ]);
-          
-          console.log('Background PM fetch completed:', dashboardStats);
-          setStats(dashboardStats);
-          setNotifications(notificationsData);
-        } catch (err) {
-          console.error('Error updating PM dashboard data in background:', err);
-          // Don't show error for background updates
-        }
-      };
-      
-      fetchFreshData();
+    // Clear any existing interval first
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+    }
+    
+    refreshIntervalRef.current = setInterval(() => {
+      // Only fetch if component is still mounted and not currently fetching
+      if (mountedRef.current && !isFetchingRef.current) {
+        fetchDashboardData(true);
+      }
     }, 300000); // Every 5 minutes
     
+    // Cleanup function
     return () => {
-      clearInterval(refreshInterval);
+      mountedRef.current = false;
+      isFetchingRef.current = false;
+      
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
     };
-  }, []);
+  }, [fetchDashboardData]);
 
   // Loading state (matching Admin styling exactly)
   if (loading) {
@@ -148,7 +180,10 @@ const ProjectManagerDashboard: React.FC = () => {
           <p className="font-semibold text-lg mb-2 text-[#1B0A3F]">{t('projectManager.dashboard.errorLoading')}</p>
           <p className="text-gray-700">{error}</p>
           <button 
-            onClick={() => window.location.reload()} 
+            onClick={() => {
+              setError(null);
+              fetchDashboardData(false);
+            }} 
             className="mt-4 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white font-bold py-2 px-4 rounded-lg transition-colors"
           >
             {t('projectManager.dashboard.tryAgain')}

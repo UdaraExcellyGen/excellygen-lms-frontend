@@ -1,11 +1,13 @@
-import React, { useEffect } from 'react';
+// src/App.tsx - Simplified Enterprise Version
+
+import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { I18nextProvider } from 'react-i18next'; // ADDED
 import i18n from './i18n'; // ADDED
 
 // Auth Provider
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // Loading Provider and Book Loader
 import { LoadingProvider, useLoading } from './contexts/LoadingContext';
@@ -19,75 +21,107 @@ import ProtectedRoute from './components/routing/ProtectedRoute';
 import { SidebarProvider } from './components/Sidebar/contexts/SidebarContext';
 import { SearchProvider } from './components/Sidebar/contexts/SearchContext';
 import { CourseProvider, useCourseContext } from './features/Coordinator/contexts/CourseContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 
 // User Roles
 import { UserRole } from './types/auth.types';
 
+// 🚀 LAZY LOADED COMPONENTS - Only load when needed
 // Learner Components
-import LearnerDashboard from './features/Learner/LearnerDashboard/LearnerDashboard';
-import LearnerProfile from './features/Learner/LearnerProfile/LearnerProfile';
-import BadgesAndRewards from './features/Learner/BadgesAndRewards/BadgesAndRewards';
-import LearnerProjects from './features/Learner/LearnerProjects/LearnerProjects';
-import CertificatesPage from './features/Learner/Certificates/CertificatePage';
-import DiscussionForum from './features/Learner/DiscussionForum/DiscussionForum';
-import LearnerNotifications from './features/Learner/LearnerNotifications/LearnerNotification';
-import Leaderboard from './features/Learner/Leaderboard/Leaderboard';
-import CourseCategories from './features/Learner/CourseCategories/CourseCategories';
-import CourseContent from './features/Learner/CourseContent/CourseContent';
-import LearnerCourseOverview from './features/Learner/CourseContent/LearnerCourseOverview';
-import TakeQuiz from './features/Learner/TakeQuiz/TakeQuiz';
-import QuizResults from './features/Learner/QuizResults/QuizResults';
+const LearnerDashboard = lazy(() => import('./features/Learner/LearnerDashboard/LearnerDashboard'));
+const LearnerProfile = lazy(() => import('./features/Learner/LearnerProfile/LearnerProfile'));
+const BadgesAndRewards = lazy(() => import('./features/Learner/BadgesAndRewards/BadgesAndRewards'));
+const LearnerProjects = lazy(() => import('./features/Learner/LearnerProjects/LearnerProjects'));
+const CertificatesPage = lazy(() => import('./features/Learner/Certificates/CertificatePage'));
+const DiscussionForum = lazy(() => import('./features/Learner/DiscussionForum/DiscussionForum'));
+const LearnerNotifications = lazy(() => import('./features/Learner/LearnerNotifications/LearnerNotification'));
+const Leaderboard = lazy(() => import('./features/Learner/Leaderboard/Leaderboard'));
+const CourseCategories = lazy(() => import('./features/Learner/CourseCategories/CourseCategories'));
+const CourseContent = lazy(() => import('./features/Learner/CourseContent/CourseContent'));
+const LearnerCourseOverview = lazy(() => import('./features/Learner/CourseContent/LearnerCourseOverview'));
+const TakeQuiz = lazy(() => import('./features/Learner/TakeQuiz/TakeQuiz'));
+const QuizResults = lazy(() => import('./features/Learner/QuizResults/QuizResults'));
 
 // Admin Components
-import AdminDashboard from './features/Admin/AdminDashboard/AdminDashboard';
-import AdminNotifications from './features/Admin/AdminNotifications/MainAdminNotification';
-import AdminAnalytics from './features/Admin/AdminAnalytics/Adminanalytics';
-import ManageUsers from './features/Admin/ManageUser/ManageUser';
-import ManageTech from './features/Admin/ManageTech/ManageTech';
+const AdminDashboard = lazy(() => import('./features/Admin/AdminDashboard/AdminDashboard'));
+const AdminNotifications = lazy(() => import('./features/Admin/AdminNotifications/MainAdminNotification'));
+const AdminAnalytics = lazy(() => import('./features/Admin/AdminAnalytics/Adminanalytics'));
+const ManageUsers = lazy(() => import('./features/Admin/ManageUser/ManageUser'));
+const ManageTech = lazy(() => import('./features/Admin/ManageTech/ManageTech'));
+const CategoryCoursesPage = lazy(() => import('./features/Admin/CategoryCourses/CategoryCoursesPage'));
+const ManageCourseCategory = lazy(() => import('./features/Admin/ManageCourseCategory/ManageCourseCategory'));
 
 // Coordinator Components
-import CourseCoordinatorDashboard from './features/Coordinator/CoordinatorDashboard/CourseCoordinatorDashboard';
-import CourseCoordinatorAnalytics from './features/Coordinator/Analytics/CourseCoordinatorAnalytics';
-import CCNotifications from './features/Coordinator/CoordinatorNotification/CCNotifications';
-import LearnerListPage from './features/Coordinator/LearnerListPage/LearnerListPage';
-import LearnerQuizPage from './features/Coordinator/learnerQuizPage/learnerQuizPage';
-import QuizCreator from './features/Coordinator/QuizCreator/QuizCreator';
-import UploadMaterials from './features/Coordinator/CreateNewCourse/UploadMaterials/UploadMaterials';
-import PublishCoursePage from './features/Coordinator/CreateNewCourse/PublishCoursePage/PublishCoursePage';
-import CoursesDisplayPage from './features/Coordinator/CoursesDisplayPage/CoursesDisplayPage';
-import CourseDetails from './features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails';
-import CoordinatorCourseOverview from './features/Coordinator/coordinatorCourseView/CoordinatorCourseOverview/CoordinatorCourseOverview';
-import AssignLearners from './features/Coordinator/coordinatorCourseView/AssignLearners/AssignLearners';
-import CreateQuiz from './features/Coordinator/QuizManagement/CreateQuiz';
-import EditQuiz from './features/Coordinator/QuizManagement/EditQuiz';
-
-import QuizList from './features/Coordinator/LessonQuizzes/QuizList';
-import QuizResultsCoordinator from './features/Coordinator/LessonQuizzes/QuizResultsCoordinator';
+const CourseCoordinatorDashboard = lazy(() => import('./features/Coordinator/CoordinatorDashboard/CourseCoordinatorDashboard'));
+const CourseCoordinatorAnalytics = lazy(() => import('./features/Coordinator/Analytics/CourseCoordinatorAnalytics'));
+const CCNotifications = lazy(() => import('./features/Coordinator/CoordinatorNotification/CCNotifications'));
+const LearnerListPage = lazy(() => import('./features/Coordinator/LearnerListPage/LearnerListPage'));
+const LearnerQuizPage = lazy(() => import('./features/Coordinator/learnerQuizPage/learnerQuizPage'));
+const QuizCreator = lazy(() => import('./features/Coordinator/QuizCreator/QuizCreator'));
+const UploadMaterials = lazy(() => import('./features/Coordinator/CreateNewCourse/UploadMaterials/UploadMaterials'));
+const PublishCoursePage = lazy(() => import('./features/Coordinator/CreateNewCourse/PublishCoursePage/PublishCoursePage'));
+const CoursesDisplayPage = lazy(() => import('./features/Coordinator/CoursesDisplayPage/CoursesDisplayPage'));
+const CourseDetails = lazy(() => import('./features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails'));
+const CoordinatorCourseOverview = lazy(() => import('./features/Coordinator/coordinatorCourseView/CoordinatorCourseOverview/CoordinatorCourseOverview'));
+const AssignLearners = lazy(() => import('./features/Coordinator/coordinatorCourseView/AssignLearners/AssignLearners'));
+const CreateQuiz = lazy(() => import('./features/Coordinator/QuizManagement/CreateQuiz'));
+const EditQuiz = lazy(() => import('./features/Coordinator/QuizManagement/EditQuiz'));
+const QuizList = lazy(() => import('./features/Coordinator/LessonQuizzes/QuizList'));
+const QuizResultsCoordinator = lazy(() => import('./features/Coordinator/LessonQuizzes/QuizResultsCoordinator'));
 
 // Project Manager Components
-import ProjectManagerDashboard from './features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard';
-import ProjectManagerNotification from './features/ProjectManager/PMnotifications/ProjectManagerNotification';
-import EmployeeManagement from './features/ProjectManager/Employee-assign/Employee-assign';
-import ProjectCruds from './features/ProjectManager/ProjectCruds/ProjectCruds';
+const ProjectManagerDashboard = lazy(() => import('./features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard'));
+const ProjectManagerNotification = lazy(() => import('./features/ProjectManager/PMnotifications/ProjectManagerNotification'));
+const EmployeeManagement = lazy(() => import('./features/ProjectManager/Employee-assign/Employee-assign'));
+const ProjectCruds = lazy(() => import('./features/ProjectManager/ProjectCruds/ProjectCruds'));
 
 // Search Components
-import SearchResults from './components/Sidebar/SearchResults';
-import ViewLearnerProfile from './components/Sidebar/ViewLearnerProfile';
-import CategoryCoursesPage from './features/Admin/CategoryCourses/CategoryCoursesPage';
-import ManageCourseCategory from './features/Admin/ManageCourseCategory/ManageCourseCategory';
+const SearchResults = lazy(() => import('./components/Sidebar/SearchResults'));
+const ViewLearnerProfile = lazy(() => import('./components/Sidebar/ViewLearnerProfile'));
+
+// Landing and Auth (keep these loaded immediately as they're entry points)
 import LandingPage from './features/landing/AnimatedLandingPage';
 import RoleSelection from './features/auth/RoleSelection';
+
+// 🎨 Enhanced Loading Component
+const PageLoader: React.FC = () => (
+  <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] flex items-center justify-center">
+    <div className="text-center">
+      <BookLoader />
+      <p className="text-white mt-4 text-lg">Loading...</p>
+    </div>
+  </div>
+);
 
 // API Loading Interceptor Component
 const ApiLoadingInterceptor: React.FC = () => {
   const { startLoading, stopLoading } = useLoading();
   
   useEffect(() => {
-    // Setup the loader functions for API client
     setupLoaderFunctions(startLoading, stopLoading);
   }, [startLoading, stopLoading]);
   
   return null; 
+};
+
+// ENTERPRISE APPROACH: Simple cleanup on logout
+const AuthCleanup: React.FC = () => {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) {
+      console.log('User logged out, clearing session data...');
+      // Simple cleanup - only clear what's necessary
+      try {
+        sessionStorage.removeItem('course_categories');
+        console.log('Session data cleared');
+      } catch (error) {
+        console.log('Session cleanup failed:', error);
+      }
+    }
+  }, [user]);
+
+  return null;
 };
 
 function AppWrapper() {
@@ -96,10 +130,13 @@ function AppWrapper() {
       <BrowserRouter>
         <LoadingProvider>
           <AuthProvider>
-            <ApiLoadingInterceptor />
-            <BookLoader />
-            <App />
-            <Toaster position="top-right" />
+          <NotificationProvider>
+              <ApiLoadingInterceptor />
+            <AuthCleanup />
+              <BookLoader />
+              <App />
+              <Toaster position="top-right" />
+          </NotificationProvider>
           </AuthProvider>
         </LoadingProvider>
       </BrowserRouter>
@@ -111,7 +148,9 @@ function App() {
   // Helper function to wrap component with CourseProvider
   const withCourseContext = (Component: React.ComponentType) => (
     <CourseProvider>
-      <Component />
+      <Suspense fallback={<PageLoader />}>
+        <Component />
+      </Suspense>
     </CourseProvider>
   );
 
@@ -119,20 +158,22 @@ function App() {
   const withSidebarAndSearch = (Component: React.ComponentType) => (
     <SidebarProvider>
       <SearchProvider>
-        <Component />
+        <Suspense fallback={<PageLoader />}>
+          <Component />
+        </Suspense>
       </SearchProvider>
     </SidebarProvider>
   );
 
-  const CourseAssignLearners = () => { // Create a wrapper component to access context
+  const CourseAssignLearners = () => {
     const { courseData } = useCourseContext();
-    return <AssignLearners courseName={courseData.basicDetails.title} />; // Pass courseName from context
+    return <AssignLearners courseName={courseData.basicDetails.title} />;
   };
 
   return (
     <div className="min-h-screen flex flex-col">
       <Routes>
-        {/* Public Routes */}
+        {/* Public Routes - Keep immediately loaded */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LandingPage />} />
         
@@ -146,9 +187,8 @@ function App() {
           } 
         />
 
-        {/* LEARNER ROUTES*/}
+        {/* LEARNER ROUTES - All lazy loaded */}
         <Route path="/learner">
-          {/* Main Learner Pages */}
           <Route 
             path="dashboard" 
             element={
@@ -213,8 +253,6 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          
-          {/* Course related pages */}
           <Route 
             path="course-categories" 
             element={
@@ -223,7 +261,6 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          {/* Route for category-specific courses */}
           <Route 
             path="courses/:categoryId" 
             element={
@@ -232,7 +269,6 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          {/* Route for specific course overview (learner view) */}
           <Route 
             path="course-view/:courseId" 
             element={
@@ -241,8 +277,6 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          
-          {/* Quiz related pages */}
           <Route 
             path="take-quiz/:quizId" 
             element={
@@ -279,14 +313,15 @@ function App() {
           } 
         />
 
-        
-        {/* ADMIN ROUTES */}
+        {/* ADMIN ROUTES - All lazy loaded */}
         <Route path="/admin">
           <Route 
             path="dashboard" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.Admin]}>
-                <AdminDashboard/>
+                <Suspense fallback={<PageLoader />}>
+                  <AdminDashboard/>
+                </Suspense>
               </ProtectedRoute>
             } 
           />
@@ -294,7 +329,9 @@ function App() {
             path="notifications" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.Admin]}>
-                <AdminNotifications/>
+                <Suspense fallback={<PageLoader />}>
+                  <AdminNotifications/>
+                </Suspense>
               </ProtectedRoute>
             } 
           />
@@ -302,7 +339,9 @@ function App() {
             path="analytics" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.Admin]}>
-                <AdminAnalytics/>
+                <Suspense fallback={<PageLoader />}>
+                  <AdminAnalytics/>
+                </Suspense>
               </ProtectedRoute>
             } 
           />
@@ -310,7 +349,9 @@ function App() {
             path="manage-users" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.Admin]}>
-                <ManageUsers/>
+                <Suspense fallback={<PageLoader />}>
+                  <ManageUsers/>
+                </Suspense>
               </ProtectedRoute>
             } 
           />
@@ -318,7 +359,9 @@ function App() {
             path="manage-tech" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.Admin]}>
-                <ManageTech/>
+                <Suspense fallback={<PageLoader />}>
+                  <ManageTech/>
+                </Suspense>
               </ProtectedRoute>
             } 
           />
@@ -326,28 +369,33 @@ function App() {
             path="course-categories" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.Admin]}>
-                <ManageCourseCategory/>
+                <Suspense fallback={<PageLoader />}>
+                  <ManageCourseCategory/>
+                </Suspense>
               </ProtectedRoute>
             } 
           />
-
           <Route 
             path="categories/:categoryId" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.Admin]}>
-                <CategoryCoursesPage/>
+                <Suspense fallback={<PageLoader />}>
+                  <CategoryCoursesPage/>
+                </Suspense>
               </ProtectedRoute>
             } 
           />
         </Route>
         
-        {/*  COORDINATOR ROUTES */}
+        {/* COORDINATOR ROUTES - All lazy loaded */}
         <Route path="/coordinator">
           <Route 
             path="dashboard" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                <CourseCoordinatorDashboard/>
+                <Suspense fallback={<PageLoader />}>
+                  <CourseCoordinatorDashboard/>
+                </Suspense>
               </ProtectedRoute>
             } 
           />
@@ -355,7 +403,9 @@ function App() {
             path="analytics" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                <CourseCoordinatorAnalytics/>
+                <Suspense fallback={<PageLoader />}>
+                  <CourseCoordinatorAnalytics/>
+                </Suspense>
               </ProtectedRoute>
             } 
           />
@@ -363,7 +413,9 @@ function App() {
             path="notifications" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                <CCNotifications/>
+                <Suspense fallback={<PageLoader />}>
+                  <CCNotifications/>
+                </Suspense>
               </ProtectedRoute>
             } 
           />
@@ -371,7 +423,9 @@ function App() {
             path="learner-list" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                <LearnerListPage/>
+                <Suspense fallback={<PageLoader />}>
+                  <LearnerListPage/>
+                </Suspense>
               </ProtectedRoute>
             } 
           />
@@ -379,9 +433,11 @@ function App() {
             path="quiz-learner-view" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                <LearnerQuizPage/>
+                <Suspense fallback={<PageLoader />}>
+                  <LearnerQuizPage/>
+                </Suspense>
               </ProtectedRoute>
-            } 
+            }
           />
           <Route 
             path="quiz-creator" 
@@ -439,8 +495,6 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          
-          {/* Quiz Management Routes */}
           <Route 
             path="create-quiz/:lessonId" 
             element={
@@ -475,13 +529,15 @@ function App() {
           />
         </Route>
         
-        {/* PROJECT MANAGER ROUTES  */}
+        {/* PROJECT MANAGER ROUTES - All lazy loaded */}
         <Route path="/project-manager">
           <Route 
             path="dashboard" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
-                <ProjectManagerDashboard/>
+                <Suspense fallback={<PageLoader />}>
+                  <ProjectManagerDashboard/>
+                </Suspense>
               </ProtectedRoute>
             } 
           />
@@ -489,7 +545,9 @@ function App() {
             path="notifications" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
-                <ProjectManagerNotification/>
+                <Suspense fallback={<PageLoader />}>
+                  <ProjectManagerNotification/>
+                </Suspense>
               </ProtectedRoute>
             } 
           />
@@ -497,7 +555,9 @@ function App() {
             path="employee-assign" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
-                <EmployeeManagement/>
+                <Suspense fallback={<PageLoader />}>
+                  <EmployeeManagement/>
+                </Suspense>
               </ProtectedRoute>
             } 
           />
@@ -505,7 +565,9 @@ function App() {
             path="project-cruds" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
-                <ProjectCruds />
+                <Suspense fallback={<PageLoader />}>
+                  <ProjectCruds />
+                </Suspense>
               </ProtectedRoute>
             } 
           />
@@ -513,7 +575,9 @@ function App() {
             path="project-cruds/technologies" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
-                <ProjectCruds />
+                <Suspense fallback={<PageLoader />}>
+                  <ProjectCruds />
+                </Suspense>
               </ProtectedRoute>
             } 
           />
@@ -521,7 +585,9 @@ function App() {
             path="project-cruds/roles" 
             element={
               <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
-                <ProjectCruds />
+                <Suspense fallback={<PageLoader />}>
+                  <ProjectCruds />
+                </Suspense>
               </ProtectedRoute>
             } 
           />
@@ -532,7 +598,9 @@ function App() {
           path="/ProjectManager/notifications" 
           element={
             <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
-              <ProjectManagerNotification/>
+              <Suspense fallback={<PageLoader />}>
+                <ProjectManagerNotification/>
+              </Suspense>
             </ProtectedRoute>
           } 
         />

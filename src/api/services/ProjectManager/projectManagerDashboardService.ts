@@ -25,63 +25,124 @@ export interface PMNotification {
   isNew: boolean;
 }
 
+// Cache for dashboard stats to prevent unnecessary API calls
+let statsCache: {
+  data: ProjectManagerDashboardStats | null;
+  timestamp: number;
+} = {
+  data: null,
+  timestamp: 0
+};
+
+// Cache TTL in milliseconds (2 minutes)
+const CACHE_TTL = 2 * 60 * 1000;
+
+// Flag to prevent concurrent requests
+let isStatsLoading = false;
+let statsPromise: Promise<ProjectManagerDashboardStats> | null = null;
+
 /**
  * Fetches dashboard statistics for Project Manager
  * Matches Admin dashboard pattern for consistency
+ * Includes caching and request deduplication
  */
 export const getDashboardStats = async (): Promise<ProjectManagerDashboardStats> => {
+  // Check cache first
+  const now = Date.now();
+  if (statsCache.data && (now - statsCache.timestamp) < CACHE_TTL) {
+    console.log('Returning cached PM dashboard stats');
+    return statsCache.data;
+  }
+
+  // If already loading, return the existing promise
+  if (isStatsLoading && statsPromise) {
+    console.log('Dashboard stats request already in progress, waiting...');
+    return statsPromise;
+  }
+
   try {
+    isStatsLoading = true;
     console.log('Fetching Project Manager dashboard stats...');
     
-    // Fetch all data in parallel for better performance
-    const [allProjects, allEmployees, allTechnologies] = await Promise.all([
-      getAllProjects(), // Get all projects
-      employeeApi.getAvailableEmployees(), // Get all employees (using PM API)
-      getProjectTechnologies() // Get all technologies
-    ]);
-
-    console.log('Dashboard data fetched successfully');
-
-    // Calculate project statistics
-    const totalProjects = allProjects.length;
-    const activeProjects = allProjects.filter(project => 
-      project.status === 'Active'
-    ).length;
-
-    // Calculate employee statistics  
-    const totalEmployees = allEmployees.length;
-    const activeEmployees = allEmployees.filter(employee => 
-      employee.status === 'active'
-    ).length;
-
-    // Calculate technology statistics
-    const totalTechnologies = allTechnologies.length;
-    const activeTechnologies = allTechnologies.filter(tech => 
-      tech.status === 'active'
-    ).length;
-
-    const result = {
-      projects: {
-        total: totalProjects,
-        active: activeProjects
-      },
-      employees: {
-        total: totalEmployees,
-        active: activeEmployees
-      },
-      technologies: {
-        total: totalTechnologies,
-        active: activeTechnologies
-      }
+    // Create and store the promise
+    statsPromise = fetchStatsFromAPI();
+    const result = await statsPromise;
+    
+    // Cache the result
+    statsCache = {
+      data: result,
+      timestamp: now
     };
-
+    
     console.log('Final PM dashboard stats:', result);
     return result;
 
   } catch (error) {
     console.error('Error fetching Project Manager dashboard stats:', error);
-    throw error; // Let the component handle the error
+    // Clear the promise on error so retry can work
+    statsPromise = null;
+    throw error;
+  } finally {
+    isStatsLoading = false;
+    // Clear the promise after completion
+    statsPromise = null;
   }
+};
+
+/**
+ * Internal function to fetch stats from API
+ */
+const fetchStatsFromAPI = async (): Promise<ProjectManagerDashboardStats> => {
+  // Fetch all data in parallel for better performance
+  const [allProjects, allEmployees, allTechnologies] = await Promise.all([
+    getAllProjects().catch(err => {
+      console.error('Error fetching projects:', err);
+      return [];
+    }),
+    employeeApi.getAvailableEmployees().catch(err => {
+      console.error('Error fetching employees:', err);
+      return [];
+    }),
+    getProjectTechnologies().catch(err => {
+      console.error('Error fetching technologies:', err);
+      return [];
+    })
+  ]);
+
+  console.log('Dashboard data fetched successfully');
+
+  // Calculate project statistics
+  const totalProjects = allProjects.length;
+  const activeProjects = allProjects.filter(project => 
+    project.status === 'Active'
+  ).length;
+
+  // Calculate employee statistics  
+  const totalEmployees = allEmployees.length;
+  const activeEmployees = allEmployees.filter(employee => 
+    employee.status === 'active'
+  ).length;
+
+  // Calculate technology statistics
+  const totalTechnologies = allTechnologies.length;
+  const activeTechnologies = allTechnologies.filter(tech => 
+    tech.status === 'active'
+  ).length;
+
+  return {
+    projects: {
+      total: totalProjects,
+      active: activeProjects
+    },
+    employees: {
+      total: totalEmployees,
+      active: activeEmployees
+    },
+    technologies: {
+      total: totalTechnologies,
+      active: activeTechnologies
+    }
+  };
 };
 
 /**
@@ -118,6 +179,18 @@ export const getDashboardNotifications = async (): Promise<PMNotification[]> => 
 };
 
 /**
+ * Helper function to clear the cache
+ * Useful for forcing fresh data after updates
+ */
+export const clearStatsCache = () => {
+  statsCache = {
+    data: null,
+    timestamp: 0
+  };
+  console.log('PM dashboard stats cache cleared');
+};
+
+/**
  * Helper function to get project statistics only
  */
 export const getProjectStats = async () => {
@@ -138,10 +211,10 @@ export const getProjectStats = async () => {
  */
 export const getEmployeeStats = async () => {
   try {
-    const allUsers = await getAllUsers();
+    const allEmployees = await employeeApi.getAvailableEmployees();
     return {
-      total: allUsers.length,
-      active: allUsers.filter(user => user.status === 'active').length
+      total: allEmployees.length,
+      active: allEmployees.filter(employee => employee.status === 'active').length
     };
   } catch (error) {
     console.error('Error fetching employee stats:', error);

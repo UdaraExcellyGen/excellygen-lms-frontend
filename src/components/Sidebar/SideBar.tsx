@@ -18,7 +18,8 @@ import {
 } from 'lucide-react';
 import { useSidebar } from '../Sidebar/contexts/SidebarContext';
 import { useSearch } from '../Sidebar/contexts/SearchContext';
-import { useAuth } from '../../contexts/AuthContext'; 
+import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 
 interface MenuItem {
   title: string;
@@ -56,7 +57,8 @@ const scrollbarStyles = `
 const Sidebar = () => {
   const { isCollapsed, setIsCollapsed } = useSidebar();
   const { searchQuery, setSearchQuery, clearSearch } = useSearch();
-  const { logout } = useAuth();  // Use the logout function from AuthContext
+  const { logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const location = useLocation();
   const navigate = useNavigate();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -164,6 +166,8 @@ const Sidebar = () => {
       )}
       {items.map((item, index) => {
         const isActive = isActivePath(item.path);
+        const isNotificationItem = item.title === 'Notifications';
+        
         // Handle logout button separately
         if (item.title === 'Logout') {
           return (
@@ -185,6 +189,7 @@ const Sidebar = () => {
             </button>
           );
         }
+        
         // Regular menu items
         return (
           <Link
@@ -196,26 +201,38 @@ const Sidebar = () => {
             }}
             data-active={isActive}
             className={`w-full flex items-center rounded-xl px-4 py-3 mb-2 
-              transition-all duration-300 group
+              transition-all duration-300 group relative
               ${isActive
                 ? 'bg-gradient-to-r from-[#F6E6FF] to-[#F0D6FF] text-[#52007C]'
                 : 'hover:bg-white/5 text-gray-300'}`}
             aria-current={isActive ? 'page' : undefined}
           >
-            <item.icon
-              className={`h-5 w-5 transition-colors duration-300 ${
-                isActive
-                  ? 'text-[#52007C]'
-                  : 'text-gray-400 group-hover:text-[#D68BF9]'
-              }`}
-              aria-hidden="true"
-            />
+            <div className="relative">
+              <item.icon
+                className={`h-5 w-5 transition-colors duration-300 ${
+                  isActive
+                    ? 'text-[#52007C]'
+                    : 'text-gray-400 group-hover:text-[#D68BF9]'
+                }`}
+                aria-hidden="true"
+              />
+              {isNotificationItem && unreadCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold animate-pulse">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </div>
             {!isCollapsed && (
-              <span className={`ml-3 text-sm font-medium transition-colors duration-300
+              <span className={`ml-3 text-sm font-medium transition-colors duration-300 flex items-center justify-between w-full
                 ${isActive
                   ? 'text-[#52007C]'
                   : 'text-gray-300 group-hover:text-[#D68BF9]'}`}>
                 {item.title}
+                {isNotificationItem && unreadCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 font-bold animate-pulse">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </span>
             )}
           </Link>
@@ -328,6 +345,8 @@ const Sidebar = () => {
                   <div className="flex flex-col space-y-4 py-2">
                     {[...learningMenuItems, ...progressMenuItems, ...communityMenuItems].map((item, index) => {
                       const isActive = isActivePath(item.path);
+                      const isNotificationItem = item.title === 'Notifications';
+                      
                       return (
                         <Link
                           key={index}
@@ -337,21 +356,28 @@ const Sidebar = () => {
                             handleMobileClick();
                           }}
                           data-active={isActive}
-                          className={`flex items-center justify-center rounded-xl p-2.5
+                          className={`flex items-center justify-center rounded-xl p-2.5 relative
                             transition-all duration-300 group
                             ${isActive 
                               ? 'bg-gradient-to-r from-[#F6E6FF] to-[#F0D6FF]' 
                               : 'hover:bg-white/5'}`}
                           aria-current={isActive ? 'page' : undefined}
                         >
-                          <item.icon 
-                            className={`h-5 w-5 ${
-                              isActive
-                                ? 'text-[#52007C]'
-                                : 'text-gray-400 group-hover:text-[#D68BF9]'
-                            }`} 
-                            aria-hidden="true"
-                          />
+                          <div className="relative">
+                            <item.icon 
+                              className={`h-5 w-5 ${
+                                isActive
+                                  ? 'text-[#52007C]'
+                                  : 'text-gray-400 group-hover:text-[#D68BF9]'
+                              }`} 
+                              aria-hidden="true"
+                            />
+                            {isNotificationItem && unreadCount > 0 && (
+                              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-bold text-[10px] animate-pulse">
+                                {unreadCount > 9 ? '9+' : unreadCount}
+                              </span>
+                            )}
+                          </div>
                           <span className="sr-only">{item.title}</span>
                         </Link>
                       );
