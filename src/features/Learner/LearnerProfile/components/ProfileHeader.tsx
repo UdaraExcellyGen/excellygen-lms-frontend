@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { Camera, Edit2, FileText, Save, X, Trash } from 'lucide-react';
-import { ProfileData } from '../types';
+import { ProfileData } from '../types'; // This should resolve to src/features/Learner/LearnerProfile/types.ts
+import { useNavigate } from 'react-router-dom';
 
 interface ProfileHeaderProps {
   profileData: ProfileData;
@@ -28,11 +29,18 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   isSaving = false
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate(); // Import and use useNavigate hook
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && onAvatarUpload) {
       onAvatarUpload(e.target.files[0]);
     }
+  };
+
+  const handleViewCv = () => {
+    // For now, we navigate with userId, but Cv.tsx is not yet dynamic
+    // This sets up the navigation pattern for when Cv.tsx becomes dynamic
+    navigate(`/cv?userId=${profileData.id}`); 
   };
 
   return (
@@ -48,7 +56,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           ) : (
             <div className="h-28 w-28 rounded-2xl bg-gradient-to-br from-[#52007C] to-[#BF4BF6] flex items-center justify-center shadow-lg">
               <span className="text-4xl font-bold text-white">
-                {profileData.name.split(' ').map(n => n[0]).join('')}
+                {profileData.name ? profileData.name.split(' ').map(n => n[0]).join('') : '??'}
               </span>
             </div>
           )}
@@ -144,9 +152,10 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               </button>
             )}
             
-            <button
-             onClick={() => window.location.href = '/cv'}
-             className="px-4 sm:px-6 py-2.5 bg-gradient-to-r from-[#7A00B8] to-[#BF4BF6] text-white rounded-lg inline-flex items-center gap-2 hover:from-[#52007C] hover:to-[#A030D6] transition-colors shadow-md transform hover:-translate-y-0.5 transition-all duration-200">
+           <button
+              onClick={handleViewCv} // Updated to use the new handler
+              className="px-4 sm:px-6 py-2.5 bg-gradient-to-r from-[#7A00B8] to-[#BF4BF6] text-white rounded-lg inline-flex items-center gap-2 hover:from-[#52007C] hover:to-[#A030D6] transition-colors shadow-md transform hover:-translate-y-0.5 transition-all duration-200"
+            >
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">View CV</span>
               <span className="sm:hidden">CV</span>

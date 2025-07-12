@@ -27,6 +27,8 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { UserRole } from './types/auth.types';
 
 // 🚀 LAZY LOADED COMPONENTS - Only load when needed
+const CvPage = lazy(() => import('./features/Learner/LearnerCv/Cv')); // <-- ADDED THIS IMPORT
+
 // Learner Components
 const LearnerDashboard = lazy(() => import('./features/Learner/LearnerDashboard/LearnerDashboard'));
 const LearnerProfile = lazy(() => import('./features/Learner/LearnerProfile/LearnerProfile'));
@@ -176,6 +178,19 @@ function App() {
         {/* Public Routes - Keep immediately loaded */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LandingPage />} />
+        
+        {/* CV Page Route - Protected, accessible after login */}
+        {/* This route is placed here so it's not nested under role-specific base paths */}
+        <Route
+          path="/cv"
+          element={
+            <ProtectedRoute> {/* Ensures user is logged in */}
+              <Suspense fallback={<PageLoader />}>
+                <CvPage />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
         
         {/* Auth Routes */}
         <Route 

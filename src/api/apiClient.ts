@@ -58,7 +58,7 @@ const manageLoading = (increment: boolean, config?: any) => {
   }
   
   // OPTIMIZATION: Prevent duplicate requests from affecting loading state
-  const requestKey = `${config?.method?.toUpperCase()}_${config?.url}`;
+  const requestKey = `${config?.method?.toUpperCase()}_${config?.url}`; // FIXED
   
   if (increment) {
     if (requestQueue.has(requestKey)) {
@@ -102,7 +102,7 @@ const processQueue = (error: any = null, token: string | null = null) => {
     if (error) {
       promise.reject(error);
     } else if (token) {
-      promise.config.headers['Authorization'] = `Bearer ${token}`;
+      promise.config.headers['Authorization'] = `Bearer ${token}`; // FIXED
       promise.resolve(axios(promise.config));
     }
   });
@@ -133,7 +133,7 @@ apiClient.interceptors.request.use(
     
     const token = localStorage.getItem('access_token');
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers['Authorization'] = `Bearer ${token}`; // FIXED
     }
     
     // Add active role header
@@ -245,7 +245,7 @@ apiClient.interceptors.response.use(
         
         // Call refresh token endpoint
         const response = await axios.post(
-          `${apiClient.defaults.baseURL}/auth/refresh-token`,
+          `${apiClient.defaults.baseURL}/auth/refresh-token`, // FIXED
           {
             accessToken,
             refreshToken,
@@ -261,7 +261,7 @@ apiClient.interceptors.response.use(
           localStorage.setItem('current_role', response.data.currentRole);
           
           // Update the authorization header for the original request
-          originalRequest.headers['Authorization'] = `Bearer ${response.data.accessToken}`;
+          originalRequest.headers['Authorization'] = `Bearer ${response.data.accessToken}`; // FIXED
           
           // Also set the X-Active-Role header
           if (response.data.currentRole) {
