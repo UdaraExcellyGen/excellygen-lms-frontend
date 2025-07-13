@@ -1,6 +1,6 @@
 // src/features/Learner/CourseCategories/components/StatsOverview.tsx
 import React from 'react';
-import { BookOpen, Users } from 'lucide-react';
+import { Award, CheckCircle2 } from 'lucide-react';
 
 interface StatsOverviewProps {
   totalCoursesOverall: number;
@@ -16,7 +16,7 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
       <div className="bg-white/85 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(191,75,246,0.3)] p-6">
         <div className="flex items-center">
           <div className="flex-shrink-0 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] p-4 rounded-xl mr-5 shadow-lg">
-            <BookOpen size={24} className="text-white" />
+            <Award size={24} className="text-white" />
           </div>
           <div>
             <h3 className="text-[#52007C] text-sm font-medium uppercase tracking-wider mb-1">Total Courses</h3>
@@ -31,7 +31,7 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
       <div className="bg-white/85 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(191,75,246,0.3)] p-6">
         <div className="flex items-center">
           <div className="flex-shrink-0 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] p-4 rounded-xl mr-5 shadow-lg">
-            <Users size={24} className="text-white" />
+            <CheckCircle2 size={24} className="text-white" />
           </div>
           <div>
             <h3 className="text-[#52007C] text-sm font-medium uppercase tracking-wider mb-1">Active Learners</h3>

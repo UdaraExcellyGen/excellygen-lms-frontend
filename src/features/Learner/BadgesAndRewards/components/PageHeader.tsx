@@ -1,3 +1,4 @@
+// src/features/Learner/BadgesAndRewards/components/PageHeader.tsx
 import React from 'react';
 
 interface PageHeaderProps {
@@ -8,10 +9,10 @@ interface PageHeaderProps {
 const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle }) => {
   return (
     <div className="mb-16">
-      <h1 className="text-3xl text-center font-bold font-unbounded bg-gradient-to-r from-white via-white to-[#D68BF9] bg-clip-text text-transparent">
+      <h1 className="text-3xl md:text-4xl text-center font-bold text-white font-unbounded">
         {title}
       </h1>
-      <p className="text-[#D68BF9] text-center mt-1">
+      <p className="text-center mt-1 font-nunito text-heliotrope">
         {subtitle}
       </p>
     </div>
