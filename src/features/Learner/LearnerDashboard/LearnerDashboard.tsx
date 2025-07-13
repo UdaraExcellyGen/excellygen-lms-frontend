@@ -3,16 +3,17 @@ import { Calendar, FileText, Users, ChevronDown, Check } from 'lucide-react';
 import Layout from '../../../components/Sidebar/Layout';
 import { useAuth } from '../../../contexts/AuthContext';
 import { UserRole } from '../../../types/auth.types';
-import { Course } from './types/types';
+import { Course, Activity } from './types/types';
 import { 
   ActiveCourses, 
   RecentActivities, 
   LearningActivityChart 
 } from './components/Sections';
-import { activities, weeklyTimeData } from './data/mockData';
+import { weeklyTimeData } from './data/mockData';
 import LearnerHeaderImage from '../../../assets/LearnerHeader.svg';
 import { getEnrolledCoursesForLearner, getLearnerCourseDetails } from '../../../api/services/Course/learnerCourseService';
 import { getRecentlyAccessedCourseIds } from '../../../api/services/Course/courseAccessService';
+import { getRecentActivities } from '../../../api/services/LearnerDashboard/learnerActivitiesService';
 
 const LearnerDashboard: React.FC = () => {
   const { user, currentRole, selectRole, navigateToRoleSelection } = useAuth();
@@ -24,18 +25,20 @@ const LearnerDashboard: React.FC = () => {
   const [activeCourses, setActiveCourses] = useState<Course[]>([]);
   const [isLoadingCourses, setIsLoadingCourses] = useState(true);
 
+  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
+  const [isLoadingActivities, setIsLoadingActivities] = useState(true);
+
   useEffect(() => {
     const controller = new AbortController();
 
     const fetchActiveCourses = async () => {
       setIsLoadingCourses(true);
       try {
-        // FIX: Call the function without arguments to match the expected signature
         const allEnrolledCourses = await getEnrolledCoursesForLearner();
         
         if (!allEnrolledCourses || allEnrolledCourses.length === 0) {
           setActiveCourses([]);
-          setIsLoadingCourses(false); // Stop loading if no courses
+          setIsLoadingCourses(false);
           return;
         }
 
@@ -76,8 +79,24 @@ const LearnerDashboard: React.FC = () => {
       }
     };
 
+    const fetchRecentActivities = async () => {
+      setIsLoadingActivities(true);
+      try {
+        const activities = await getRecentActivities();
+        setRecentActivities(activities);
+      } catch (error: any) {
+        if (error.name !== 'CanceledError') {
+          console.error("Failed to fetch recent activities:", error);
+          setRecentActivities([]);
+        }
+      } finally {
+        setIsLoadingActivities(false);
+      }
+    };
+
     if (user?.id) {
       fetchActiveCourses();
+      fetchRecentActivities();
     }
 
     return () => {
@@ -244,9 +263,8 @@ const LearnerDashboard: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* FIX: Pass the isLoadingCourses prop */}
             <ActiveCourses courses={activeCourses} isLoading={isLoadingCourses} />
-            <RecentActivities activities={activities} />
+            <RecentActivities activities={recentActivities} isLoading={isLoadingActivities} />
             <LearningActivityChart data={weeklyTimeData} />
           </div>
         </div>

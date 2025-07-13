@@ -27,6 +27,14 @@ const CourseSkeleton = () => (
   </div>
 );
 
+// A simple skeleton loader for activities
+const ActivitySkeleton = () => (
+  <div className="border-l-4 border-gray-200 pl-4 py-2 animate-pulse">
+    <div className="h-4 bg-gray-300 rounded w-1/2 mb-2"></div>
+    <div className="h-3 bg-gray-300 rounded w-3/4"></div>
+  </div>
+);
+
 export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses, isLoading }) => {
   const navigate = useNavigate();
 
@@ -95,7 +103,7 @@ export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses, isLoading
   );
 };
 
-export const RecentActivities: React.FC<RecentActivitiesProps> = ({ activities }) => (
+export const RecentActivities: React.FC<RecentActivitiesProps> = ({ activities, isLoading }) => (
   <Card>
     <CardHeader>
       <CardTitle className="text-[#1B0A3F] font-['Unbounded'] flex items-center gap-2">
@@ -107,13 +115,23 @@ export const RecentActivities: React.FC<RecentActivitiesProps> = ({ activities }
     </CardHeader>
     <CardContent>
       <div className="space-y-4">
-        {activities.map(activity => (
-          <div key={activity.id} className="border-l-4 border-[#BF4BF6] pl-4 py-2 hover:bg-[#F6E6FF]/50 rounded-r-lg transition-colors">
-            <p className="font-medium text-[#1B0A3F]">{activity.type}</p>
-            <p className="text-sm text-[#52007C]">{activity.course}</p>
-            {activity.time && <p className="text-xs text-[#7A00B8]">{activity.time}</p>}
-          </div>
-        ))}
+        {isLoading ? (
+          <>
+            <ActivitySkeleton />
+            <ActivitySkeleton />
+            <ActivitySkeleton />
+          </>
+        ) : activities.length > 0 ? (
+          activities.map(activity => (
+            <div key={activity.id} className="border-l-4 border-[#BF4BF6] pl-4 py-2 hover:bg-[#F6E6FF]/50 rounded-r-lg transition-colors">
+              <p className="font-medium text-[#1B0A3F]">{activity.type}</p>
+              <p className="text-sm text-[#52007C]">{activity.course}</p>
+              {activity.time && <p className="text-xs text-[#7A00B8]">{activity.time}</p>}
+            </div>
+          ))
+        ) : (
+          <p className="text-center text-gray-500 py-4">No recent activities to show.</p>
+        )}
       </div>
     </CardContent>
   </Card>
