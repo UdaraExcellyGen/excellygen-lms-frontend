@@ -1,6 +1,7 @@
+// src/features/Learner/BadgesAndRewards/components/StatsOverview.tsx
 import React from 'react';
-import { Trophy, Award } from 'lucide-react';
-import { Badge, BadgeStat } from '../types/Badge';
+import { Award, CheckCircle2, Star, Clock } from 'lucide-react';
+import { Badge } from '../types/Badge';
 import StatsCard from './StatsCard';
 
 interface StatsOverviewProps {
@@ -8,25 +9,46 @@ interface StatsOverviewProps {
 }
 
 const StatsOverview: React.FC<StatsOverviewProps> = ({ badges }) => {
-  const stats: BadgeStat[] = [
-    { 
-      icon: Trophy, 
-      label: 'Total Badges', 
-      value: badges.length,
-      color: 'from-amber-400 to-amber-600'
-    },
+  const earnedBadges = badges.filter(b => b.isUnlocked);
+  const readyToClaim = badges.filter(b => !b.isUnlocked && b.currentProgress >= b.targetProgress);
+
+  const stats = [
     { 
       icon: Award, 
+      label: 'Total Badges', 
+      value: badges.length.toString(),
+      gradient: 'from-phlox to-french-violet'
+    },
+    { 
+      icon: CheckCircle2, 
       label: 'Badges Earned', 
-      value: `${badges.filter(b => b.isUnlocked).length}/${badges.length}`,
-      color: 'from-indigo-400 to-indigo-600'
+      value: earnedBadges.length.toString(),
+      gradient: 'from-heliotrope to-phlox'
+    },
+    { 
+      icon: Star, 
+      label: 'Ready to Claim', 
+      value: readyToClaim.length.toString(),
+      gradient: 'from-federal-blue to-indigo'
+    },
+    { 
+      icon: Clock, 
+      label: 'In Progress', 
+      value: badges.filter(b => !b.isUnlocked && b.currentProgress < b.targetProgress).length.toString(),
+      gradient: 'from-french-violet to-indigo'
     }
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
       {stats.map((stat, index) => (
-        <StatsCard key={index} stat={stat} />
+        <StatsCard 
+          key={index} 
+          icon={stat.icon}
+          label={stat.label}
+          value={stat.value}
+          gradient={stat.gradient}
+        />
       ))}
     </div>
   );
