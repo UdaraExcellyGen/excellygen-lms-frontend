@@ -1,12 +1,12 @@
 // Path: src/features/ProjectManager/Employee-assign/Employee-assign.tsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
     FaUserCircle, FaProjectDiagram, FaSearch, FaArrowLeft,
-    FaObjectGroup, FaChevronDown,
-    FaUserSlash, FaHashtag, FaExclamationTriangle
+    FaObjectGroup, FaChevronDown, FaChevronLeft, FaChevronRight,
+    FaUserSlash, FaHashtag, FaExclamationTriangle, FaSpinner
 } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 
@@ -24,7 +24,43 @@ import LanguageSwitcher from '../../../components/common/LanguageSwitcher';
 
 // Import types and API services
 import { Employee, Project, EmployeeFilter } from './types/types';
-import { employeeApi, projectApi, assignmentApi, resourceApi } from '../../../api/services/ProjectManager/employeeAssignmentService';
+import { employeeApi, projectApi, assignmentApi, resourceApi, PaginatedResponse } from '../../../api/services/ProjectManager/employeeAssignmentService';
+
+// Custom hook for debounced search
+const useDebounce = (value: string, delay: number) => {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+
+    return debouncedValue;
+};
+
+// Virtual scrolling hook for large lists
+const useVirtualScrolling = (items: any[], containerHeight: number, itemHeight: number) => {
+    const [scrollTop, setScrollTop] = useState(0);
+    
+    const totalHeight = items.length * itemHeight;
+    const viewportHeight = containerHeight;
+    const startIndex = Math.floor(scrollTop / itemHeight);
+    const endIndex = Math.min(startIndex + Math.ceil(viewportHeight / itemHeight) + 1, items.length);
+    const visibleItems = items.slice(startIndex, endIndex);
+    
+    return {
+        visibleItems,
+        totalHeight,
+        startIndex,
+        offsetY: startIndex * itemHeight,
+        onScroll: (e: React.UIEvent<HTMLElement>) => setScrollTop(e.currentTarget.scrollTop)
+    };
+};
 
 const EmployeeManagement: React.FC = () => {
     const { t } = useTranslation();
@@ -32,8 +68,13 @@ const EmployeeManagement: React.FC = () => {
     const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [projectStatusFilter, setProjectStatusFilter] = useState('All');
+    
+    // Search states with debouncing
     const [searchTerm, setSearchTerm] = useState('');
     const [projectSearchTerm, setProjectSearchTerm] = useState('');
+    const debouncedSearchTerm = useDebounce(searchTerm, 300);
+    const debouncedProjectSearchTerm = useDebounce(projectSearchTerm, 300);
+    
     const [skillFilter, setSkillFilter] = useState<string[]>([]);
     const [expandedProjects, setExpandedProjects] = useState<string[]>([]);
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
@@ -42,9 +83,16 @@ const EmployeeManagement: React.FC = () => {
     const [searchType, setSearchType] = useState('name');
     const [projectSearchType, setProjectSearchType] = useState('name');
 
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize] = useState(50);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+
     // Data states
     const [projects, setProjects] = useState<Project[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
+    const [employeePagination, setEmployeePagination] = useState<PaginatedResponse<Employee> | null>(null);
     const [availableRoles, setAvailableRoles] = useState<string[]>([]);
     const [availableSkills, setAvailableSkills] = useState<string[]>([]);
 
@@ -53,7 +101,8 @@ const EmployeeManagement: React.FC = () => {
         projects: false,
         employees: false,
         roles: false,
-        skills: false
+        skills: false,
+        pagination: false
     });
 
     // Dialog states
@@ -80,7 +129,14 @@ const EmployeeManagement: React.FC = () => {
     } | null>(null);
     const [editAssignmentError, setEditAssignmentError] = useState('');
 
-    const multiSelectButtonRef = useRef<HTMLButtonElement>(null);
+    const multiSelectButtonRef = useRef<HTMLButtonButton>(null);
+
+    // Memoized filter object to prevent unnecessary re-renders
+    const employeeFilter = useMemo<EmployeeFilter>(() => ({
+        searchTerm: debouncedSearchTerm || undefined,
+        availableOnly: showEmployeesWithoutProjects || undefined,
+        skills: skillFilter.length > 0 ? skillFilter : undefined
+    }), [debouncedSearchTerm, showEmployeesWithoutProjects, skillFilter]);
 
     // Initialize data on component mount
     useEffect(() => {
@@ -92,10 +148,18 @@ const EmployeeManagement: React.FC = () => {
         loadProjects();
     }, [projectStatusFilter]);
 
-    // Load employees when filters change
+    // Load employees when filters change (debounced)
     useEffect(() => {
-        loadEmployees();
-    }, [searchTerm, skillFilter, showEmployeesWithoutProjects, isSkillMatchActive, selectedProject]);
+        setCurrentPage(1); // Reset to first page when filters change
+        loadEmployees(1);
+    }, [employeeFilter, isSkillMatchActive, selectedProject]);
+
+    // Load employees when page changes
+    useEffect(() => {
+        if (currentPage > 1) {
+            loadEmployees(currentPage);
+        }
+    }, [currentPage]);
 
     // Handle click outside for status dropdown
     useEffect(() => {
@@ -160,37 +224,45 @@ const EmployeeManagement: React.FC = () => {
         }
     };
 
-    const loadEmployees = async () => {
-        setIsLoading(prev => ({ ...prev, employees: true }));
+    const loadEmployees = useCallback(async (page: number = 1) => {
+        const loadingKey = page === 1 ? 'employees' : 'pagination';
+        setIsLoading(prev => ({ ...prev, [loadingKey]: true }));
+        
         try {
-            const filter: EmployeeFilter = {
-                searchTerm: searchTerm || undefined,
-                availableOnly: showEmployeesWithoutProjects || undefined,
-                skills: skillFilter.length > 0 ? skillFilter : undefined
-            };
-
-            let employeesData: Employee[];
+            let result: PaginatedResponse<Employee>;
 
             if (isSkillMatchActive && selectedProject) {
                 // Get employees matching project skills
                 const projectSkills = selectedProject.requiredSkills.map(skill => skill.name);
                 if (projectSkills.length > 0) {
-                    employeesData = await employeeApi.getEmployeesBySkills(projectSkills);
+                    result = await employeeApi.getEmployeesBySkills(projectSkills, page, pageSize);
                 } else {
-                    employeesData = await employeeApi.getAvailableEmployees(filter);
+                    result = await employeeApi.getAvailableEmployees(employeeFilter, page, pageSize);
                 }
             } else {
-                employeesData = await employeeApi.getAvailableEmployees(filter);
+                result = await employeeApi.getAvailableEmployees(employeeFilter, page, pageSize);
             }
 
-            setEmployees(employeesData);
+            // Update employees list based on whether we're loading a new page or replacing
+            if (page === 1) {
+                setEmployees(result.data);
+            } else {
+                // For pagination, we replace the current data
+                setEmployees(result.data);
+            }
+
+            setEmployeePagination(result);
+            setCurrentPage(result.pagination.currentPage);
+            setTotalPages(result.pagination.totalPages);
+            setTotalCount(result.pagination.totalCount);
+
         } catch (error) {
             console.error('Error loading employees:', error);
             toast.error('Failed to load employees');
         } finally {
-            setIsLoading(prev => ({ ...prev, employees: false }));
+            setIsLoading(prev => ({ ...prev, [loadingKey]: false }));
         }
-    };
+    }, [employeeFilter, isSkillMatchActive, selectedProject, pageSize]);
 
     const loadRoles = async () => {
         setIsLoading(prev => ({ ...prev, roles: true }));
@@ -294,7 +366,7 @@ const EmployeeManagement: React.FC = () => {
             toast.success('Employees assigned successfully!');
 
             // Refresh data
-            await Promise.all([loadProjects(), loadEmployees()]);
+            await Promise.all([loadProjects(), loadEmployees(currentPage)]);
 
             setIsConfirmationOpen(false);
             setSelectedEmployees([]);
@@ -329,7 +401,7 @@ const EmployeeManagement: React.FC = () => {
             toast.success('Employee removed from project successfully!');
 
             // Refresh data
-            await Promise.all([loadProjects(), loadEmployees()]);
+            await Promise.all([loadProjects(), loadEmployees(currentPage)]);
         } catch (error) {
             console.error('Error removing employee from project:', error);
             toast.error('Failed to remove employee from project');
@@ -383,7 +455,26 @@ const EmployeeManagement: React.FC = () => {
         setShowEmployeesWithoutProjects(false);
     };
 
-    // ADDED HANDLERS
+    // Pagination handlers
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalPages && !isLoading.pagination) {
+            setCurrentPage(newPage);
+        }
+    };
+
+    const handlePreviousPage = () => {
+        if (currentPage > 1) {
+            handlePageChange(currentPage - 1);
+        }
+    };
+
+    const handleNextPage = () => {
+        if (currentPage < totalPages) {
+            handlePageChange(currentPage + 1);
+        }
+    };
+
+    // Edit assignment handlers
     const triggerEditAssignment = (assignment: {
         id: number;
         employeeName: string;
@@ -409,7 +500,7 @@ const EmployeeManagement: React.FC = () => {
             toast.success('Assignment updated successfully!');
 
             // Refresh data
-            await Promise.all([loadProjects(), loadEmployees()]);
+            await Promise.all([loadProjects(), loadEmployees(currentPage)]);
 
             setIsEditModalOpen(false);
             setSelectedAssignment(null);
@@ -424,7 +515,7 @@ const EmployeeManagement: React.FC = () => {
 
     // Filter projects based on search
     const filteredProjects = projects.filter(project => {
-        const searchLower = projectSearchTerm.toLowerCase();
+        const searchLower = debouncedProjectSearchTerm.toLowerCase();
         if (projectSearchType === 'name') {
             return project.name.toLowerCase().includes(searchLower);
         } else if (projectSearchType === 'id') {
@@ -433,9 +524,9 @@ const EmployeeManagement: React.FC = () => {
         return true;
     });
 
-    // Filter employees based on search
+    // Filter employees based on search (client-side for current page)
     const filteredEmployees = employees.filter(employee => {
-        const searchLower = searchTerm.toLowerCase();
+        const searchLower = debouncedSearchTerm.toLowerCase();
         if (searchType === 'name') {
             return employee.name.toLowerCase().includes(searchLower) ||
                    employee.role.toLowerCase().includes(searchLower);
@@ -449,6 +540,59 @@ const EmployeeManagement: React.FC = () => {
         maxHeight: '600px',
         paddingRight: '1rem'
     };
+
+    // Pagination component
+    const PaginationControls = () => (
+        <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200">
+            <div className="flex items-center text-sm text-gray-700">
+                <span>
+                    Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} employees
+                </span>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+                <button
+                    onClick={handlePreviousPage}
+                    disabled={currentPage <= 1 || isLoading.pagination}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <FaChevronLeft className="h-4 w-4" />
+                </button>
+                
+                <div className="flex items-center space-x-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        const page = i + 1;
+                        return (
+                            <button
+                                key={page}
+                                onClick={() => handlePageChange(page)}
+                                disabled={isLoading.pagination}
+                                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                    currentPage === page
+                                        ? 'z-10 bg-[#52007C] border-[#52007C] text-white'
+                                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                            >
+                                {page}
+                            </button>
+                        );
+                    })}
+                </div>
+                
+                <button
+                    onClick={handleNextPage}
+                    disabled={currentPage >= totalPages || isLoading.pagination}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <FaChevronRight className="h-4 w-4" />
+                </button>
+                
+                {isLoading.pagination && (
+                    <FaSpinner className="animate-spin h-4 w-4 text-[#52007C] ml-2" />
+                )}
+            </div>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-[#52007C] p-4 sm:p-6 lg:p-8">
@@ -617,7 +761,7 @@ const EmployeeManagement: React.FC = () => {
                                     {isSkillMatchActive && selectedProject
                                         ? t('projectManager.employeeAssign.matchedEmployees')
                                         : t('projectManager.employeeAssign.availableEmployees')}{' '}
-                                    ({filteredEmployees.length})
+                                    ({totalCount})
                                 </h2>
                                 <div className="relative flex-grow max-w-sm ml-4">
                                     <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7A00B8]" />
@@ -714,6 +858,9 @@ const EmployeeManagement: React.FC = () => {
                                     </p>
                                 )}
                             </div>
+
+                            {/* Pagination Controls */}
+                            {totalPages > 1 && <PaginationControls />}
                         </div>
                     </div>
 
@@ -760,7 +907,6 @@ const EmployeeManagement: React.FC = () => {
                         assignmentError={assignmentError}
                     />
 
-                    {/* ADDED MODAL */}
                     <EditWorkloadModal
                         isOpen={isEditModalOpen}
                         assignment={selectedAssignment}
