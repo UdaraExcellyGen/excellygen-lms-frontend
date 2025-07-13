@@ -8,6 +8,7 @@ import { LearnerCourseDto, LearnerLessonDto } from '../../../types/course.types'
 import { QuizDto } from '../../../types/quiz.types';
 import { generateCertificate } from '../../../api/services/Course/certificateService';
 import { getLearnerCourseDetails, markLessonCompleted } from '../../../api/services/Course/learnerCourseService';
+import { logCourseAccess } from '../../../api/services/Course/courseAccessService'; // 1. IMPORT THE NEW SERVICE
 
 const LearnerCourseOverview: React.FC = () => {
   const { courseId: courseIdParam } = useParams<{ courseId: string }>();
@@ -40,6 +41,12 @@ const LearnerCourseOverview: React.FC = () => {
         
         setCourseData(course);
         setExpandedLessons(initialExpandedState);
+
+        // 2. LOG THE COURSE ACCESS ONCE DETAILS ARE SUCCESSFULLY LOADED
+        if (courseId) {
+          logCourseAccess(courseId);
+        }
+
       } catch (error) {
         console.error("Error fetching course details:", error);
         toast.error("Failed to load course details.");

@@ -7,14 +7,15 @@ export const learningStats: LearningStat[] = [
   { title: 'Average Score', value: '92%', trend: '+5% from last' }
 ];
 
+// Corrected IDs to match navigation expectations
 export const courses: Course[] = [
-  { id: 1, title: 'Advanced React Development', progress: 75 },
+  { id: 4, title: 'Web Development Fundamentals', progress: 75 },
   { id: 2, title: 'Machine Learning Fundamentals', progress: 45 },
   { id: 3, title: 'Cloud Architecture', progress: 30 }
 ];
 
 export const activities: Activity[] = [
-  { id: 1, type: 'Quiz Completed', course: 'Advanced React Development' },
+  { id: 1, type: 'Quiz Completed', course: 'Web Development Fundamentals' },
   { id: 2, type: 'Badge Earned', course: 'Machine Learning Fundamentals' },
   { id: 3, type: 'Course Started', course: 'Cloud Architecture' }
 ];
