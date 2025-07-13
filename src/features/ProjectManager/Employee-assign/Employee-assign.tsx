@@ -1,10 +1,11 @@
 // Path: src/features/ProjectManager/Employee-assign/Employee-assign.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom'; // Removed useNavigate
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
-    FaUserCircle, FaProjectDiagram, FaSearch, FaArrowLeft, // Removed FaFilter
-    FaObjectGroup, FaChevronDown, // Removed FaFileExport, FaUsers, FaClock
+    FaUserCircle, FaProjectDiagram, FaSearch, FaArrowLeft,
+    FaObjectGroup, FaChevronDown,
     FaUserSlash, FaHashtag, FaExclamationTriangle
 } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
@@ -18,14 +19,16 @@ import BottomBarWithAvatars from './components/BottomBarWithAvatars';
 import ConfirmationDialog from './components/ConfirmationDialog';
 import EmployeeCard from './components/EmployeeCard';
 import ProjectCard from './components/ProjectCard';
-import EditWorkloadModal from './components/EditWorkloadModal'; // ADDED
+import EditWorkloadModal from './components/EditWorkloadModal';
+import LanguageSwitcher from '../../../components/common/LanguageSwitcher';
 
 // Import types and API services
-import { Employee, Project, EmployeeFilter } from './types/types'; // Removed EmployeeAssignment
+import { Employee, Project, EmployeeFilter } from './types/types';
 import { employeeApi, projectApi, assignmentApi, resourceApi } from '../../../api/services/ProjectManager/employeeAssignmentService';
 
 const EmployeeManagement: React.FC = () => {
-    const [darkMode] = useState(false); // Removed setDarkMode, darkMode is still available if needed elsewhere in this component
+    const { t } = useTranslation();
+    const [darkMode] = useState(false);
     const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [projectStatusFilter, setProjectStatusFilter] = useState('All');
@@ -38,7 +41,6 @@ const EmployeeManagement: React.FC = () => {
     const [isSkillMatchActive, setIsSkillMatchActive] = useState(false);
     const [searchType, setSearchType] = useState('name');
     const [projectSearchType, setProjectSearchType] = useState('name');
-    // const navigate = useNavigate(); // Removed
 
     // Data states
     const [projects, setProjects] = useState<Project[]>([]);
@@ -67,8 +69,8 @@ const EmployeeManagement: React.FC = () => {
     const [showWarningMessage, setShowWarningMessage] = useState(false);
 
     // Edit assignment modal states
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false); // ADDED
-    const [selectedAssignment, setSelectedAssignment] = useState<{ // ADDED
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [selectedAssignment, setSelectedAssignment] = useState<{
         id: number;
         employeeName: string;
         projectName: string;
@@ -76,7 +78,7 @@ const EmployeeManagement: React.FC = () => {
         workloadPercentage: number;
         employeeId: string;
     } | null>(null);
-    const [editAssignmentError, setEditAssignmentError] = useState(''); // ADDED
+    const [editAssignmentError, setEditAssignmentError] = useState('');
 
     const multiSelectButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -349,7 +351,7 @@ const EmployeeManagement: React.FC = () => {
         setProjectToRemoveFrom(null);
     };
 
-    const triggerRemoveConfirmation = (projectId: string, employeeId: string) => { // Removed employeeName, projectName
+    const triggerRemoveConfirmation = (projectId: string, employeeId: string) => {
         const employeeData = employees.find(e => e.id === employeeId);
         const projectData = projects.find(p => p.id === projectId);
         if (employeeData && projectData) {
@@ -462,12 +464,13 @@ const EmployeeManagement: React.FC = () => {
                                 <FaArrowLeft className="w-6 h-6" />
                             </Link>
                             <h1 className="text-2xl font-bold text-[#52007C] dark:text-white font-unbounded">
-                                Project Assignment Dashboard
+                                {t('projectManager.employeeAssign.title')}
                             </h1>
                         </div>
                     </div>
 
                     <div className="flex items-center justify-end gap-2">
+                        <LanguageSwitcher />
                         <MultiSelect
                             value={skillFilter}
                             onChange={setSkillFilter}
@@ -488,7 +491,7 @@ const EmployeeManagement: React.FC = () => {
                             title="Filter employees to show only those who possess skills matching the selected project's required technologies."
                         >
                             <FaObjectGroup className="w-4 h-4" />
-                            Match Technologies
+                            {t('projectManager.employeeAssign.matchTechnologies')}
                         </button>
                     </div>
                 </header>
@@ -498,13 +501,13 @@ const EmployeeManagement: React.FC = () => {
                         <div className="bg-white rounded-xl shadow-lg p-6 h-full flex flex-col">
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-xl font-bold text-[#52007C] dark:text-white font-unbounded">
-                                    Projects ({filteredProjects.length})
+                                    {t('projectManager.employeeAssign.projects')} ({filteredProjects.length})
                                 </h2>
                                 <div className="relative flex-grow max-w-sm ml-4">
                                     <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7A00B8]" />
                                     <input
                                         type="text"
-                                        placeholder="Search projects..."
+                                        placeholder={t('projectManager.employeeAssign.searchProjects')}
                                         value={projectSearchTerm}
                                         onChange={(e) => setProjectSearchTerm(e.target.value)}
                                         className="w-full pl-10 pr-24 py-2 rounded-lg border border-[#F6E6FF]
@@ -519,9 +522,9 @@ const EmployeeManagement: React.FC = () => {
                                                     ? 'bg-[#BF4BF6] text-white'
                                                     : 'bg-[#F6E6FF] dark:bg-[#1B0A3F] text-[#52007C] dark:text-[#D68BF9] hover:bg-[#e0c1f5] dark:hover:bg-[#4a006e]'
                                                 }`}
-                                            title="Search by Name"
+                                            title={t('projectManager.employeeAssign.searchByName')}
                                         >
-                                            <FaProjectDiagram /> <span>Name</span>
+                                            <FaProjectDiagram /> <span>{t('projectManager.employeeAssign.name')}</span>
                                         </button>
                                         <button
                                             onClick={() => setProjectSearchType('id')}
@@ -529,9 +532,9 @@ const EmployeeManagement: React.FC = () => {
                                                     ? 'bg-[#BF4BF6] text-white'
                                                     : 'bg-[#F6E6FF] dark:bg-[#1B0A3F] text-[#52007C] dark:text-[#D68BF9] hover:bg-[#e0c1f5] dark:hover:bg-[#4a006e]'
                                                 }`}
-                                            title="Search by ID"
+                                            title={t('projectManager.employeeAssign.searchById')}
                                         >
-                                            <FaHashtag /> <span>ID</span>
+                                            <FaHashtag /> <span>{t('projectManager.employeeAssign.id')}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -545,7 +548,9 @@ const EmployeeManagement: React.FC = () => {
                                                 dark:hover:bg-[#34137C] focus:outline-none focus:ring-2
                                                 focus:ring-[#BF4BF6]"
                                         >
-                                            {projectStatusFilter} Statuses
+                                            {projectStatusFilter === 'All' ? t('projectManager.employeeAssign.allStatuses') : 
+                                             projectStatusFilter === 'Active' ? t('projectManager.employeeAssign.activeStatuses') : 
+                                             t('projectManager.employeeAssign.completedStatuses')}
                                             <FaChevronDown className="-mr-1 ml-2 h-5 w-5" />
                                         </button>
 
@@ -565,7 +570,9 @@ const EmployeeManagement: React.FC = () => {
                                                             }}
                                                             className={`block w-full text-left px-4 py-2 text-sm ${projectStatusFilter === status ? 'font-bold bg-[#BF4BF6] text-white' : 'text-[#52007C] dark:text-white hover:bg-[#F6E6FF] dark:hover:bg-[#52007C]'}`}
                                                         >
-                                                            {status} Statuses
+                                                            {status === 'All' ? t('projectManager.employeeAssign.allStatuses') : 
+                                                             status === 'Active' ? t('projectManager.employeeAssign.activeStatuses') : 
+                                                             t('projectManager.employeeAssign.completedStatuses')}
                                                         </button>
                                                     ))}
                                                 </div>
@@ -582,7 +589,7 @@ const EmployeeManagement: React.FC = () => {
                                     </div>
                                 ) : filteredProjects.length === 0 ? (
                                     <div className="text-center py-8 text-[#7A00B8] dark:text-[#D68BF9] italic">
-                                        No projects found matching the current filters.
+                                        {t('projectManager.employeeAssign.noProjectsFound')}
                                     </div>
                                 ) : (
                                     filteredProjects.map((project) => (
@@ -595,7 +602,7 @@ const EmployeeManagement: React.FC = () => {
                                             handleProjectSelect={handleProjectSelect}
                                             toggleProjectExpansion={toggleProjectExpansion}
                                             triggerRemoveConfirmation={triggerRemoveConfirmation}
-                                            triggerEditAssignment={triggerEditAssignment} // UPDATED
+                                            triggerEditAssignment={triggerEditAssignment}
                                         />
                                     ))
                                 )}
@@ -608,15 +615,15 @@ const EmployeeManagement: React.FC = () => {
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-xl font-bold text-[#52007C] dark:text-white font-unbounded">
                                     {isSkillMatchActive && selectedProject
-                                        ? 'Matched Employees'
-                                        : 'Available Employees'}{' '}
+                                        ? t('projectManager.employeeAssign.matchedEmployees')
+                                        : t('projectManager.employeeAssign.availableEmployees')}{' '}
                                     ({filteredEmployees.length})
                                 </h2>
                                 <div className="relative flex-grow max-w-sm ml-4">
                                     <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7A00B8]" />
                                     <input
                                         type="text"
-                                        placeholder="Search employees..."
+                                        placeholder={t('projectManager.employeeAssign.searchEmployees')}
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         className="w-full pl-10 pr-24 py-2 rounded-lg border border-[#F6E6FF]
@@ -631,9 +638,9 @@ const EmployeeManagement: React.FC = () => {
                                                     ? 'bg-[#BF4BF6] text-white'
                                                     : 'bg-[#F6E6FF] dark:bg-[#1B0A3F] text-[#52007C] dark:text-[#D68BF9] hover:bg-[#e0c1f5] dark:hover:bg-[#4a006e]'
                                                 }`}
-                                            title="Search by Name/Role"
+                                            title={t('projectManager.employeeAssign.searchByNameRole')}
                                         >
-                                            <FaUserCircle /> <span>Name/Role</span>
+                                            <FaUserCircle /> <span>{t('projectManager.employeeAssign.searchByNameRole')}</span>
                                         </button>
                                         <button
                                             onClick={() => setSearchType('id')}
@@ -641,9 +648,9 @@ const EmployeeManagement: React.FC = () => {
                                                     ? 'bg-[#BF4BF6] text-white'
                                                     : 'bg-[#F6E6FF] dark:bg-[#1B0A3F] text-[#52007C] dark:text-[#D68BF9] hover:bg-[#e0c1f5] dark:hover:bg-[#4a006e]'
                                                 }`}
-                                            title="Search by ID"
+                                            title={t('projectManager.employeeAssign.searchById')}
                                         >
-                                            <FaHashtag /> <span>ID</span>
+                                            <FaHashtag /> <span>{t('projectManager.employeeAssign.id')}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -657,7 +664,7 @@ const EmployeeManagement: React.FC = () => {
                                     title="Show employees without assigned projects"
                                 >
                                     <FaUserSlash className="w-4 h-4" />
-                                    Free Bench
+                                    {t('projectManager.employeeAssign.freeBench')}
                                 </button>
                             </div>
 
@@ -666,7 +673,7 @@ const EmployeeManagement: React.FC = () => {
                                 <div className="mb-4 p-3 rounded-lg bg-amber-100 border border-amber-300 text-amber-800 transition-all duration-300 transform ease-in-out">
                                     <p className="text-sm flex items-center gap-2">
                                     <FaExclamationTriangle className="h-5 w-5" />
-                                        Please select a project first before selecting employees
+                                        {t('projectManager.employeeAssign.selectProjectFirst')}
                                     </p>
                                 </div>
                             )}
@@ -675,7 +682,7 @@ const EmployeeManagement: React.FC = () => {
                                 <div className="mb-4 p-3 rounded-lg bg-gray-100 border border-gray-200 text-gray-600">
                                     <p className="text-sm flex items-center gap-2">
                                         <FaProjectDiagram className="h-5 w-5" />
-                                        Select a project from the left panel to assign employees
+                                        {t('projectManager.employeeAssign.selectProjectFromLeft')}
                                     </p>
                                 </div>
                             )}
@@ -700,10 +707,10 @@ const EmployeeManagement: React.FC = () => {
                                 ) : (
                                     <p className="text-center text-[#7A00B8] dark:text-[#D68BF9] italic">
                                         {isSkillMatchActive && selectedProject
-                                            ? 'No employees match the project technologies.'
+                                            ? t('projectManager.employeeAssign.noEmployeesMatch')
                                             : showEmployeesWithoutProjects
-                                                ? 'No available employees without assigned projects match the current filters.'
-                                                : 'No employees match the current filters.'}
+                                                ? t('projectManager.employeeAssign.noAvailableEmployees')
+                                                : t('projectManager.employeeAssign.noEmployeesMatchFilters')}
                                     </p>
                                 )}
                             </div>
@@ -713,7 +720,6 @@ const EmployeeManagement: React.FC = () => {
                     <ProjectDetailsPopup
                         project={projectDetailsPopup.project}
                         onClose={handleCloseProjectDetails}
-                        // darkMode={darkMode} // THIS LINE IS THE FIX - REMOVE IT
                         employees={employees}
                     />
 

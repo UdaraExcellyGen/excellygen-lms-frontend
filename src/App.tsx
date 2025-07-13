@@ -3,6 +3,8 @@
 import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { I18nextProvider } from 'react-i18next'; // ADDED
+import i18n from './i18n'; // ADDED
 
 // Auth Provider
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -25,6 +27,8 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { UserRole } from './types/auth.types';
 
 // 🚀 LAZY LOADED COMPONENTS - Only load when needed
+const CvPage = lazy(() => import('./features/Learner/LearnerCv/Cv')); // <-- ADDED THIS IMPORT
+
 // Learner Components
 const LearnerDashboard = lazy(() => import('./features/Learner/LearnerDashboard/LearnerDashboard'));
 const LearnerProfile = lazy(() => import('./features/Learner/LearnerProfile/LearnerProfile'));
@@ -124,19 +128,21 @@ const AuthCleanup: React.FC = () => {
 
 function AppWrapper() {
   return (
-    <BrowserRouter>
-      <LoadingProvider>
-        <AuthProvider>
+    <I18nextProvider i18n={i18n}> {/* CRITICAL: This wraps the entire app */}
+      <BrowserRouter>
+        <LoadingProvider>
+          <AuthProvider>
           <NotificationProvider>
-            <ApiLoadingInterceptor />
+              <ApiLoadingInterceptor />
             <AuthCleanup />
-            <BookLoader />
-            <App />
-            <Toaster position="top-right" />
+              <BookLoader />
+              <App />
+              <Toaster position="top-right" />
           </NotificationProvider>
-        </AuthProvider>
-      </LoadingProvider>
-    </BrowserRouter>
+          </AuthProvider>
+        </LoadingProvider>
+      </BrowserRouter>
+    </I18nextProvider>
   );
 }
 
@@ -172,6 +178,19 @@ function App() {
         {/* Public Routes - Keep immediately loaded */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LandingPage />} />
+        
+        {/* CV Page Route - Protected, accessible after login */}
+        {/* This route is placed here so it's not nested under role-specific base paths */}
+        <Route
+          path="/cv"
+          element={
+            <ProtectedRoute> {/* Ensures user is logged in */}
+              <Suspense fallback={<PageLoader />}>
+                <CvPage />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
         
         {/* Auth Routes */}
         <Route 

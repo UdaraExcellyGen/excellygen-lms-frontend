@@ -1,5 +1,6 @@
 // Enhanced ProjectForm.tsx with Advanced Technology Selection and Date Validation
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Save, PlusCircle, MinusCircle, AlertCircle, ChevronDown, Check, Search } from 'lucide-react';
 import { EmployeeTechnology, ProjectRole } from '../data/types';
 
@@ -9,13 +10,15 @@ const RoleSelectDropdown = ({
   selectedRole,
   onRoleChange,
   placeholder = "Select Role",
-  index
+  index,
+  t
 }: {
   availableRoles: ProjectRole[];
   selectedRole: { roleId: number | string, roleName: string };
   onRoleChange: (role: ProjectRole) => void;
   placeholder?: string;
   index: number;
+  t: (key: string) => string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -76,7 +79,7 @@ const RoleSelectDropdown = ({
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search roles..."
+                placeholder={t('projectManager.projectCruds.searchRoles')}
                 className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#BF4BF6]"
                 onClick={(e) => e.stopPropagation()}
               />
@@ -130,12 +133,14 @@ const TechnologySelectDropdown = ({
   availableTechnologies,
   selectedTechnologies,
   onTechnologyChange,
-  onRemoveTechnology
+  onRemoveTechnology,
+  t
 }: {
   availableTechnologies: EmployeeTechnology[];
   selectedTechnologies: { id: number | string, name: string }[];
   onTechnologyChange: (tech: { id: number | string, name: string }) => void;
   onRemoveTechnology: (techName: string) => void;
+  t: (key: string) => string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -209,7 +214,7 @@ const TechnologySelectDropdown = ({
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search technologies..."
+                placeholder={t('projectManager.projectCruds.searchTechnologies')}
                 className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#BF4BF6]"
                 onClick={(e) => e.stopPropagation()}
               />
@@ -296,10 +301,10 @@ interface ProjectFormProps {
         name: boolean;
         deadline: boolean;
         startDate: boolean;
-        dateOrder: boolean; // Added for cross-field validation
+        dateOrder?: boolean;
     };
     error: string | null;
-    fieldErrors: string[]; // Added for comprehensive error handling
+    fieldErrors?: string[];
     isSubmitting: boolean;
     availableTechnologies: EmployeeTechnology[];
     projectRoles: ProjectRole[];
@@ -332,6 +337,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
     removeRoleAssignment,
     removeTechnology
 }) => {
+    const { t } = useTranslation();
     const nameInputRef = useRef<HTMLInputElement>(null);
     const initialFocusRef = useRef(false);
 
@@ -385,7 +391,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                 {/* Fixed Header */}
                 <div className="flex justify-between items-center p-6 border-b border-gray-200 flex-shrink-0">
                     <h2 className="text-xl text-russian-violet font-['Unbounded']">
-                        {isEditing ? 'Edit Project' : 'Add New Project'}
+                        {isEditing ? t('projectManager.projectCruds.editProject') : t('projectManager.projectCruds.addProject')}
                     </h2>
                     <button
                         type="button"
@@ -425,7 +431,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                         <div className="space-y-4">
                             <div>
                                 <label htmlFor="project-name" className="block text-sm font-medium text-russian-violet mb-1">
-                                    Project Name<span className="text-red-500">*</span>
+                                    {t('projectManager.projectCruds.projectName')}<span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     id="project-name"
@@ -442,7 +448,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                                 {formErrors.name && (
                                     <p className="mt-1 text-xs text-red-500 flex items-center gap-1" role="alert">
                                         <AlertCircle size={12} />
-                                        Project name is required
+                                        {t('projectManager.projectCruds.projectNameRequired')}
                                     </p>
                                 )}
                             </div>
@@ -450,7 +456,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label htmlFor="project-status" className="block text-sm font-medium text-russian-violet mb-1">
-                                        Status
+                                        {t('projectManager.projectCruds.status')}
                                     </label>
                                     <select
                                         id="project-status"
@@ -459,8 +465,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                                         className="w-full px-4 py-2 rounded-lg border border-gray-200
                                                  focus-ring focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] transition-all duration-200"
                                     >
-                                        <option value="Active">Active</option>
-                                        <option value="Completed">Completed</option>
+                                        <option value="Active">{t('projectManager.employeeAssign.active')}</option>
+                                        <option value="Completed">{t('projectManager.employeeAssign.completed')}</option>
                                     </select>
                                 </div>
                             </div>
@@ -468,7 +474,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label htmlFor="project-start-date" className="block text-sm font-medium text-russian-violet mb-1">
-                                        Start Date<span className="text-red-500">*</span>
+                                        {t('projectManager.projectCruds.startDate')}<span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         id="project-start-date"
@@ -484,14 +490,14 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                                     {formErrors.startDate && (
                                         <p className="mt-1 text-xs text-red-500 flex items-center gap-1" role="alert">
                                             <AlertCircle size={12} />
-                                            Start date is required
+                                            {t('projectManager.projectCruds.startDateRequired')}
                                         </p>
                                     )}
                                 </div>
 
                                 <div>
                                     <label htmlFor="project-deadline" className="block text-sm font-medium text-russian-violet mb-1">
-                                        Deadline<span className="text-red-500">*</span>
+                                        {t('projectManager.cards.deadline')}<span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         id="project-deadline"
@@ -508,13 +514,13 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                                     {formErrors.deadline && (
                                         <p className="mt-1 text-xs text-red-500 flex items-center gap-1" role="alert">
                                             <AlertCircle size={12} />
-                                            Deadline is required
+                                            {t('projectManager.projectCruds.deadlineRequired')}
                                         </p>
                                     )}
                                     {formErrors.dateOrder && (
                                         <p className="mt-1 text-xs text-red-500 flex items-center gap-1" role="alert">
                                             <AlertCircle size={12} />
-                                            Deadline must be after the start date
+                                            {t('projectManager.projectCruds.deadlineAfterStart')}
                                         </p>
                                     )}
                                 </div>
@@ -522,13 +528,13 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 
                             {formData.startDate && (
                                 <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded-lg">
-                                    <strong>Note:</strong> Deadline must be set to a date after {new Date(formData.startDate).toLocaleDateString()}
+                                    <strong>{t('projectManager.projectCruds.note')}</strong> {t('projectManager.projectCruds.deadlineNote')} {new Date(formData.startDate).toLocaleDateString()}
                                 </div>
                             )}
 
                             <div>
                                 <label htmlFor="project-description" className="block text-sm font-medium text-russian-violet mb-1">
-                                    Description
+                                    {t('projectManager.projectCruds.description')}
                                 </label>
                                 <textarea
                                     id="project-description"
@@ -542,7 +548,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 
                             <div>
                                 <label htmlFor="project-short-description" className="block text-sm font-medium text-russian-violet mb-1">
-                                    Short Description
+                                    {t('projectManager.projectCruds.shortDescription')}
                                 </label>
                                 <textarea
                                     id="project-short-description"
@@ -556,13 +562,14 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 
                             <div>
                                 <label className="block text-sm font-medium text-russian-violet mb-1">
-                                    Required Technologies
+                                    {t('projectManager.cards.requiredTechnologies')}
                                 </label>
                                 <TechnologySelectDropdown
                                     availableTechnologies={availableTechnologies}
                                     selectedTechnologies={formData.requiredTechnologies}
                                     onTechnologyChange={handleTechnologyAdd}
                                     onRemoveTechnology={removeTechnology}
+                                    t={t}
                                 />
                                 {formData.requiredTechnologies.length > 0 && (
                                     <div className="flex flex-wrap gap-2 mt-2">
@@ -586,7 +593,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 
                             <div>
                                 <label className="block text-sm font-medium text-russian-violet mb-2">
-                                    Assigned Roles
+                                    {t('projectManager.cards.requiredRoles')}
                                 </label>
                                 <button
                                     type="button"
@@ -596,14 +603,14 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                                     aria-label="Add role assignment"
                                     title="Add role assignment"
                                 >
-                                    <PlusCircle size={18} /> Add Role
+                                    <PlusCircle size={18} /> {t('projectManager.projectCruds.addRole')}
                                 </button>
                                 <div>
                                     {formData.assignedRoles.map((roleAssignment, index) => (
                                         <div key={index} className="mb-3 bg-gray-50 rounded-lg border border-gray-200 card-hover">
                                             <div className="flex items-center gap-3 p-3">
                                                 <div className="flex-grow">
-                                                    <label className="block text-sm text-russian-violet mb-1">Role</label>
+                                                    <label className="block text-sm text-russian-violet mb-1">{t('projectManager.dialogs.role')}</label>
                                                     <RoleSelectDropdown
                                                         availableRoles={projectRoles}
                                                         selectedRole={roleAssignment}
@@ -614,12 +621,13 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                                                             } as React.ChangeEvent<HTMLSelectElement>;
                                                             onRoleChange(syntheticEvent, index);
                                                         }}
-                                                        placeholder="Select Role"
+                                                        placeholder={t('projectManager.dialogs.selectRole')}
                                                         index={index}
+                                                        t={t}
                                                     />
                                                 </div>
                                                 <div className="w-24">
-                                                    <label htmlFor={`role-amount-${index}`} className="block text-sm text-russian-violet mb-1">Amount</label>
+                                                    <label htmlFor={`role-amount-${index}`} className="block text-sm text-russian-violet mb-1">{t('projectManager.projectCruds.amount')}</label>
                                                     <input
                                                         id={`role-amount-${index}`}
                                                         type="number"
@@ -656,7 +664,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                         className="px-4 py-2 text-indigo hover:text-[#BF4BF6] transition-all duration-300"
                         title="Cancel"
                     >
-                        Cancel
+                        {t('projectManager.dialogs.cancel')}
                     </button>
                     <button
                         type="submit"
@@ -664,10 +672,10 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                         disabled={isSubmitting}
                         className={`px-6 py-2 ${isSubmitting ? 'bg-gray-400' : 'bg-gradient-primary'} text-white rounded-full
                                  hover:bg-pale-purple transition-all duration-300 flex items-center gap-2 shadow-soft ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        title={isSubmitting ? 'Processing...' : (isEditing ? 'Update project' : 'Add project')}
+                        title={isSubmitting ? t('projectManager.projectCruds.processing') : (isEditing ? t('projectManager.projectCruds.updateProject') : t('projectManager.projectCruds.addProject'))}
                     >
                         <Save size={18} />
-                        {isSubmitting ? 'Processing...' : (isEditing ? 'Update' : 'Add')} Project
+                        {isSubmitting ? t('projectManager.projectCruds.processing') : (isEditing ? `${t('projectManager.projectCruds.update')} Project` : `${t('projectManager.projectCruds.add')} Project`)}
                     </button>
                 </div>
             </div>

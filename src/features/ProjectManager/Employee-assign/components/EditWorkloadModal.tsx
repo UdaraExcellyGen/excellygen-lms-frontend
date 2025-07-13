@@ -2,7 +2,8 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { FaEdit, FaCheck, FaTimes, FaPercentage, FaInfoCircle } from 'react-icons/fa'; // Removed FaUser
+import { useTranslation } from 'react-i18next';
+import { FaEdit, FaCheck, FaTimes, FaPercentage, FaInfoCircle } from 'react-icons/fa';
 
 interface EditWorkloadModalProps {
   isOpen: boolean;
@@ -12,12 +13,12 @@ interface EditWorkloadModalProps {
     projectName: string;
     role: string;
     workloadPercentage: number;
-    employeeId: string; // Added to get employee data
+    employeeId: string;
   } | null;
   onClose: () => void;
   onConfirm: (id: number, role: string, workloadPercentage: number) => void;
   availableRoles: string[];
-  employees: any[]; // Added to get current employee workload
+  employees: any[];
   error?: string;
 }
 
@@ -30,6 +31,7 @@ const EditWorkloadModal: React.FC<EditWorkloadModalProps> = ({
   employees,
   error
 }) => {
+  const { t } = useTranslation();
   const [role, setRole] = useState(assignment?.role || '');
   const [workloadPercentage, setWorkloadPercentage] = useState(assignment?.workloadPercentage || 0);
 
@@ -80,7 +82,9 @@ const EditWorkloadModal: React.FC<EditWorkloadModalProps> = ({
       <div className="bg-white p-6 rounded-xl shadow-lg border border-[#F6E6FF] min-w-[600px] max-w-[90vw]">
         <div className="flex items-center gap-2 mb-4">
           <FaEdit className="text-[#BF4BF6]" />
-          <h3 className="text-lg font-semibold text-[#52007C]">Edit Assignment</h3>
+          <h3 className="text-lg font-semibold text-[#52007C]">
+            {t('projectManager.dialogs.editAssignment')}
+          </h3>
         </div>
         
         <div className="space-y-4">
@@ -89,19 +93,19 @@ const EditWorkloadModal: React.FC<EditWorkloadModalProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-[#7A00B8]">
-                  <strong>Employee:</strong> {assignment.employeeName}
+                  <strong>{t('projectManager.dialogs.employee')}</strong> {assignment.employeeName}
                 </p>
                 <p className="text-sm text-[#7A00B8]">
-                  <strong>Project:</strong> {assignment.projectName}
+                  <strong>{t('projectManager.dialogs.projectName')}</strong> {assignment.projectName}
                 </p>
               </div>
               {employeeWorkloadInfo && (
                 <div>
                   <p className="text-sm text-[#7A00B8]">
-                    <strong>Current Total Workload:</strong> {employeeWorkloadInfo.currentTotal}%
+                    <strong>{t('projectManager.dialogs.currentTotalWorkload')}</strong> {employeeWorkloadInfo.currentTotal}%
                   </p>
                   <p className="text-sm text-[#7A00B8]">
-                    <strong>This Assignment:</strong> {employeeWorkloadInfo.currentAssignment}%
+                    <strong>{t('projectManager.dialogs.thisAssignment')}</strong> {employeeWorkloadInfo.currentAssignment}%
                   </p>
                 </div>
               )}
@@ -113,24 +117,26 @@ const EditWorkloadModal: React.FC<EditWorkloadModalProps> = ({
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center gap-2 mb-3">
                 <FaInfoCircle className="text-blue-600" />
-                <h4 className="text-sm font-semibold text-blue-800">Workload Calculator</h4>
+                <h4 className="text-sm font-semibold text-blue-800">
+                  {t('projectManager.dialogs.workloadCalculator')}
+                </h4>
               </div>
               
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-blue-700">
-                    <strong>Without this assignment:</strong> {employeeWorkloadInfo.withoutThisAssignment}%
+                    <strong>{t('projectManager.dialogs.withoutThisAssignment')}</strong> {employeeWorkloadInfo.withoutThisAssignment}%
                   </p>
                   <p className="text-blue-700">
-                    <strong>Available capacity:</strong> {employeeWorkloadInfo.available}%
+                    <strong>{t('projectManager.dialogs.availableCapacity')}</strong> {employeeWorkloadInfo.available}%
                   </p>
                 </div>
                 <div>
                   <p className={`font-semibold ${employeeWorkloadInfo.isOverAllocated ? 'text-red-600' : 'text-green-600'}`}>
-                    <strong>New total:</strong> {employeeWorkloadInfo.newTotal}%
+                    <strong>{t('projectManager.dialogs.newTotal')}</strong> {employeeWorkloadInfo.newTotal}%
                   </p>
                   <p className={`font-semibold ${employeeWorkloadInfo.remainingAfterChange < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                    <strong>Remaining after change:</strong> {employeeWorkloadInfo.remainingAfterChange}%
+                    <strong>{t('projectManager.dialogs.remainingAfterChange')}</strong> {employeeWorkloadInfo.remainingAfterChange}%
                   </p>
                 </div>
               </div>
@@ -138,7 +144,7 @@ const EditWorkloadModal: React.FC<EditWorkloadModalProps> = ({
               {/* Visual Progress Bar */}
               <div className="mt-3">
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-gray-600">Workload Distribution</span>
+                  <span className="text-gray-600">{t('projectManager.dialogs.workloadDistribution')}</span>
                   <span className={`font-semibold ${employeeWorkloadInfo.isOverAllocated ? 'text-red-600' : 'text-blue-600'}`}>
                     {employeeWorkloadInfo.newTotal}% of 100%
                   </span>
@@ -183,21 +189,21 @@ const EditWorkloadModal: React.FC<EditWorkloadModalProps> = ({
           {/* Error Message */}
           {(error || employeeWorkloadInfo?.isOverAllocated) && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
-              {error || `Workload exceeds 100%! You can assign maximum ${employeeWorkloadInfo?.available}% to this employee.`}
+              {error || `${t('projectManager.dialogs.workloadExceeds')} You can assign maximum ${employeeWorkloadInfo?.available}% to this employee.`}
             </div>
           )}
 
           {/* Role Selection */}
           <div>
             <label className="block text-sm font-medium text-[#52007C] mb-1">
-              Role
+              {t('projectManager.dialogs.role')}
             </label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
               className="w-full px-3 py-2 border border-[#F6E6FF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#BF4BF6]"
             >
-              <option value="">Select Role</option>
+              <option value="">{t('projectManager.dialogs.selectRole')}</option>
               {availableRoles.map(roleOption => (
                 <option key={roleOption} value={roleOption}>
                   {roleOption}
@@ -209,10 +215,10 @@ const EditWorkloadModal: React.FC<EditWorkloadModalProps> = ({
           {/* Workload Percentage Input */}
           <div>
             <label className="block text-sm font-medium text-[#52007C] mb-1">
-              Workload Percentage
+              {t('projectManager.dialogs.workloadPercentage')}
               {employeeWorkloadInfo && (
                 <span className="text-xs text-gray-500 ml-2">
-                  (Available: {employeeWorkloadInfo.available}%)
+                  ({t('projectManager.dialogs.available')} {employeeWorkloadInfo.available}%)
                 </span>
               )}
             </label>
@@ -253,7 +259,7 @@ const EditWorkloadModal: React.FC<EditWorkloadModalProps> = ({
             className="px-4 py-2 text-[#7A00B8] hover:text-[#52007C] transition-colors flex items-center gap-2"
           >
             <FaTimes size={14} />
-            Cancel
+            {t('projectManager.dialogs.cancel')}
           </button>
           <button
             onClick={handleConfirm}
@@ -268,7 +274,7 @@ const EditWorkloadModal: React.FC<EditWorkloadModalProps> = ({
             className="px-4 py-2 bg-[#BF4BF6] text-white rounded-lg hover:bg-[#52007C] transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FaCheck size={14} />
-            Update Assignment
+            {t('projectManager.dialogs.updateAssignment')}
           </button>
         </div>
       </div>
