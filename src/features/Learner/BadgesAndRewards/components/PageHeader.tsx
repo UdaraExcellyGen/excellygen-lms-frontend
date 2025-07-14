@@ -8,11 +8,11 @@ interface PageHeaderProps {
 
 const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle }) => {
   return (
-    <div className="mb-16">
-      <h1 className="text-3xl md:text-4xl text-center font-bold text-white font-unbounded">
+    <div className="mb-12 text-center">
+      <h1 className="text-4xl font-bold text-white font-unbounded md:text-5xl">
         {title}
       </h1>
-      <p className="text-center mt-1 font-nunito text-heliotrope">
+      <p className="max-w-2xl mx-auto mt-3 text-lg text-heliotrope font-nunito">
         {subtitle}
       </p>
     </div>
