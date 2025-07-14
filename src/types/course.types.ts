@@ -68,6 +68,9 @@ export interface LearnerLessonDto {
     hasQuiz: boolean; // Indicates if this lesson has an associated quiz
     quizId: number | null; // The ID of the quiz for this lesson, if any
     isQuizCompleted: boolean; // Indicates if the quiz for this lesson is completed by the learner
+    quizAttemptCount?: number;
+    isQuizPassed?: boolean;
+    lastAttemptId?: number | null;
 }
 
 export interface LearnerCourseDto {

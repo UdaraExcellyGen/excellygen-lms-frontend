@@ -303,7 +303,7 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
 
                 {/* Error Message */}
                 {errorMessage && (
-                  <div className="mt-3 p-2 bg-red-900/30 border border-red-500/30 rounded text-red-300 text-sm">
+                  <div className="mt-3 p-2 bg-white border border-red-500/30 rounded text-red-500 text-sm">
                     {errorMessage}
                   </div>
                 )}
