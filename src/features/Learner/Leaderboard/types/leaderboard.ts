@@ -1,23 +1,19 @@
-// Leaderboard related types
-export interface Learner {
+export interface LeaderboardEntry {
   rank: number;
+  userId: string;
   name: string;
-  avatar: string;
-  title: string;
+  title: string | null;
+  avatar: string | null;
   points: number;
-  achievements: number;
-  completedCourses: number;
-  rankChange: number;
-  isCurrentUser?: boolean;
+  isCurrentUser: boolean;
 }
 
-export interface CourseCategory {
-  id: string;
-  name: string;
+export interface UserRank {
+  rank: number;
+  points: number;
 }
 
 export interface LeaderboardData {
-  [category: string]: Learner[];
+  entries: LeaderboardEntry[];
+  currentUserRank: UserRank | null;
 }
-
-export type TimeFrame = 'daily' | 'weekly' | 'monthly' | 'yearly';
