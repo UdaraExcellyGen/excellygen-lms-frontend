@@ -1,8 +1,8 @@
-// src/api/services/Course/learnerCourseService.ts
 import apiClient from '../../apiClient';
 import { LearnerCourseDto, LessonProgressDto, MarkLessonCompletedPayload } from '../../../types/course.types';
 
-// OPTIMIZATION: Simplified caching with request deduplication
+// NOTE: The complex caching logic here can still conflict with browser and other caching layers.
+// This simplified version relies on deduplication for in-flight requests.
 interface CacheEntry<T> {
   data: T | null;
   timestamp: number;
@@ -15,12 +15,10 @@ const cache = {
   courseDetails: new Map<number, CacheEntry<LearnerCourseDto>>()
 };
 
-// Cache durations
 const AVAILABLE_COURSES_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const ENROLLED_COURSES_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 const COURSE_DETAILS_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
-// OPTIMIZATION: Request deduplication helper
 async function withCache<T>(
   cacheEntry: CacheEntry<T>,
   cacheDuration: number,
@@ -29,19 +27,16 @@ async function withCache<T>(
 ): Promise<T> {
   const now = Date.now();
   
-  // Return cached data if fresh
   if (cacheEntry.data && (now - cacheEntry.timestamp) < cacheDuration) {
     console.log(`Returning cached data${cacheKey ? ` for ${cacheKey}` : ''}`);
     return cacheEntry.data;
   }
   
-  // Return ongoing promise if exists
   if (cacheEntry.promise) {
     console.log(`Waiting for ongoing request${cacheKey ? ` for ${cacheKey}` : ''}`);
     return cacheEntry.promise;
   }
   
-  // Create new request
   console.log(`Fetching fresh data${cacheKey ? ` for ${cacheKey}` : ''}`);
   cacheEntry.promise = fetchFunction();
   
@@ -51,7 +46,6 @@ async function withCache<T>(
     cacheEntry.timestamp = now;
     return data;
   } catch (error) {
-    // Return stale data if available on error
     if (cacheEntry.data) {
       console.warn(`API error, returning stale data${cacheKey ? ` for ${cacheKey}` : ''}:`, error);
       return cacheEntry.data;
@@ -62,9 +56,6 @@ async function withCache<T>(
   }
 }
 
-/**
- * OPTIMIZATION: Get all available courses with request deduplication
- */
 export const getAvailableCoursesForLearner = async (categoryId?: string): Promise<LearnerCourseDto[]> => {
   const cacheKey = categoryId || 'all';
   
@@ -78,56 +69,28 @@ export const getAvailableCoursesForLearner = async (categoryId?: string): Promis
     cacheEntry,
     AVAILABLE_COURSES_CACHE_DURATION,
     async () => {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // Reduced timeout
-      
-      try {
-        const params = categoryId ? `?categoryId=${categoryId}` : '';
-        const response = await apiClient.get<LearnerCourseDto[]>(`/LearnerCourses/available${params}`, {
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        return response.data;
-      } catch (error: any) {
-        clearTimeout(timeoutId);
-        throw error;
-      }
+      // FIX: Removed manual AbortController and timeout to prevent conflict with apiClient.ts
+      const params = categoryId ? `?categoryId=${categoryId}` : '';
+      const response = await apiClient.get<LearnerCourseDto[]>(`/LearnerCourses/available${params}`);
+      return response.data;
     },
     `available courses (category: ${cacheKey})`
   );
 };
 
-/**
- * OPTIMIZATION: Get enrolled courses with request deduplication
- */
 export const getEnrolledCoursesForLearner = async (): Promise<LearnerCourseDto[]> => {
   return withCache(
     cache.enrolled,
     ENROLLED_COURSES_CACHE_DURATION,
     async () => {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // Reduced timeout
-      
-      try {
-        const response = await apiClient.get<LearnerCourseDto[]>('/LearnerCourses/enrolled', {
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        return response.data;
-      } catch (error: any) {
-        clearTimeout(timeoutId);
-        throw error;
-      }
+      // FIX: Removed manual AbortController and timeout to prevent conflict with apiClient.ts
+      const response = await apiClient.get<LearnerCourseDto[]>('/LearnerCourses/enrolled');
+      return response.data;
     },
     'enrolled courses'
   );
 };
 
-/**
- * OPTIMIZATION: Get course details with request deduplication
- */
 export const getLearnerCourseDetails = async (courseId: number): Promise<LearnerCourseDto> => {
   if (!cache.courseDetails.has(courseId)) {
     cache.courseDetails.set(courseId, { data: null, timestamp: 0, promise: null });
@@ -139,38 +102,24 @@ export const getLearnerCourseDetails = async (courseId: number): Promise<Learner
     cacheEntry,
     COURSE_DETAILS_CACHE_DURATION,
     async () => {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
-      try {
-        const response = await apiClient.get<LearnerCourseDto>(`/LearnerCourses/${courseId}`, {
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        return response.data;
-      } catch (error: any) {
-        clearTimeout(timeoutId);
-        throw error;
-      }
+       // FIX: Removed manual AbortController and timeout to prevent conflict with apiClient.ts
+      const response = await apiClient.get<LearnerCourseDto>(`/LearnerCourses/${courseId}`);
+      return response.data;
     },
     `course details (${courseId})`
   );
 };
 
-/**
- * OPTIMIZATION: Mark lesson completed with cache invalidation
- */
 export const markLessonCompleted = async (lessonId: number): Promise<LessonProgressDto> => {
   try {
+    // This is a POST/PATCH request, so it doesn't need cancellation logic.
     const payload: MarkLessonCompletedPayload = { lessonId };
     const response = await apiClient.patch<LessonProgressDto>(`/LearnerCourses/lessons/${lessonId}/complete`, payload);
     
-    // OPTIMIZATION: Smart cache invalidation
+    // Invalidate cache after mutation
     cache.enrolled.data = null;
     cache.enrolled.timestamp = 0;
     
-    // Clear specific course details instead of all
     cache.courseDetails.forEach((entry, courseId) => {
       if (entry.data?.lessons?.some(lesson => lesson.id === lessonId)) {
         cache.courseDetails.delete(courseId);
@@ -185,9 +134,6 @@ export const markLessonCompleted = async (lessonId: number): Promise<LessonProgr
   }
 };
 
-/**
- * OPTIMIZATION: Batch fetch with intelligent error handling
- */
 export const getCoursesForCategory = async (categoryId: string): Promise<{
   available: LearnerCourseDto[];
   enrolled: LearnerCourseDto[];
@@ -196,7 +142,6 @@ export const getCoursesForCategory = async (categoryId: string): Promise<{
   console.log(`Batch fetching courses for category: ${categoryId}`);
   
   try {
-    // Use Promise.all for parallel requests (faster than Promise.allSettled)
     const [available, enrolled] = await Promise.all([
       getAvailableCoursesForLearner(categoryId),
       getEnrolledCoursesForLearner()
@@ -206,30 +151,12 @@ export const getCoursesForCategory = async (categoryId: string): Promise<{
     
     return { available, enrolled, categoryEnrolled };
   } catch (error) {
+    // This will now catch genuine errors from apiClient, not self-cancellations.
     console.error('Error in batch fetch:', error);
-    
-    // Fallback: try to get data individually
-    try {
-      const [availableResult, enrolledResult] = await Promise.allSettled([
-        getAvailableCoursesForLearner(categoryId),
-        getEnrolledCoursesForLearner()
-      ]);
-      
-      const available = availableResult.status === 'fulfilled' ? availableResult.value : [];
-      const enrolled = enrolledResult.status === 'fulfilled' ? enrolledResult.value : [];
-      const categoryEnrolled = enrolled.filter(course => course.category.id === categoryId);
-      
-      return { available, enrolled, categoryEnrolled };
-    } catch (fallbackError) {
-      console.error('Fallback also failed:', fallbackError);
-      return { available: [], enrolled: [], categoryEnrolled: [] };
-    }
+    return { available: [], enrolled: [], categoryEnrolled: [] };
   }
 };
 
-/**
- * OPTIMIZATION: Clear all caches
- */
 export const clearCourseCaches = () => {
   cache.available.clear();
   cache.enrolled = { data: null, timestamp: 0, promise: null };
@@ -237,23 +164,10 @@ export const clearCourseCaches = () => {
   console.log('All course caches cleared');
 };
 
-/**
- * OPTIMIZATION: Smart cache warming for specific category
- */
 export const preloadCoursesForCategory = async (categoryId: string): Promise<void> => {
-  try {
-    // Don't await - fire and forget for preloading
-    getCoursesForCategory(categoryId).catch(() => {
-      // Silently handle preload errors
-    });
-  } catch {
-    // Silently handle preload errors
-  }
+    getCoursesForCategory(categoryId).catch(() => { /* Silently ignore preload errors */ });
 };
 
-/**
- * OPTIMIZATION: Get cache status for debugging
- */
 export const getCacheStatus = () => {
   const now = Date.now();
   return {

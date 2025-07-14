@@ -7,7 +7,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 45000, // OPTIMIZATION: Increased timeout to 15 seconds
+  timeout: 15000, // OPTIMIZATION: Increased timeout to 15 seconds
 });
 
 // Flag to prevent multiple token refresh attempts at the same time
