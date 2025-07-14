@@ -1,3 +1,5 @@
+import { ComponentType } from 'react';
+
 export interface Notification {
   id: number;
   text: string;
@@ -5,26 +7,14 @@ export interface Notification {
   isNew: boolean;
 }
 
-export interface DashboardStats {
-  courses: {
-    total: number;
-    active: number;
-  };
-  students: {
-    total: number;
-    active: number;
-  };
-}
-
 export interface QuickAction {
   text: string;
-  color: string;
-  hoverColor: string;
+  icon: ComponentType<any>;
   onClick: () => void;
 }
 
 export interface StatCardProps {
-  icon: React.ComponentType<any>;
+  icon: ComponentType<any>;
   title: string;
   stats: {
     total: number;
@@ -32,13 +22,19 @@ export interface StatCardProps {
   };
   totalLabel: string;
   activeLabel: string;
-  onViewMore: () => void;
-}
-
-export interface NotificationCardProps {
-  notifications: Notification[];
+  onClick?: () => void;
 }
 
 export interface QuickActionsGridProps {
   actions: QuickAction[];
+}
+
+export interface HeaderProps {
+  notifications?: Notification[];
+  coordinatorName?: string;
+  role?: string;
+}
+
+export interface NotificationCardProps {
+  notifications: Notification[];
 }

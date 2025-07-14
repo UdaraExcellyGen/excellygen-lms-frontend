@@ -69,8 +69,9 @@ const UploadMaterials: React.FC = () => {
                                 id: l.id, lessonName: l.lessonName, lessonPoints: l.lessonPoints,
                                 courseId: l.courseId,
                                 documents: l.documents.map(d => ({
-                                    id: d.id, name: d.name, type: 'document', fileUrl: d.fileUrl,
-                                    documentType: d.documentType, fileSize: d.fileSize, lessonId: d.lessonId
+                                    id: d.id, name: d.name, fileUrl: d.fileUrl,
+                                    documentType: d.documentType, fileSize: d.fileSize, lessonId: d.lessonId,
+                                    lastUpdatedDate: d.lastUpdatedDate
                                 })),
                                 isEditing: false, originalName: l.lessonName, originalPoints: l.lessonPoints ?? 1
                             }));
@@ -298,8 +299,8 @@ const UploadMaterials: React.FC = () => {
             try {
                 const docDto = await uploadDocument(lessonId, file);
                 const newDoc: ExistingMaterialFile = {
-                    id: docDto.id, name: docDto.name, type: 'document', fileUrl: docDto.fileUrl,
-                    documentType: docDto.documentType, fileSize: docDto.fileSize, lessonId: docDto.lessonId
+                    id: docDto.id, name: docDto.name, fileUrl: docDto.fileUrl,
+                    documentType: docDto.documentType, fileSize: docDto.fileSize, lessonId: docDto.lessonId,lastUpdatedDate: docDto.lastUpdatedDate 
                 };
                 addDocumentToLessonState(lessonId, newDoc);
                 successCount++;
@@ -369,7 +370,25 @@ const UploadMaterials: React.FC = () => {
         }
     }, [courseId, navigate, pendingUploadFiles, courseData.lessons]);
 
-    const handleSaveDraftAction = useCallback(() => { toast.error("Save as Draft feature is not implemented yet."); }, []);
+    const handleSaveDraftAction = useCallback(() => {
+         //toast.error("Save as Draft feature is not implemented yet."); 
+        const hasPendingUploads = Object.values(pendingUploadFiles).some(fileList => fileList && fileList.length > 0);
+        if (hasPendingUploads) {
+            toast.error("You have pending documents that are not uploaded. Please upload or remove them before saving a draft.");
+            return;
+        }
+
+        if (courseData.lessons.some(l => l.isEditing)) {
+            toast.error("Please save or cancel changes on all subtopics before saving a draft.");
+            return;
+        }
+        
+        // If all checks pass, it's safe to leave.
+        toast.success('Your progress has been saved. You can continue later.');
+        navigate('/coordinator/course-display-page');
+
+    }, [navigate, pendingUploadFiles, courseData.lessons]);
+        
     
     const handleCreateQuizAction = useCallback((lessonId: number) => {
         if (!courseId) {
@@ -452,16 +471,16 @@ const handleRemoveQuizAction = useCallback((lessonId: number) => {
 
     return (
         <div className="min-h-screen bg-[#52007C] p-6">
-            <Header onSaveDraft={handleSaveDraftAction} navigateToCreateCourse={handleBackNavigation} />
+            <Header onSaveDraft={handleSaveDraftAction} navigateToCreateCourse={handleBackNavigation} isSubmitting={isSubmittingAction} />
             <ProgressBar stage={2} />
             <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
-                <div className="bg-[#1B0A3F]/40 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg overflow-hidden mb-6">
+                <div className="bg-white/90 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg overflow-hidden mb-6">
                     <div className="px-6 py-4 flex justify-between items-center">
-                        <h2 className="text-lg font-['Unbounded'] text-white">Course Materials (Subtopics & Documents)</h2>
+                        <h2 className="text-lg font-['Unbounded'] text-[#1B0A3F]">Course Materials (Subtopics & Documents)</h2>
                         <button onClick={handleAddNewSubtopic} disabled={isSubmittingAction} className="px-4 py-2 bg-[#BF4BF6] text-white rounded-lg font-['Nunito_Sans'] hover:bg-[#D68BF9] transition-colors text-sm disabled:opacity-50">Add New Subtopic</button>
                     </div>
                     <div className="px-6 py-4 space-y-4 border-t border-[#BF4BF6]/20">
-                        {courseData.lessons.length === 0 && (<p className="text-center text-gray-400 py-4">No subtopics added yet. Click 'Add New Subtopic' to begin.</p>)}
+                        {courseData.lessons.length === 0 && (<p className="text-center text-gray-600 py-4">No subtopics added yet. Click 'Add New Subtopic' to begin.</p>)}
                         {courseData.lessons.map((subtopic) => (
                             <SubtopicItem
                                 key={subtopic.id}

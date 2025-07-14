@@ -27,11 +27,28 @@ export interface LessonDto {
   documents?: CourseDocumentDto[];
 }
 
+// Enhanced LearnerLessonDto with quiz completion tracking
+export interface LearnerLessonDto {
+  id: number;
+  courseId: number;
+  lessonName: string;
+  lessonOrder: number;
+  content?: string;
+  videoUrl?: string;
+  documents?: CourseDocumentDto[];
+  isCompleted: boolean;
+  hasQuiz: boolean;
+  quizId?: number;
+  isQuizCompleted: boolean;
+  lastAttemptId?: number;
+}
+
 export interface CourseDocumentDto {
   id: number;
   lessonId: number;
   name: string;
   filePath: string;
+  fileUrl: string;
   documentType: DocumentType;
   uploadedAt: string;
 }
@@ -39,6 +56,7 @@ export interface CourseDocumentDto {
 export interface CourseCategoryDto {
   id: string;
   name: string;
+  title: string; // Added for compatibility
   description?: string;
   iconName?: string;
   isActive: boolean;
@@ -66,12 +84,16 @@ export interface LearnerCourseDto {
   creator: UserDto;
   status: CourseStatus;
   thumbnailImagePath?: string;
+  thumbnailUrl?: string; // Added for compatibility
   enrollmentStatus: 'active' | 'completed' | 'inactive';
   progressPercentage: number;
   enrolledAt?: string;
   completedAt?: string;
-  lessons?: LessonDto[];
-  technologies?: TechnologyDto[];
+  lessons: LearnerLessonDto[]; // Updated to use LearnerLessonDto
+  technologies: TechnologyDto[];
+  totalLessons: number;
+  completedLessons: number;
+  estimatedTime: number;
 }
 
 export interface LessonProgressDto {
@@ -206,6 +228,7 @@ export type CertificatePlatform = typeof CERTIFICATE_PLATFORMS[number];
 // === THEME CONFIGURATIONS ===
 export const CERTIFICATE_THEMES = {
   internal: {
+    // FIX: Wrapped template literals in backticks to form a valid string
     gradient: `linear-gradient(135deg, ${BRAND_COLORS.indigo}, ${BRAND_COLORS.phlox})`,
     primaryColor: BRAND_COLORS.indigo,
     secondaryColor: BRAND_COLORS.heliotrope,
@@ -214,6 +237,7 @@ export const CERTIFICATE_THEMES = {
     textColor: BRAND_COLORS.frenchViolet
   },
   external: {
+    // FIX: Wrapped template literals in backticks to form a valid string
     gradient: `linear-gradient(135deg, ${BRAND_COLORS.federalBlue}, ${BRAND_COLORS.mediumBlue})`,
     primaryColor: BRAND_COLORS.federalBlue,
     secondaryColor: BRAND_COLORS.paleAzure,

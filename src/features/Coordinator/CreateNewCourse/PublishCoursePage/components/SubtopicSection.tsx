@@ -17,7 +17,7 @@ interface SubtopicSectionProps {
     isEditMode?: boolean;
     onEditQuiz?: (lessonId: number) => void;
     onRemoveQuiz?: (lessonId: number) => void;
-    courseId?: number;
+    courseId?: number|null;
     isLearnerView?: boolean;
 }
 
@@ -39,17 +39,17 @@ const SubtopicSection: React.FC<SubtopicSectionProps> = ({
     const quiz = hasQuiz ? quizzes[subtopic.id][0] : null;
 
     return (
-        <div className="mb-3 bg-[#1B0A3F]/50 rounded-lg p-0.5"> {/* Reduced padding */}
+        <div className="mb-3 border border-[#52007C] rounded-lg p-0.5"> {/* Reduced padding */}
             <button
                 onClick={() => toggleSubtopic(subtopic.id)}
-                className="w-full flex items-center justify-between p-3 text-white hover:bg-[#1B0A3F]/80 rounded-md transition-colors"
+                className="w-full flex items-center justify-between p-3 text-[#1B0A3F] hover:bg-white/30 rounded-md transition-colors"
                 aria-expanded={expandedSubtopics[subtopic.id]}
             >
                 <h4 className="font-semibold font-unbounded text-base">{subtopic.lessonName}</h4>
                 <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-400 bg-[#2D1B59] px-2 py-0.5 rounded-full">{subtopic.lessonPoints} pts</span>
+                    <span className="text-xs text-[#1B0A3F] text-bold border border-[#52007C] px-2 py-0.5 rounded-full">{subtopic.lessonPoints} Points</span>
                     {hasQuiz && (
-                        <span className="text-xs text-purple-400 bg-[#2D1B59] px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="text-xs text-[#1B0A3F] border border-[#52007C] px-2 py-0.5 rounded-full flex items-center gap-1">
                             <BookCheck size={12} />
                             Quiz
                         </span>

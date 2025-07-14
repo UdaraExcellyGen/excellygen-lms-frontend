@@ -110,7 +110,7 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
   const materialsList = subtopic.documents || [];
 
   return (
-    <div className="bg-[#1B0A3F]/50 rounded-lg mb-4 overflow-hidden">
+    <div className="bg-white/90 rounded-lg mb-4 overflow-hidden ">
       {/* Subtopic Header */}
       <div 
         className="p-4 flex justify-between items-center cursor-pointer" 
@@ -118,9 +118,9 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
       >
         <div className="flex items-center space-x-3">
           {expanded ? (
-            <ChevronUp className="text-[#D68BF9] w-5 h-5" />
+            <ChevronUp className="text-[#52007C] w-5 h-5" />
           ) : (
-            <ChevronDown className="text-[#D68BF9] w-5 h-5" />
+            <ChevronDown className="text-[#52007C] w-5 h-5" />
           )}
           <div className="flex-1">
             {subtopic.isEditing ? (
@@ -128,17 +128,17 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                 type="text"
                 value={subtopic.lessonName}
                 onChange={(e) => handleSubtopicInputChange('lessonName', e.target.value)}
-                className="bg-[#34137C]/60 text-white px-3 py-1 rounded-md border border-[#BF4BF6]/30 w-full max-w-md"
+                className=" text-[#1B0A3F] px-3 py-1 rounded-md border-2 border-[#52007C] w-full max-w-md"
                 onClick={(e) => e.stopPropagation()}
                 placeholder="Enter subtopic name"
               />
             ) : (
-              <h3 className="text-white font-medium">{subtopic.lessonName}</h3>
+              <h3 className="text-[#1B0A3F] font-medium">{subtopic.lessonName}</h3>
             )}
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <div className="bg-[#34137C]/60 px-2 py-1 rounded text-white text-xs flex items-center">
+          <div className="border border-[#52007C] px-2 py-1 rounded text-[#1B0A3F] text-xs flex items-center">
             <span className="mr-1">Points:</span>
             {subtopic.isEditing ? (
               <input
@@ -147,7 +147,7 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                 max="100"
                 value={subtopic.lessonPoints}
                 onChange={(e) => handleSubtopicInputChange('lessonPoints', e.target.value)}
-                className="bg-[#34137C] text-white w-12 px-1 rounded border border-[#BF4BF6]/30"
+                className=" text-[#1B0A3F] w-12 px-1 rounded"
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
@@ -161,7 +161,7 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                   e.stopPropagation();
                   handleSaveChanges();
                 }} 
-                className="text-green-400 hover:text-green-300 text-xs px-2 py-1 bg-green-800/30 rounded"
+                className="text-green-600 hover:text-green-800 text-xs px-2 py-1 border-2 border-gray-800/30 rounded"
                 disabled={isSubmitting}
               >
                 Save
@@ -171,7 +171,7 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                   e.stopPropagation();
                   handleCancelEdit();
                 }} 
-                className="text-gray-400 hover:text-gray-300 text-xs px-2 py-1 bg-gray-800/30 rounded"
+                className="text-gray-600 hover:text-gray-800 text-xs px-2 py-1 border-2 border border-gray-800/30 rounded"
                 disabled={isSubmitting}
               >
                 Cancel
@@ -184,7 +184,7 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                   e.stopPropagation();
                   handleToggleEdit();
                 }} 
-                className="text-[#D68BF9] hover:text-white"
+                className="text-[#DA70D6] hover:text-[#D68BF9]"
                 disabled={isSubmitting}
               >
                 <Edit className="w-4 h-4" />
@@ -194,7 +194,7 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                   e.stopPropagation();
                   handleRemoveSubtopic();
                 }} 
-                className="text-red-400 hover:text-red-300"
+                className="text-red-500 hover:text-red-400"
                 disabled={isSubmitting}
               >
                 <Trash className="w-4 h-4" />
@@ -216,7 +216,7 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
               </h4>
               <button 
                 onClick={handleUploadDocumentClick} 
-                className="bg-[#34137C] hover:bg-[#34137C]/80 text-[#D68BF9] text-xs py-1 px-2 rounded flex items-center"
+                className="border-2 border border-[#34137C] hover:border-[#34137C]/60 text-[#BF4BF6] text-xs py-1 px-2 rounded flex items-center"
                 disabled={isSubmitting}
               >
                 <Plus className="w-3 h-3 mr-1" />
@@ -230,12 +230,12 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                 materialsList.map((doc) => (
                   <div 
                     key={doc.id} 
-                    className="bg-[#34137C]/30 p-2 rounded-md flex justify-between items-center"
+                    className="bg-[#52007C]/20 p-2 rounded-md flex justify-between items-center"
                   >
                     <div className="flex items-center">
-                      <FileText className="w-4 h-4 text-[#D68BF9] mr-2" />
-                      <span className="text-white text-sm">{doc.name}</span>
-                      <span className="text-gray-400 text-xs ml-2">
+                      <FileText className="w-4 h-4 text-[#52007C] mr-2" />
+                      <span className="text-[#52007C] text-sm">{doc.name}</span>
+                      <span className="text-gray-800 text-xs ml-2">
                         ({(doc.fileSize / 1024 / 1024).toFixed(2)} MB)
                       </span>
                     </div>
@@ -244,14 +244,14 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                         href={doc.fileUrl} 
                         target="_blank" 
                         rel="noopener noreferrer" 
-                        className="text-[#D68BF9] hover:text-white"
+                        className="text-[#52007C] hover:text-[#52007C]/80"
                         download={doc.name}
                       >
                         <Download className="w-4 h-4" />
                       </a>
                       <button 
                         onClick={() => removeMaterial(doc.id, doc.name)} 
-                        className="text-red-400 hover:text-red-300"
+                        className="text-red-500 hover:text-red-400"
                         disabled={isSubmitting}
                       >
                         <Trash className="w-4 h-4" />
@@ -264,9 +264,9 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
               )}
             </div>
 
-            {/* Upload Section */}
+            {/* Upload area */}
             {showUploadSection && (
-              <div className="bg-[#34137C]/20 border border-[#BF4BF6]/30 rounded-lg p-4">
+              <div className="border border-[#BF4BF6]/30 rounded-lg p-4">
                 <div 
                   className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                     isDraggingDocs 
@@ -278,17 +278,17 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
                 >
-                  <Upload className="w-8 h-8 text-[#D68BF9] mx-auto mb-2" />
-                  <p className="text-white text-sm mb-2">
+                  <Upload className="w-8 h-8 text-[#BF4BF6] mx-auto mb-2" />
+                  <p className="text-[#1B0A3F]/80 text-sm mb-2">
                     Drag and drop files here or{' '}
                     <button 
                       onClick={handleFileButtonClick}
-                      className="text-[#D68BF9] underline hover:text-white"
+                      className="text-[#BF4BF6]  hover:text-[#BF4BF6]/80"
                     >
                       browse
                     </button>
                   </p>
-                  <p className="text-gray-400 text-xs">
+                  <p className="text-gray-500 text-xs">
                     Supported: PDF, DOC, DOCX (Max 5MB each)
                   </p>
                   <input
@@ -303,7 +303,7 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
 
                 {/* Error Message */}
                 {errorMessage && (
-                  <div className="mt-3 p-2 bg-red-900/30 border border-red-500/30 rounded text-red-300 text-sm">
+                  <div className="mt-3 p-2 bg-white border border-red-500/30 rounded text-red-500 text-sm">
                     {errorMessage}
                   </div>
                 )}
@@ -311,11 +311,11 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                 {/* Pending Files */}
                 {pendingFiles.length > 0 && (
                   <div className="mt-3">
-                    <h5 className="text-white text-sm mb-2">Pending Files:</h5>
+                    <h5 className="text-[#1B0A3F] text-sm mb-2">Pending Files:</h5>
                     <div className="space-y-1">
                       {pendingFiles.map((file, index) => (
-                        <div key={index} className="flex justify-between items-center bg-[#1B0A3F]/50 p-2 rounded">
-                          <span className="text-white text-sm truncate flex-1">{file.name}</span>
+                        <div key={index} className="flex justify-between items-center bg-[#1B0A3F]/20 p-2 rounded">
+                          <span className="text-[#1B0A3F]/60 text-sm truncate flex-1">{file.name}</span>
                           <button 
                             onClick={() => handleRemovePendingFile(file.name)}
                             className="text-red-400 hover:text-red-300 ml-2"
@@ -348,16 +348,16 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap gap-2 mb-4">
+          {/* <div className="flex flex-wrap gap-2 mb-4">
             <button 
               onClick={handleAddVideoClick} 
-              className="bg-[#34137C] hover:bg-[#34137C]/80 text-[#D68BF9] text-xs py-1 px-2 rounded flex items-center"
+              className="border-2 border border-[#34137C] hover:border-[#34137C]/60 text-[#BF4BF6] text-xs py-1 px-2 rounded flex items-center"
               disabled={isSubmitting}
             >
               <Video className="w-3 h-3 mr-1" />
               Add Video
             </button>
-          </div>
+          </div> */}
 
           {/* Quizzes Section */}
           <div>
@@ -369,7 +369,7 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
               {!hasQuizzes && (
                 <button 
                   onClick={handleCreateQuizClick}
-                  className="bg-[#34137C] hover:bg-[#34137C]/80 text-[#D68BF9] text-xs py-1 px-2 rounded flex items-center"
+                  className="border-2 border border-[#34137C] hover:border-[#34137C]/60 text-[#BF4BF6] text-xs py-1 px-2 rounded flex items-center"
                   disabled={isSubmitting}
                 >
                   <Plus className="w-3 h-3 mr-1" />
@@ -383,26 +383,26 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                 quizzes.map((quiz) => (
                   <div 
                     key={quiz.quizId} 
-                    className="bg-[#34137C]/30 p-2 rounded-md flex justify-between items-center"
+                    className="bg-[#52007C]/20 p-2 rounded-md flex justify-between items-center"
                   >
                     <div className="flex items-center">
-                      <List className="w-4 h-4 text-[#D68BF9] mr-2" />
-                      <span className="text-white text-sm">{quiz.quizTitle}</span>
-                      <span className="text-gray-400 text-xs ml-2">
+                      <List className="w-4 h-4 text-[#52007C] mr-2" />
+                      <span className="text-[#52007C] text-sm">{quiz.quizTitle}</span>
+                      <span className="text-gray-800 text-xs ml-2">
                         ({quiz.quizSize} questions • {quiz.timeLimitMinutes} min)
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <button 
                         onClick={handleEditQuiz}
-                        className="text-[#D68BF9] hover:text-white"
+                        className="text-[#52007C] hover:text-[#52007C]/80"
                         disabled={isSubmitting}
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={handleRemoveQuiz}
-                        className="text-red-400 hover:text-red-300"
+                        className="text-red-500 hover:text-red-400"
                         disabled={isSubmitting}
                       >
                         <Trash className="w-4 h-4" />
@@ -416,6 +416,17 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
                 </p>
               )}
             </div>
+          </div>
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <button 
+              onClick={handleAddVideoClick} 
+              className="border-2 border border-[#34137C] hover:border-[#34137C]/60 text-[#BF4BF6] text-xs py-1 px-2 rounded flex items-center"
+              disabled={isSubmitting}
+            >
+              <Video className="w-3 h-3 mr-1" />
+              Add Video
+            </button>
           </div>
         </div>
       )}

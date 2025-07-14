@@ -10,7 +10,7 @@ interface QuizItemProps {
   isEditMode?: boolean;
   onEditQuiz?: (lessonId: number) => void;
   onRemoveQuiz?: (lessonId: number) => void;
-  courseId?: number;
+  courseId?: number|null;
   isLearnerView?: boolean;
 }
 
@@ -41,10 +41,10 @@ const QuizItem: React.FC<QuizItemProps> = ({
   };
 
   return (
-    <div className="bg-[#1B0A3F]/60 rounded-lg p-3 flex items-center justify-between group hover:bg-[#1B0A3F]/80 transition-all duration-300 mt-2 border-l-2 border-purple-500">
+    <div className="rounded-lg p-3 flex items-center justify-between group hover:border border-[#52007C] transition-all duration-300 mt-2 border border-[#52007C]">
       <div className="flex items-center gap-2 overflow-hidden">
-        <BookCheck className="w-5 h-5 mr-3 text-purple-400 flex-shrink-0" />
-        <span className="text-sm text-white group-hover:text-[#D68BF9] transition-colors font-nunito truncate">
+        <BookCheck className="w-5 h-5 mr-3 text-red-400 flex-shrink-0" />
+        <span className="text-sm text-[#1B0A3F] group-hover:text-[#1B0A3F]/80 transition-colors font-nunito truncate">
           Quiz: {quizTitle} ({questionCount} questions, {timeLimit} min)
         </span>
       </div>
@@ -79,11 +79,17 @@ const QuizItem: React.FC<QuizItemProps> = ({
             </button>
           </>
         ) : (
+          // THIS IS THE MODIFIED BUTTON
           <button
-            onClick={() => handleViewQuiz(lessonId)}
-            className="text-gray-400 hover:text-[#D68BF9] transition-colors flex-shrink-0 text-sm px-3 py-1 border border-[#D68BF9]/30 rounded-md"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Use the onEditQuiz handler which navigates to the EditQuiz page
+              onEditQuiz && onEditQuiz(lessonId);
+            }}
+            className="text-gray-800 hover:text-gray-600 transition-colors flex-shrink-0 text-sm px-3 py-1 border border-[#D68BF9] rounded-md flex items-center gap-1"
           >
-            View Quiz
+            <Edit3 size={13} className="mr-1" />
+            Edit Quiz
           </button>
         )}
       </div>
