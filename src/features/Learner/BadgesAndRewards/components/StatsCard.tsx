@@ -5,14 +5,14 @@ import { LucideIcon } from 'lucide-react';
 interface StatsCardProps {
   icon: LucideIcon;
   label: string;
-  value: string;
+  value: string | number;
   gradient: string;
 }
 
 const StatsCard: React.FC<StatsCardProps> = ({ icon: Icon, label, value, gradient }) => {
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 border border-[#BF4BF6]/20 shadow-md hover:shadow-xl transition-all duration-300 font-nunito">
-      <div className="flex items-center gap-4">
+      <div className="flex items-start gap-4">
         <div className={`p-3 rounded-lg bg-gradient-to-br ${gradient} shadow-lg`}>
           <Icon className="h-6 w-6 text-white" />
         </div>

@@ -12,33 +12,20 @@ interface BadgeGridProps {
   setFilter: (filter: string) => void;
   onClaimBadge: (badge: Badge) => void;
   loading: boolean;
-  error: string | null;
 }
 
-const BadgeGrid: React.FC<BadgeGridProps> = ({
-  badges,
-  searchQuery,
-  setSearchQuery,
-  filter,
-  setFilter,
-  onClaimBadge,
-  loading,
-  error
-}) => {
-  // Filter badges
+const BadgeGrid: React.FC<BadgeGridProps> = ({ badges, searchQuery, setSearchQuery, filter, setFilter, onClaimBadge, loading }) => {
   const filteredBadges = badges.filter(badge => {
-    const matchesSearch = badge.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         badge.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
+    const matchesSearch = badge.title.toLowerCase().includes(searchQuery.toLowerCase()) || badge.description.toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
 
     switch (filter) {
       case 'earned':
-        return badge.isUnlocked;
+        return badge.isClaimed;
       case 'locked':
-        return !badge.isUnlocked && badge.currentProgress < badge.targetProgress;
+        return !badge.isUnlocked;
       case 'ready':
-        return !badge.isUnlocked && badge.currentProgress >= badge.targetProgress;
+        return badge.isUnlocked && !badge.isClaimed;
       default:
         return true;
     }
@@ -46,63 +33,40 @@ const BadgeGrid: React.FC<BadgeGridProps> = ({
 
   return (
     <div className="space-y-8">
-      {/* Filters and Search */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 border border-[#BF4BF6]/20 shadow-md font-nunito">
-        <div className="flex flex-col md:flex-row gap-4 items-center">
+      <div className="p-6 border rounded-xl bg-white/90 backdrop-blur-sm border-[#BF4BF6]/20 shadow-md font-nunito">
+        <div className="flex flex-col items-center gap-4 md:flex-row">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#52007C]" />
-            <input
-              type="text"
-              placeholder="Search badges..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#F6E6FF]/50 border border-[#BF4BF6]/20 rounded-xl pl-12 pr-4 py-3 text-[#1B0A3F] placeholder-[#52007C]/60 focus:ring-2 focus:ring-[#BF4BF6] focus:border-transparent font-nunito"
-            />
+            <input type="text" placeholder="Search badges..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full py-3 pl-12 pr-4 font-nunito bg-[#F6E6FF]/50 border border-[#BF4BF6]/20 rounded-xl text-[#1B0A3F] placeholder-[#52007C]/60 focus:ring-2 focus:ring-[#BF4BF6] focus:border-transparent" />
           </div>
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="bg-[#F6E6FF]/50 border border-[#BF4BF6]/20 rounded-xl px-4 py-3 text-[#1B0A3F] focus:ring-2 focus:ring-[#BF4BF6] focus:border-transparent font-nunito"
-          >
+          <select value={filter} onChange={(e) => setFilter(e.target.value)} className="px-4 py-3 font-nunito bg-[#F6E6FF]/50 border border-[#BF4BF6]/20 rounded-xl text-[#1B0A3F] focus:ring-2 focus:ring-[#BF4BF6] focus:border-transparent">
             <option value="all">All Badges</option>
-            <option value="earned">Earned Badges</option>
+            <option value="earned">Earned</option>
             <option value="ready">Ready to Claim</option>
-            <option value="locked">Locked Badges</option>
+            <option value="locked">Locked</option>
           </select>
         </div>
       </div>
 
-      {/* Badges Section */}
       <div>
-        <h2 className="text-2xl font-semibold text-white font-unbounded mb-6">My Badges</h2>
-        
-        {loading && badges.length === 0 && !error ? (
-          <div className="flex justify-center items-center h-40">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white"></div>
-          </div>
-        ) : !loading && !error && filteredBadges.length === 0 ? (
-          <div className="text-center py-12">
-            <Award className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-300 text-lg mb-2 font-nunito">No badges found</p>
+        <h2 className="mb-6 text-2xl font-semibold text-white font-unbounded">My Badges</h2>
+        {loading ? (
+          <div className="flex items-center justify-center h-40"><div className="w-10 h-10 border-t-2 border-b-2 border-white rounded-full animate-spin"></div></div>
+        ) : filteredBadges.length === 0 ? (
+          <div className="py-12 text-center">
+            <Award className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+            <p className="mb-2 text-lg text-gray-300 font-nunito">No Badges Found</p>
             <p className="text-gray-400 font-nunito">
-              {filter === 'ready' 
-                ? 'No badges are ready to claim yet'
-                : filter === 'earned' 
-                ? 'You haven\'t earned any badges yet'
-                : 'Start learning to earn your first badge!'}
+              {filter === 'ready' ? 'No badges are ready to be claimed.' :
+               filter === 'earned' ? 'You haven\'t earned any badges yet.' :
+               'Try a different filter or start learning to unlock badges!'}
             </p>
           </div>
-        ) : filteredBadges.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredBadges.map(badge => (
-              <BadgeCard 
-                key={badge.id} 
-                badge={badge} 
-                onClaimBadge={onClaimBadge} 
-              />
-            ))}
+        ) : (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredBadges.map(badge => <BadgeCard key={badge.id} badge={badge} onClaimBadge={onClaimBadge} />)}
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   );
