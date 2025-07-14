@@ -2,8 +2,10 @@
 import React from 'react';
 import { Mail, Phone, MapPin, Facebook, Linkedin, Youtube, Globe } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const Footer: React.FC = () => {
+  const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
 
   return (
@@ -29,23 +31,23 @@ const Footer: React.FC = () => {
               </span>
             </div>
             <p className="text-gray-300">
-              Empowering businesses with cutting-edge AI solutions for continuous learning and development.
+              {t('footer.companyDescription')}
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('footer.quickLinks')}</h3>
             <ul className="space-y-2">
-              <li><Link to="/about-us" className="text-gray-300 hover:text-phlox transition-colors duration-200">About Us</Link></li>
-              <li><Link to="/services" className="text-gray-300 hover:text-phlox transition-colors duration-200">Services</Link></li>
-              <li><Link to="/contact-us" className="text-gray-300 hover:text-phlox transition-colors duration-200">Contact</Link></li>
+              <li><Link to="/about-us" className="text-gray-300 hover:text-phlox transition-colors duration-200">{t('footer.aboutUs')}</Link></li>
+              <li><Link to="/services" className="text-gray-300 hover:text-phlox transition-colors duration-200">{t('footer.services')}</Link></li>
+              <li><Link to="/contact-us" className="text-gray-300 hover:text-phlox transition-colors duration-200">{t('footer.contact')}</Link></li>
             </ul>
           </div>
 
           {/* Contact Info */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Contact Us</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('footer.contactUs')}</h3>
             <ul className="space-y-3">
               <li className="flex items-center space-x-2">
                 <MapPin size={18} className="text-phlox" />
@@ -64,7 +66,7 @@ const Footer: React.FC = () => {
 
           {/* Social Links */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Follow Us</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('footer.followUs')}</h3>
             <div className="flex space-x-4">
               <a 
                 href="https://web.facebook.com/people/ExcellyGen/61567888501807/" 
@@ -105,10 +107,10 @@ const Footer: React.FC = () => {
         {/* Bottom Bar */}
         <div className="mt-8 pt-8 border-t border-gray-800">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400">© {currentYear} ExcellyGen. All rights reserved.</p>
+            <p className="text-gray-400">© {currentYear} ExcellyGen. {t('footer.allRightsReserved')}.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">
-              <Link to="/privacy-policy" className="text-gray-400 hover:text-white">Privacy Policy</Link>
-              <Link to="/terms-of-service" className="text-gray-400 hover:text-white">Terms of Service</Link>
+              <Link to="/privacy-policy" className="text-gray-400 hover:text-white">{t('footer.privacyPolicy')}</Link>
+              <Link to="/terms-of-service" className="text-gray-400 hover:text-white">{t('footer.termsOfService')}</Link>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 // ProjectCruds/components/TechnologyForm.tsx
 import React, { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Save } from 'lucide-react';
 
 interface TechnologyFormProps {
@@ -23,6 +24,7 @@ const TechnologyForm: React.FC<TechnologyFormProps> = ({
     onSubmit,
     onInputChange
 }) => {
+    const { t } = useTranslation();
     const inputRef = useRef<HTMLInputElement>(null);
     
     // Handle escape key to close modal
@@ -58,7 +60,7 @@ const TechnologyForm: React.FC<TechnologyFormProps> = ({
                 <form onSubmit={handleSubmit}>
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-xl text-russian-violet font-['Unbounded']">
-                            {isEditing ? 'Edit Technology' : 'Add New Technology'}
+                            {isEditing ? 'Edit Technology' : t('projectManager.projectCruds.addTechnology')}
                         </h2>
                         <button
                             type="button"
@@ -79,8 +81,9 @@ const TechnologyForm: React.FC<TechnologyFormProps> = ({
                     <div className="space-y-4">
                         <div>
                             <label htmlFor="technology-name" className="block text-sm font-medium text-russian-violet mb-1">
-                                Technology Name<span className="text-red-500">*</span>
-                            </label>                            <input
+                                {t('projectManager.projectCruds.technologyName')}<span className="text-red-500">*</span>
+                            </label>
+                            <input
                                 id="technology-name"
                                 ref={inputRef}
                                 type="text"
@@ -107,7 +110,7 @@ const TechnologyForm: React.FC<TechnologyFormProps> = ({
                             onClick={onClose}
                             className="px-4 py-2 text-indigo hover:text-[#BF4BF6] transition-all duration-300"
                         >
-                            Cancel
+                            {t('projectManager.dialogs.cancel')}
                         </button>
                         <button
                             type="submit"

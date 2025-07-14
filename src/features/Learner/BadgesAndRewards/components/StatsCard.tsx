@@ -1,22 +1,24 @@
+// src/features/Learner/BadgesAndRewards/components/StatsCard.tsx
 import React from 'react';
-import { BadgeStat } from '../types/Badge';
+import { LucideIcon } from 'lucide-react';
 
 interface StatsCardProps {
-  stat: BadgeStat;
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  gradient: string;
 }
 
-const StatsCard: React.FC<StatsCardProps> = ({ stat }) => {
-  const { icon: Icon, label, value, color } = stat;
-  
+const StatsCard: React.FC<StatsCardProps> = ({ icon: Icon, label, value, gradient }) => {
   return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-xl p-6 border border-[#BF4BF6]/20 shadow-md hover:border-[#BF4BF6]/40 transition-all duration-300">
+    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 border border-[#BF4BF6]/20 shadow-md hover:shadow-xl transition-all duration-300 font-nunito">
       <div className="flex items-center gap-4">
-        <div className={`p-3 rounded-lg bg-gradient-to-br ${color}`}>
+        <div className={`p-3 rounded-lg bg-gradient-to-br ${gradient} shadow-lg`}>
           <Icon className="h-6 w-6 text-white" />
         </div>
         <div>
-          <p className="text-[#52007C] font-nunito font-medium">{label}</p>
-          <p className="text-2xl font-bold text-[#1B0A3F] mt-1 font-unbounded">{value}</p>
+          <p className="font-medium text-[#52007C] text-sm uppercase tracking-wider">{label}</p>
+          <p className="text-3xl font-bold mt-1 text-[#1B0A3F]">{value}</p>
         </div>
       </div>
     </div>

@@ -2,17 +2,19 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
     ArrowLeft, Search, Plus, Edit, Trash2,
-    ChevronDown, Menu, X as XIcon // Removed Lock
+    ChevronDown, Menu, X as XIcon
 } from 'lucide-react';
-import { toast } from 'react-hot-toast'; // Import toast for notifications
+import { toast } from 'react-hot-toast';
 
 // Import components
 import DeleteConfirmationDialog from './components/DeleteConfirmationDialog';
 import ProjectForm from './components/ProjectForm';
 import TechnologyForm from './components/TechnologyForm';
 import RoleForm from './components/RoleForm';
+import LanguageSwitcher from '../../../components/common/LanguageSwitcher';
 
 // Import API services
 import { 
@@ -65,7 +67,7 @@ const calculateRemainingDays = (deadlineStr: string | null | undefined): number 
     }
 };
 
-const renderCreatedBy = (technology: EmployeeTechnology) => {
+const renderCreatedBy = (technology: EmployeeTechnology, t: (key: string) => string) => {
   const isPMCreated = technology.creatorType === 'project_manager';
   return (
     <>
@@ -85,6 +87,7 @@ const renderCreatedBy = (technology: EmployeeTechnology) => {
 };
 
 const ProjectCRUD: React.FC = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const pathname = location.pathname;
@@ -575,14 +578,14 @@ const ProjectCRUD: React.FC = () => {
         try {
             const technology = employeeTechnologies.find(tech => tech.id === editingTechnologyId);
             if (technology && technology.creatorType !== 'project_manager') {
-                setError((prev) => ({ ...prev, form: "Admin-created technologies cannot be modified" }));
-                toast.error("Admin-created technologies cannot be modified");
+                setError((prev) => ({ ...prev, form: t('projectManager.projectCruds.adminCreated') }));
+                toast.error(t('projectManager.projectCruds.adminCreated'));
                 setIsLoading((prev) => ({ ...prev, technologies: false }));
                 return;
             }
             if (technology?.status !== 'active') {
-                setError((prev) => ({ ...prev, form: "Inactive technologies cannot be modified" }));
-                toast.error("Inactive technologies cannot be modified");
+                setError((prev) => ({ ...prev, form: t('projectManager.projectCruds.inactiveCannotEdit') }));
+                toast.error(t('projectManager.projectCruds.inactiveCannotEdit'));
                 setIsLoading((prev) => ({ ...prev, technologies: false }));
                 return;
             }
@@ -635,16 +638,16 @@ const ProjectCRUD: React.FC = () => {
         const technology = employeeTechnologies.find((tech) => tech.id === id);
         if (technology) {
             if (technology.creatorType !== 'project_manager') {
-                toast.error("Admin-created technologies cannot be deleted");
+                toast.error(t('projectManager.projectCruds.adminCreatedDelete'));
                 return;
             }
             if (technology.status !== 'active') {
-                toast.error("Inactive technologies cannot be deleted");
+                toast.error(t('projectManager.projectCruds.inactiveCannotDelete'));
                 return;
             }
             
             if (isTechnologyInUse(id)) {
-                toast.error("Cannot delete technology that is in use by projects");
+                toast.error(t('projectManager.projectCruds.technologyInUse'));
                 return;
             }
             
@@ -662,16 +665,16 @@ const ProjectCRUD: React.FC = () => {
             // These checks are technically redundant if handleDeleteTechnologyConfirmation does its job,
             // but good for safety if confirmDeleteTechnology is ever called directly.
             if (technology && technology.creatorType !== 'project_manager') {
-                setError((prev) => ({ ...prev, technologies: "Admin-created technologies cannot be deleted" }));
-                toast.error("Admin-created technologies cannot be deleted");
+                setError((prev) => ({ ...prev, technologies: t('projectManager.projectCruds.adminCreatedDelete') }));
+                toast.error(t('projectManager.projectCruds.adminCreatedDelete'));
                 setShowTechnologyDeleteConfirmation(false);
                 setTechnologyIdToDelete(null);
                 setIsLoading((prev) => ({ ...prev, technologies: false }));
                 return;
             }
             if (technology?.status !== 'active') {
-                setError((prev) => ({ ...prev, technologies: "Inactive technologies cannot be deleted" }));
-                toast.error("Inactive technologies cannot be deleted");
+                setError((prev) => ({ ...prev, technologies: t('projectManager.projectCruds.inactiveCannotDelete') }));
+                toast.error(t('projectManager.projectCruds.inactiveCannotDelete'));
                 setShowTechnologyDeleteConfirmation(false);
                 setTechnologyIdToDelete(null);
                 setIsLoading((prev) => ({ ...prev, technologies: false }));
@@ -697,13 +700,13 @@ const ProjectCRUD: React.FC = () => {
                 } else if (status === 400) {
                     if (typeof data === 'string') {
                         if (data.includes("in use") || data.includes("assigned") || data.includes("projects")) {
-                            errorMessage = "Cannot delete technology that is in use by projects";
+                            errorMessage = t('projectManager.projectCruds.technologyInUse');
                         } else {
                             errorMessage = data;
                         }
                     } else if (data?.message) {
                         if (data.message.includes("in use") || data.message.includes("assigned") || data.message.includes("projects")) {
-                            errorMessage = "Cannot delete technology that is in use by projects";
+                            errorMessage = t('projectManager.projectCruds.technologyInUse');
                         } else {
                             errorMessage = data.message;
                         }
@@ -711,7 +714,7 @@ const ProjectCRUD: React.FC = () => {
                         errorMessage = data.error;
                     }
                 } else if (status === 409) {
-                    errorMessage = "Cannot delete technology that is in use by projects";
+                    errorMessage = t('projectManager.projectCruds.technologyInUse');
                 }
             } else if (err.request) {
                 errorMessage = "No response from server. Please check your connection.";
@@ -785,7 +788,7 @@ const ProjectCRUD: React.FC = () => {
     // Updated handleDeleteRoleConfirmation function
     const handleDeleteRoleConfirmation = (id: number | string) => {
         if (isRoleInUse(id)) {
-            toast.error("Cannot delete role that is in use by projects");
+            toast.error(t('projectManager.projectCruds.roleInUse'));
             return;
         }
         
@@ -817,13 +820,13 @@ const ProjectCRUD: React.FC = () => {
                 } else if (status === 400 || status === 409) { 
                     if (typeof data === 'string') {
                         if (data.includes("in use") || data.includes("assigned") || data.includes("projects")) {
-                            errorMessage = "Cannot delete role that is in use by projects";
+                            errorMessage = t('projectManager.projectCruds.roleInUse');
                         } else {
                             errorMessage = data;
                         }
                     } else if (data?.message) {
                         if (data.message.includes("in use") || data.message.includes("assigned") || data.message.includes("projects")) {
-                            errorMessage = "Cannot delete role that is in use by projects";
+                            errorMessage = t('projectManager.projectCruds.roleInUse');
                         } else {
                             errorMessage = data.message;
                         }
@@ -940,11 +943,11 @@ const ProjectCRUD: React.FC = () => {
         const technology = employeeTechnologies.find((tech) => tech.id === id);
         if (technology) {
             if (technology.creatorType !== 'project_manager') {
-                toast.error("Admin-created technologies cannot be edited");
+                toast.error(t('projectManager.projectCruds.adminCreated'));
                 return;
             }
             if (technology.status !== 'active') {
-                toast.error("Inactive technologies cannot be edited");
+                toast.error(t('projectManager.projectCruds.inactiveCannotEdit'));
                 return;
             }
             setTechnologyFormData({ name: technology.name });
@@ -1088,9 +1091,9 @@ const ProjectCRUD: React.FC = () => {
                         </button>
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-2 md:gap-4">
                             <h1 className="text-lg md:text-2xl font-['Unbounded'] text-gradient truncate">
-                                {showProjects ? 'Project Management' :
-                                    isTechnologySectionActive ? 'Technology Management' :
-                                        showRoles ? 'Role Management' : 'Management Dashboard'}
+                                {showProjects ? t('projectManager.projectCruds.title') :
+                                    isTechnologySectionActive ? t('projectManager.projectCruds.technologyManagement') :
+                                        showRoles ? t('projectManager.projectCruds.roleManagement') : 'Management Dashboard'}
                             </h1>
                             <div className="sm:hidden ml-auto">
                                 <button 
@@ -1100,24 +1103,25 @@ const ProjectCRUD: React.FC = () => {
                                     {mobileMenuOpen ? <XIcon size={24} /> : <Menu size={24} />}
                                 </button>
                             </div>
-                            <div className="hidden sm:flex flex-wrap gap-2">
+                            <div className="hidden sm:flex flex-wrap gap-2 items-center">
+                                <LanguageSwitcher />
                                 <button
                                     onClick={() => toggleSection('projects')}
                                     className={`px-4 py-2 rounded-full transition-all duration-300 ${showProjects ? 'bg-gradient-primary text-white shadow-soft' : 'bg-[#F6E6FF] text-[#1B0A3F] hover:bg-pale-purple'}`}
                                 >
-                                    Projects
+                                    {t('projectManager.projectCruds.title')}
                                 </button>
                                 <button
                                     onClick={() => toggleSection('technologies')}
                                     className={`px-4 py-2 rounded-full transition-all duration-300 ${isTechnologySectionActive ? 'bg-gradient-primary text-white shadow-soft' : 'bg-[#F6E6FF] text-[#1B0A3F] hover:bg-pale-purple'}`}
                                 >
-                                    Technologies
+                                    {t('projectManager.projectCruds.technologies')}
                                 </button>
                                 <button
                                     onClick={() => toggleSection('roles')}
                                     className={`px-4 py-2 rounded-full transition-all duration-300 ${showRoles ? 'bg-gradient-primary text-white shadow-soft' : 'bg-[#F6E6FF] text-[#1B0A3F] hover:bg-pale-purple'}`}
                                 >
-                                    Roles
+                                    {t('projectManager.projectCruds.roles')}
                                 </button>
                             </div>
                         </div>
@@ -1128,19 +1132,19 @@ const ProjectCRUD: React.FC = () => {
                                 onClick={() => toggleSection('projects')}
                                 className={`px-4 py-3 rounded-lg transition-all duration-300 text-left ${showProjects ? 'bg-gradient-primary text-white shadow-soft' : 'bg-white text-[#1B0A3F] hover:bg-pale-purple'}`}
                             >
-                                Projects
+                                {t('projectManager.projectCruds.title')}
                             </button>
                             <button
                                 onClick={() => toggleSection('technologies')}
                                 className={`px-4 py-3 rounded-lg transition-all duration-300 text-left ${isTechnologySectionActive ? 'bg-gradient-primary text-white shadow-soft' : 'bg-white text-[#1B0A3F] hover:bg-pale-purple'}`}
                             >
-                                Technologies
+                                {t('projectManager.projectCruds.technologies')}
                             </button>
                             <button
                                 onClick={() => toggleSection('roles')}
                                 className={`px-4 py-3 rounded-lg transition-all duration-300 text-left ${showRoles ? 'bg-gradient-primary text-white shadow-soft' : 'bg-white text-[#1B0A3F] hover:bg-pale-purple'}`}
                             >
-                                Roles
+                                {t('projectManager.projectCruds.roles')}
                             </button>
                         </div>
                     )}
@@ -1164,7 +1168,7 @@ const ProjectCRUD: React.FC = () => {
                         <div className="relative w-full md:w-auto md:flex-grow md:max-w-md">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                             <input
-                                type="text" placeholder="Search projects..." value={searchTerm}
+                                type="text" placeholder={t('projectManager.projectCruds.searchProjects')} value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus-ring focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] transition-all duration-200"
                             />
@@ -1176,7 +1180,14 @@ const ProjectCRUD: React.FC = () => {
                                     className="w-full sm:w-auto px-4 py-2 bg-white rounded-lg border border-gray-200 text-[#1B0A3F] hover:bg-pale-purple transition-all duration-300 focus-ring flex items-center justify-between"
                                     onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
                                 >
-                                    <span>{projectStatusFilter} Statuses</span>
+                                    <span>
+                                        {projectStatusFilter === 'All' 
+                                            ? t('projectManager.projectCruds.allStatuses')
+                                            : projectStatusFilter === 'Active' 
+                                                ? t('projectManager.projectCruds.activeStatuses') 
+                                                : t('projectManager.projectCruds.completedStatuses')
+                                        }
+                                    </span>
                                     <ChevronDown size={16} className="ml-2" />
                                 </button>
                                 {isStatusDropdownOpen && (
@@ -1203,7 +1214,12 @@ const ProjectCRUD: React.FC = () => {
                                                     }}
                                                     className={`w-full px-4 py-2 text-left text-sm transition-all duration-200 ${projectStatusFilter === status ? 'bg-gradient-primary text-white' : 'hover:bg-pale-purple text-[#1B0A3F]'}`}
                                                 >
-                                                    {status} Statuses
+                                                    {status === 'All' 
+                                                        ? t('projectManager.projectCruds.allStatuses')
+                                                        : status === 'Active' 
+                                                            ? t('projectManager.projectCruds.activeStatuses')
+                                                            : t('projectManager.projectCruds.completedStatuses')
+                                                    }
                                                 </button>
                                             ))}
                                         </div>
@@ -1215,7 +1231,7 @@ const ProjectCRUD: React.FC = () => {
                                 className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-primary text-white rounded-full hover:bg-pale-purple transition-all duration-300 flex items-center justify-center gap-2 shadow-soft"
                             >
                                 <Plus size={18} />
-                                <span className="whitespace-nowrap">Add Project</span>
+                                <span className="whitespace-nowrap">{t('projectManager.projectCruds.addProject')}</span>
                             </button>
                         </div>
                     </div>
@@ -1224,7 +1240,7 @@ const ProjectCRUD: React.FC = () => {
                         <div className="relative w-full sm:flex-grow sm:max-w-md">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                             <input
-                                type="text" placeholder="Search technologies..." value={searchTerm}
+                                type="text" placeholder={t('projectManager.projectCruds.searchTechnologies')} value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-10 py-2 border border-gray-200 rounded-lg focus-ring focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] transition-all duration-200"
                             />
@@ -1233,16 +1249,16 @@ const ProjectCRUD: React.FC = () => {
                             value={techStatusFilter} onChange={(e) => setTechStatusFilter(e.target.value)}
                             className="px-4 py-2 border border-gray-200 rounded-lg focus-ring focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] transition-all duration-200"
                         >
-                            <option value="all">All Status</option>
+                            <option value="all">{t('projectManager.projectCruds.allStatus')}</option>
                             <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
+                            <option value="inactive">{t('projectManager.projectCruds.inactive')}</option>
                         </select>
                         <button
                             onClick={() => { setIsTechnologyFormOpen(true); setEditingTechnologyId(null); resetTechnologyForm(); }}
                             className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-primary text-white rounded-full hover:bg-pale-purple transition-all duration-300 flex items-center justify-center gap-2 shadow-soft"
                         >
                             <Plus size={18} />
-                            <span className="whitespace-nowrap">Add Technology</span>
+                            <span className="whitespace-nowrap">{t('projectManager.projectCruds.addTechnology')}</span>
                         </button>
                     </div>
                 ) : showRoles ? (
@@ -1250,7 +1266,7 @@ const ProjectCRUD: React.FC = () => {
                         <div className="relative w-full sm:flex-grow sm:max-w-md">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                             <input
-                                type="text" placeholder="Search roles..." value={searchTerm}
+                                type="text" placeholder={t('projectManager.projectCruds.searchRoles')} value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-10 py-2 border border-gray-200 rounded-lg focus-ring focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] transition-all duration-200"
                             />
@@ -1260,7 +1276,7 @@ const ProjectCRUD: React.FC = () => {
                             className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-primary text-white rounded-full hover:bg-pale-purple transition-all duration-300 flex items-center justify-center gap-2 shadow-soft"
                         >
                             <Plus size={18} />
-                            <span className="whitespace-nowrap">Add Role</span>
+                            <span className="whitespace-nowrap">{t('projectManager.projectCruds.addRole')}</span>
                         </button>
                     </div>
                 ) : null}
@@ -1277,7 +1293,7 @@ const ProjectCRUD: React.FC = () => {
                         </div>
                     ) : filteredProjects.length === 0 ? (
                         <div className="text-center py-8 text-indigo">
-                            No projects found. Create your first project!
+                            {t('projectManager.projectCruds.noProjectsFound')}
                         </div>
                     ) : (
                         <div className="overflow-x-auto custom-scrollbar -mx-3 sm:mx-0">
@@ -1285,12 +1301,12 @@ const ProjectCRUD: React.FC = () => {
                                 <table className="w-full border-separate border-spacing-0">
                                     <thead>
                                         <tr className="border-b border-gray-200">
-                                            <th className="px-2 sm:px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">Name</th>
+                                            <th className="px-2 sm:px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">{t('projectManager.employeeAssign.name')}</th>
                                             <th className="px-2 sm:px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">Status</th>
-                                            <th className="px-2 sm:px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">Deadline</th>
-                                            <th className="px-2 sm:px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm hidden md:table-cell">Technologies</th>
-                                            <th className="px-2 sm:px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm hidden lg:table-cell">Roles</th>
-                                            <th className="px-2 sm:px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">Actions</th>
+                                            <th className="px-2 sm:px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">{t('projectManager.cards.deadline')}</th>
+                                            <th className="px-2 sm:px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm hidden md:table-cell">{t('projectManager.projectCruds.technologies')}</th>
+                                            <th className="px-2 sm:px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm hidden lg:table-cell">{t('projectManager.projectCruds.roles')}</th>
+                                            <th className="px-2 sm:px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">{t('projectManager.projectCruds.actions')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1302,7 +1318,12 @@ const ProjectCRUD: React.FC = () => {
                                                 <td className="px-2 sm:px-4 py-3 text-indigo font-medium text-sm">{project.name}</td>
                                                 <td className="px-2 sm:px-4 py-3">
                                                     <span className={`px-2 py-1 rounded-full text-xs ${project.status === 'Active' ? 'bg-green-100 text-green-600 badge-pulse' : project.status === 'Completed' ? 'bg-gray-100 text-gray-600' : 'bg-gray-100 text-gray-600'}`}>
-                                                        {project.status}
+                                                        {project.status === 'Active' 
+                                                            ? t('projectManager.employeeAssign.active') 
+                                                            : project.status === 'Completed' 
+                                                                ? t('projectManager.employeeAssign.completed')
+                                                                : project.status
+                                                        }
                                                     </span>
                                                 </td>
                                                 <td className="px-2 sm:px-4 py-3 text-indigo text-sm">
@@ -1401,16 +1422,16 @@ const ProjectCRUD: React.FC = () => {
                 </div>
             ) : isTechnologySectionActive ? (
                 <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6">
-                    <h3 className="text-xl text-russian-violet font-['Unbounded'] mb-4">Employee Technologies</h3>
+                    <h3 className="text-xl text-russian-violet font-['Unbounded'] mb-4">{t('projectManager.projectCruds.technologies')}</h3>
                     <div className="overflow-x-auto custom-scrollbar -mx-3 sm:mx-0">
                         <div className="min-w-[500px] px-3 sm:px-0 sm:min-w-0">
                             <table className="w-full border-separate border-spacing-0">
                                 <thead>
                                     <tr className="border-b border-gray-200">
-                                        <th className="px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">Technology Name</th>
+                                        <th className="px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">{t('projectManager.projectCruds.technologyName')}</th>
                                         <th className="px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">Status</th>
-                                        <th className="px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">Created By</th>
-                                        <th className="px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">Actions</th>
+                                        <th className="px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">{t('projectManager.projectCruds.createdBy')}</th>
+                                        <th className="px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">{t('projectManager.projectCruds.actions')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1434,11 +1455,11 @@ const ProjectCRUD: React.FC = () => {
                                                         ? 'bg-green-100 text-green-600 badge-pulse' 
                                                         : 'bg-gray-100 text-gray-600'
                                                 }`}>
-                                                    {technology.status === 'active' ? 'Active' : 'Inactive'}
+                                                    {technology.status === 'active' ? 'Active' : t('projectManager.projectCruds.inactive')}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-indigo text-sm">
-                                                {renderCreatedBy(technology)}
+                                                {renderCreatedBy(technology, t)}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex gap-2">
@@ -1453,9 +1474,9 @@ const ProjectCRUD: React.FC = () => {
                                                         aria-label="Edit technology"
                                                         title={
                                                             technology.creatorType !== 'project_manager'
-                                                                ? "Admin-created technologies cannot be edited" 
+                                                                ? t('projectManager.projectCruds.adminCreated')
                                                                 : technology.status !== 'active'
-                                                                ? "Inactive technologies cannot be edited"
+                                                                ? t('projectManager.projectCruds.inactiveCannotEdit')
                                                                 : "Edit technology"
                                                         }
                                                     >
@@ -1472,9 +1493,9 @@ const ProjectCRUD: React.FC = () => {
                                                         aria-label="Delete technology"
                                                         title={
                                                             technology.creatorType !== 'project_manager'
-                                                                ? "Admin-created technologies cannot be deleted" 
+                                                                ? t('projectManager.projectCruds.adminCreatedDelete')
                                                                 : technology.status !== 'active'
-                                                                ? "Inactive technologies cannot be deleted"
+                                                                ? t('projectManager.projectCruds.inactiveCannotDelete')
                                                                 : "Delete technology"
                                                         }
                                                     >
@@ -1485,7 +1506,7 @@ const ProjectCRUD: React.FC = () => {
                                         </tr>
                                     ))}
                                     {filteredTechnologies.length === 0 && !searchTerm && !isLoading.technologies && !error.technologies && (
-                                        <tr><td colSpan={4} className="text-center py-8 text-indigo">No technologies found. Add your first technology!</td></tr>
+                                        <tr><td colSpan={4} className="text-center py-8 text-indigo">{t('projectManager.projectCruds.noTechnologiesFound')}</td></tr>
                                     )}
                                 </tbody>
                             </table>
@@ -1494,14 +1515,14 @@ const ProjectCRUD: React.FC = () => {
                 </div>
             ) : showRoles ? (
                 <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6">
-                    <h3 className="text-xl text-russian-violet font-['Unbounded'] mb-4">Project Roles</h3>
+                    <h3 className="text-xl text-russian-violet font-['Unbounded'] mb-4">{t('projectManager.projectCruds.roles')}</h3>
                     <div className="overflow-x-auto custom-scrollbar -mx-3 sm:mx-0">
                         <div className="min-w-[500px] px-3 sm:px-0 sm:min-w-0">
                             <table className="w-full border-separate border-spacing-0">
                                 <thead>
                                     <tr className="border-b border-gray-200">
-                                        <th className="px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">Role Name</th>
-                                        <th className="px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">Actions</th>
+                                        <th className="px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">{t('projectManager.projectCruds.roleName')}</th>
+                                        <th className="px-4 py-3 text-left text-russian-violet font-medium border-b-3 border-[#F6E6FF] text-sm">{t('projectManager.projectCruds.actions')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1538,7 +1559,7 @@ const ProjectCRUD: React.FC = () => {
                                         </tr>
                                     ))}
                                     {filteredRoles.length === 0 && !searchTerm && !isLoading.roles && !error.roles && (
-                                        <tr><td colSpan={2} className="text-center py-8 text-indigo">No roles found. Add your first role!</td></tr>
+                                        <tr><td colSpan={2} className="text-center py-8 text-indigo">{t('projectManager.projectCruds.noRolesFound')}</td></tr>
                                     )}
                                 </tbody>
                             </table>
@@ -1602,8 +1623,8 @@ const ProjectCRUD: React.FC = () => {
             {showDeleteConfirmation && (
                 <DeleteConfirmationDialog
                     isOpen={showDeleteConfirmation}
-                    title="Confirm Delete Project"
-                    message="Are you sure you want to delete this project? This action cannot be undone."
+                    title={t('projectManager.projectCruds.confirmDeleteProject')}
+                    message={`${t('projectManager.projectCruds.confirmDeleteMessage')} project? ${t('projectManager.projectCruds.actionCannotBeUndone')}`}
                     onCancel={cancelDeleteProject}
                     onConfirm={confirmDeleteProject}
                 />
@@ -1612,8 +1633,8 @@ const ProjectCRUD: React.FC = () => {
             {showTechnologyDeleteConfirmation && (
                 <DeleteConfirmationDialog
                     isOpen={showTechnologyDeleteConfirmation}
-                    title="Confirm Delete Technology"
-                    message="Are you sure you want to delete this technology? This action cannot be undone."
+                    title={t('projectManager.projectCruds.confirmDeleteTechnology')}
+                    message={`${t('projectManager.projectCruds.confirmDeleteMessage')} technology? ${t('projectManager.projectCruds.actionCannotBeUndone')}`}
                     onCancel={cancelDeleteTechnology}
                     onConfirm={confirmDeleteTechnology}
                 />
@@ -1622,8 +1643,8 @@ const ProjectCRUD: React.FC = () => {
             {showRoleDeleteConfirmation && (
                 <DeleteConfirmationDialog
                     isOpen={showRoleDeleteConfirmation}
-                    title="Confirm Delete Role"
-                    message="Are you sure you want to delete this role? This action cannot be undone."
+                    title={t('projectManager.projectCruds.confirmDeleteRole')}
+                    message={`${t('projectManager.projectCruds.confirmDeleteMessage')} role? ${t('projectManager.projectCruds.actionCannotBeUndone')}`}
                     onCancel={cancelDeleteRole}
                     onConfirm={confirmDeleteRole}
                 />

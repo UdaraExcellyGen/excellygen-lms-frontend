@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import AuthContainer from '../../features/auth/AuthContainer';
+import LanguageSwitcher from '../common/LanguageSwitcher';
 
 const NavBar = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <>
@@ -31,17 +34,20 @@ const NavBar = () => {
 
             {/* Nav Links */}
             <div className="flex items-center space-x-4">
+              {/* Language Switcher */}
+              <LanguageSwitcher />
+              
               <button 
                 onClick={() => setIsAuthOpen(true)}
                 className="px-4 py-2 text-base text-french-violet hover:text-indigo transition-colors duration-200 font-medium"
               >
-                Login
+                {t('navigation.login')}
               </button>
               <button 
                 onClick={() => navigate('/contact-us')}
                 className="px-4 py-2 text-base bg-french-violet hover:bg-indigo text-white rounded-md transition-colors duration-200 font-medium"
               >
-                Contact Us
+                {t('navigation.contactUs')}
               </button>
             </div>
           </div>

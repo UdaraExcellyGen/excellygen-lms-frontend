@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { FaChevronDown } from 'react-icons/fa';
 
 interface MultiSelectProps {
@@ -13,6 +14,7 @@ interface MultiSelectProps {
 }
 
 const MultiSelect: React.FC<MultiSelectProps> = ({ value, onChange, options, darkMode, buttonRef }) => {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
     const selectRef = useRef(null);
@@ -76,7 +78,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ value, onChange, options, dar
                 flex items-center justify-between relative z-10"
             >
                 <span className="truncate">
-                    {value.length === 0 ? 'Select Employee Technologies' : `${value.length} technology(s) selected`}
+                    {value.length === 0 ? t('projectManager.multiSelect.selectEmployeeTechnologies') : `${value.length} ${t('projectManager.multiSelect.technologiesSelected')}`}
                 </span>
                 <FaChevronDown className="ml-2 w-4 h-4" />
             </button>
@@ -96,12 +98,12 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ value, onChange, options, dar
                         scrollbarColor: darkMode ? '#7A00B8 #34137C' : '#D68BF9 #F6E6FF',
                     }}
                     className="z-[9999] bg-white dark:bg-[#34137C] rounded-lg shadow-lg
-                  border border-[#F6E6FF] dark:border-[#7A00B8]" // Combined className attributes
+                  border border-[#F6E6FF] dark:border-[#7A00B8]"
                 >
                     <div className="sticky top-0 bg-white dark:bg-[#34137C] p-2 border-b border-[#F6E6FF] dark:border-[#7A00B8]
                       flex justify-between items-center shadow-sm">
                         <span className="text-sm font-medium text-[#52007C] dark:text-white">
-                            Selected: {value.length}
+                            {t('projectManager.multiSelect.selected')}: {value.length}
                         </span>
                         {value.length > 0 && (
                             <button
@@ -109,7 +111,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ value, onChange, options, dar
                                 className="text-sm text-[#BF4BF6] hover:text-[#7A00B8] dark:text-[#D68BF9]
                              dark:hover:text-white transition-colors"
                             >
-                                Clear all
+                                {t('projectManager.multiSelect.clearAll')}
                             </button>
                         )}
                     </div>
@@ -125,7 +127,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({ value, onChange, options, dar
                                 <input
                                     type="checkbox"
                                     checked={value.includes(skill)}
-                                    onChange={() => { }} // Kept empty onChange as it's controlled by div click
+                                    onChange={() => { }}
                                     className="mr-2"
                                 />
                                 <span className="text-[#52007C] dark:text-white">{skill}</span>

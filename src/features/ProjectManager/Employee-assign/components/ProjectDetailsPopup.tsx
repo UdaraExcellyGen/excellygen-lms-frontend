@@ -2,54 +2,52 @@
 
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { FaTimesCircle, FaLaptopCode } from 'react-icons/fa';
 import { Project, Employee } from '../types/types';
 
 interface ProjectDetailsPopupProps {
   project: Project | null;
   onClose: () => void;
-  // darkMode: boolean; // Removed darkMode from props
   employees: Employee[];
 }
 
-const ProjectDetailsPopup: React.FC<ProjectDetailsPopupProps> = ({ project, onClose, /* darkMode, */ employees }) => { // Removed darkMode from destructuring
+const ProjectDetailsPopup: React.FC<ProjectDetailsPopupProps> = ({ project, onClose, employees }) => {
+    const { t } = useTranslation();
+    
     if (!project) return null;
-
-    // Since darkMode is removed, any logic that depended on it would need to be adjusted.
-    // However, in the provided snippet, darkMode was not actively used for conditional styling
-    // that would change based on its value (dark: styles are Tailwind's way of handling dark mode via a parent class).
-    // If there were specific styles like className={darkMode ? 'dark-class' : 'light-class'},
-    // those would need to be re-evaluated. For now, removing it as it's unused.
 
     return createPortal(
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[99999]">
             <div className="bg-white p-6 rounded-xl shadow-lg border border-[#F6E6FF] dark:border-[#7A00B8] min-w-[700px] max-h-[80vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold text-[#52007C] dark:text-white">{project.name} Details</h3>
+                    <h3 className="text-lg font-semibold text-[#52007C] dark:text-white">
+                        {project.name} Details
+                    </h3>
                     <button onClick={onClose} className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
                         <FaTimesCircle className="w-5 h-5 text-gray-500 dark:text-gray-300" />
                     </button>
                 </div>
                 <div className="space-y-4">
                     <p className="text-sm text-[#7A00B8] dark:text-white">
-                        <strong>Status:</strong> {project.status}
+                        <strong>Status:</strong> {project.status === "Active" ? t('projectManager.employeeAssign.active') : t('projectManager.employeeAssign.completed')}
                     </p>
                     <p className="text-sm text-[#7A00B8] dark:text-white">
-                        <strong>Deadline:</strong> {new Date(project.deadline).toLocaleDateString()}
+                        <strong>{t('projectManager.cards.deadline')}</strong> {new Date(project.deadline).toLocaleDateString()}
                     </p>
                     <p className="text-sm text-[#7A00B8] dark:text-white">
                         <strong>Description:</strong> {project.description}
                     </p>
                     <div>
                         <h5 className="text-sm font-semibold text-[#52007C] dark:text-[#D68BF9] mb-1">
-                            Required Technologies
+                            {t('projectManager.cards.requiredTechnologies')}
                         </h5>
                         <div className="flex flex-wrap gap-2">
                             {project.requiredSkills.map((skill) => (
                                 <span
                                     key={skill.id}
                                     className="px-3 py-1 text-xs rounded-full bg-white
-                                    text-[#52007C] dark:text-[#D68BF9] flex items-center gap-1" // Tailwind handles dark mode based on a parent class
+                                    text-[#52007C] dark:text-[#D68BF9] flex items-center gap-1"
                                 >
                                     <FaLaptopCode className="w-3 h-3" />
                                     {skill.name}
@@ -59,7 +57,7 @@ const ProjectDetailsPopup: React.FC<ProjectDetailsPopupProps> = ({ project, onCl
                      </div>
                     <div>
                         <h5 className="text-sm font-semibold text-[#52007C] dark:text-[#D68BF9] mb-2">
-                            Required Roles
+                            {t('projectManager.cards.requiredRoles')}
                         </h5>
                         {project.requiredRoles.map((roleItem, index) => (
                             <p key={index} className="text-sm text-[#7A00B8] dark:text-white">
@@ -69,7 +67,7 @@ const ProjectDetailsPopup: React.FC<ProjectDetailsPopupProps> = ({ project, onCl
                     </div>
                     <div>
                         <h5 className="text-sm font-semibold text-[#52007C] dark:text-[#D68BF9] mb-2">
-                            Assigned Team Members
+                            {t('projectManager.cards.assignedTeamMembers')}
                         </h5>
                         {/* Group assignments by employee for easier reading */}
                         {Object.entries(project.employeeAssignments.reduce((acc, assignment) => {
@@ -90,12 +88,12 @@ const ProjectDetailsPopup: React.FC<ProjectDetailsPopupProps> = ({ project, onCl
                             return (
                                 <div key={employeeId} className="mb-2">
                                     <p className="text-sm font-medium text-[#7A00B8] dark:text-white">
-                                        {employee.name} (ID: {employee.id}) - Total: {totalAllocation}% allocation
+                                        {employee.name} ({t('projectManager.employeeAssign.id')}: {employee.id}) - {t('projectManager.cards.total')}: {totalAllocation}% {t('projectManager.cards.allocation')}
                                     </p>
                                     <ul className="pl-6 list-disc">
                                         {assignments.map((assignment, index) => (
                                             <li key={index} className="text-xs text-[#7A00B8] dark:text-[#D68BF9]">
-                                                {assignment.role}: {assignment.workloadPercentage}% allocation
+                                                {assignment.role}: {assignment.workloadPercentage}% {t('projectManager.cards.allocation')}
                                             </li>
                                         ))}
                                     </ul>
