@@ -1,6 +1,6 @@
 // src/features/Learner/CourseContent/LearnerCourseOverview.tsx
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, BookOpen, CheckCircle, List, Clock, FileText, Download, PlayCircle, AlertCircle, Award } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -8,10 +8,12 @@ import { LearnerCourseDto, LearnerLessonDto } from '../../../types/course.types'
 import { QuizDto } from '../../../types/quiz.types';
 import { generateCertificate } from '../../../api/services/Course/certificateService';
 import { getLearnerCourseDetails, markLessonCompleted } from '../../../api/services/Course/learnerCourseService';
+import { logCourseAccess } from '../../../api/services/Course/courseAccessService';
 
 const LearnerCourseOverview: React.FC = () => {
   const { courseId: courseIdParam } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const courseId = courseIdParam ? parseInt(courseIdParam, 10) : null;
 
   const [courseData, setCourseData] = useState<LearnerCourseDto | null>(null);
@@ -20,6 +22,30 @@ const LearnerCourseOverview: React.FC = () => {
   const [isGeneratingCertificate, setIsGeneratingCertificate] = useState(false);
   const [expandedLessons, setExpandedLessons] = useState<Record<number, boolean>>({});
 
+  // Centralized function to refetch data from the backend
+  const fetchCourseData = useCallback(async () => {
+    if (!courseId) return;
+    try {
+      const data = await getLearnerCourseDetails(courseId);
+      setCourseData(data);
+      
+      // Initialize expanded state for lessons if not already set
+      if (Object.keys(expandedLessons).length === 0) {
+        const initialExpandedState: Record<number, boolean> = {};
+        data.lessons.forEach(lesson => {
+          initialExpandedState[lesson.id] = false; // Initially collapsed
+        });
+        setExpandedLessons(initialExpandedState);
+      }
+    } catch (error) {
+      if ((error as any).name !== 'CanceledError') {
+        console.error("Error fetching course details:", error);
+        toast.error("Failed to load course details.");
+      }
+    }
+  }, [courseId, expandedLessons]);
+
+  // Effect 1: Handles the INITIAL data load for the component
   useEffect(() => {
     if (!courseId) {
       toast.error("Course ID is missing.");
@@ -27,7 +53,7 @@ const LearnerCourseOverview: React.FC = () => {
       return;
     }
 
-    const fetchCourseDetails = async () => {
+    const fetchInitialData = async () => {
       try {
         setIsLoading(true);
         const course = await getLearnerCourseDetails(courseId);
@@ -40,6 +66,12 @@ const LearnerCourseOverview: React.FC = () => {
         
         setCourseData(course);
         setExpandedLessons(initialExpandedState);
+
+        // Log the course access once details are successfully loaded
+        if (courseId) {
+          logCourseAccess(courseId);
+        }
+
       } catch (error) {
         console.error("Error fetching course details:", error);
         toast.error("Failed to load course details.");
@@ -49,17 +81,56 @@ const LearnerCourseOverview: React.FC = () => {
       }
     };
 
-    fetchCourseDetails();
+    fetchInitialData();
   }, [courseId, navigate]);
 
-const handleGoBack = () => {
-  if (courseData && courseData.category && courseData.category.id) {
-    navigate(`/learner/courses/${courseData.category.id}`);
-  } else {
-    // Fallback if category ID is not available
-    navigate("/learner/course-categories");
-  }
-};
+  // Effect 2: Handles the MANUAL state update when returning from a quiz
+  useEffect(() => {
+    if (location.state?.quizCompleted && courseData) {
+      const { quizId, attemptId } = location.state;
+      
+      const lessonToUpdate = courseData.lessons.find(l => l.quizId === quizId);
+
+      if (lessonToUpdate && !lessonToUpdate.isQuizCompleted) {
+        const newCourseData = JSON.parse(JSON.stringify(courseData)) as LearnerCourseDto;
+        const lessonInNewData = newCourseData.lessons.find(l => l.quizId === quizId)!;
+        
+        lessonInNewData.isQuizCompleted = true;
+        lessonInNewData.lastAttemptId = attemptId;
+        
+        // Auto-complete lesson if it has no documents
+        const hasDocuments = lessonInNewData.documents && lessonInNewData.documents.length > 0;
+        if (!hasDocuments) {
+          lessonInNewData.isCompleted = true;
+          markLessonCompleted(lessonInNewData.id).catch(err => {
+            console.error("Background sync for auto-completion failed:", err);
+          });
+          toast.success("Lesson completed automatically!");
+        } else {
+          toast.success("Quiz completed! Mark the lesson as complete when you're ready.");
+        }
+        
+        // Recalculate progress
+        const completedLessons = newCourseData.lessons.filter(l => l.isCompleted).length;
+        newCourseData.completedLessons = completedLessons;
+        newCourseData.progressPercentage = Math.round((completedLessons / newCourseData.totalLessons) * 100);
+        setCourseData(newCourseData);
+      }
+      
+      // Clear the navigation state
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, courseData, navigate, location.pathname]);
+
+  const handleGoBack = () => {
+    if (courseData && courseData.category && courseData.category.id) {
+      // FIX: Used template literal for string interpolation
+      navigate(`/learner/courses/${courseData.category.id}`);
+    } else {
+      // Fallback if category ID is not available
+      navigate("/learner/course-categories");
+    }
+  };
 
   const toggleLessonExpand = (lessonId: number) => {
     setExpandedLessons(prev => ({
@@ -71,6 +142,15 @@ const handleGoBack = () => {
   const handleMarkLessonComplete = async (lessonId: number) => {
     // Check if we're already processing this lesson
     if (isMarkingComplete[lessonId]) return;
+    
+    const lesson = courseData?.lessons.find(l => l.id === lessonId);
+    if (!lesson) return;
+
+    // Check if lesson has a quiz that hasn't been completed
+    if (lesson.hasQuiz && !lesson.isQuizCompleted) {
+      toast.error("Please complete the quiz for this lesson first.");
+      return;
+    }
     
     // Update the marking state for this specific lesson
     setIsMarkingComplete(prev => ({
@@ -125,8 +205,24 @@ const handleGoBack = () => {
     document.body.removeChild(a);
   };
 
+  const handleQuizAction = (lesson: LearnerLessonDto) => {
+    if (!lesson.quizId) return;
+    
+    if (lesson.isQuizCompleted && lesson.lastAttemptId) {
+      // FIX: Used template literal for string interpolation
+      navigate(`/learner/quiz-results/${lesson.lastAttemptId}`, { 
+        state: { courseId: courseId } 
+      });
+    } else {
+      // FIX: Used template literal for string interpolation
+      navigate(`/learner/take-quiz/${lesson.quizId}`, { 
+        state: { courseId: courseId } 
+      });
+    }
+  };
+
   const handleStartQuiz = (quizId: number) => {
-    // Pass courseId in navigation state so it can be used in quiz results
+    // FIX: Used template literal for string interpolation
     navigate(`/learner/take-quiz/${quizId}`, { 
       state: { courseId: courseId } 
     });
@@ -143,9 +239,10 @@ const handleGoBack = () => {
     
     setIsGeneratingCertificate(true);
     try {
-      const certificate = await generateCertificate(courseId);
+      await generateCertificate(courseId);
       toast.success("Certificate generated successfully!");
-      navigate(`/learner/certificate`);
+      // FIX: Used a simple string for navigation
+      navigate('/learner/certificate');
     } catch (error) {
       console.error("Error generating certificate:", error);
       toast.error("Failed to generate certificate.");
@@ -193,9 +290,9 @@ const handleGoBack = () => {
         <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-2xl p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-1">
-              {courseData.thumbnailUrl ? (
+              {courseData.thumbnailUrl || courseData.thumbnailImagePath ? (
                 <img 
-                  src={courseData.thumbnailUrl} 
+                  src={courseData.thumbnailUrl || courseData.thumbnailImagePath} 
                   alt={courseData.title} 
                   className="w-full h-48 object-cover rounded-xl shadow-lg"
                 />
@@ -211,7 +308,7 @@ const handleGoBack = () => {
               
               <div className="flex flex-wrap gap-2 mb-4">
                 <span className="bg-[#34137C] text-[#D68BF9] px-3 py-1 rounded-full text-sm">
-                  {courseData.category.title}
+                  {courseData.category.title || courseData.category.name}
                 </span>
                 {courseData.technologies.map(tech => (
                   <span key={tech.id} className="bg-[#34137C] text-white px-3 py-1 rounded-full text-sm">
@@ -337,11 +434,11 @@ const handleGoBack = () => {
 
                 {/* Expanded Content */}
                 {expandedLessons[lesson.id] && (
-                  <div className="p-4 pt-0 border-t border-[#BF4BF6]/20">
+                  <div className="p-4 pt-0 border-t border-[#BF4BF6]/20 space-y-4">
                     {/* Documents Section */}
                     {lesson.documents && lesson.documents.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="text-[#D68BF9] text-sm mb-2">Documents</h4>
+                      <div>
+                        <h4 className="text-[#D68BF9] text-sm font-semibold mb-2">Materials</h4>
                         <div className="space-y-2">
                           {lesson.documents.map((doc) => (
                             <div 
@@ -357,7 +454,7 @@ const handleGoBack = () => {
                                 <span className="text-white text-sm">{doc.name}</span>
                               </div>
                               <button 
-                                onClick={() => handleDownloadDocument(doc.fileUrl, doc.name)}
+                                onClick={() => handleDownloadDocument(doc.fileUrl || doc.filePath, doc.name)}
                                 className="text-[#D68BF9] hover:text-white"
                               >
                                 <Download className="w-4 h-4" />
@@ -371,7 +468,7 @@ const handleGoBack = () => {
                     {/* Quiz Section */}
                     {lesson.hasQuiz && (
                       <div>
-                        <h4 className="text-[#D68BF9] text-sm mb-2">Quiz</h4>
+                        <h4 className="text-[#D68BF9] text-sm font-semibold mb-2">Quiz Assessment</h4>
                         <div className="bg-[#34137C]/50 p-3 rounded-md">
                           <div className="flex justify-between items-center">
                             <div className="flex items-center">
@@ -384,19 +481,43 @@ const handleGoBack = () => {
                               )}
                             </div>
                             <button
-                              onClick={() => lesson.quizId && handleStartQuiz(lesson.quizId)}
+                              onClick={() => handleQuizAction(lesson)}
                               className="bg-[#BF4BF6] hover:bg-[#D68BF9] text-white text-xs py-1 px-3 rounded-full"
                             >
-                              {lesson.isQuizCompleted ? 'Review Quiz' : 'Start Quiz'}
+                              {lesson.isQuizCompleted ? 'View Result' : 'Start Quiz'}
                             </button>
                           </div>
                         </div>
                       </div>
                     )}
 
+                    {/* Manual Mark Complete Button for lessons with documents */}
+                    {(lesson.documents && lesson.documents.length > 0) && !lesson.isCompleted && (
+                      <div className="mt-4 flex justify-end">
+                        <button
+                          onClick={() => handleMarkLessonComplete(lesson.id)}
+                          disabled={lesson.isCompleted || isMarkingComplete[lesson.id]}
+                          className={`px-4 py-2 text-xs font-medium rounded-full flex items-center transition-all ${
+                            lesson.isCompleted 
+                              ? 'bg-green-500/20 text-green-300 cursor-default' 
+                              : 'bg-[#BF4BF6] hover:bg-[#D68BF9] text-white disabled:opacity-50'
+                          }`}
+                        >
+                          {lesson.isCompleted ? (
+                            <>
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Completed
+                            </>
+                          ) : (
+                            isMarkingComplete[lesson.id] ? "Marking..." : "Mark as Completed"
+                          )}
+                        </button>
+                      </div>
+                    )}
+
                     {/* No Content Message */}
                     {!lesson.hasQuiz && (!lesson.documents || lesson.documents.length === 0) && (
-                      <div className="text-gray-400 text-sm italic">
+                      <div className="text-gray-400 text-sm italic py-2">
                         No content available for this lesson.
                       </div>
                     )}

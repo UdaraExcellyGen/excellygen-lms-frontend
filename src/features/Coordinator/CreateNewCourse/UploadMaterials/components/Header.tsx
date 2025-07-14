@@ -4,21 +4,26 @@ import { ArrowLeft } from 'lucide-react';
 interface HeaderProps {
     onSaveDraft: () => void;
     navigateToCreateCourse: () => void;
+    isSubmitting: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ onSaveDraft, navigateToCreateCourse }) => {
+const Header: React.FC<HeaderProps> = ({ onSaveDraft, navigateToCreateCourse, isSubmitting }) => {
     return (
         <div className="bg-white rounded-2xl p-4 mb-6">
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={navigateToCreateCourse}
+                        disabled={isSubmitting}
                         className="hover:bg-[#F6E6FF] p-2 rounded-lg transition-colors h-10 w-10 flex items-center justify-center">
                         <ArrowLeft size={20} className="text-[#1B0A3F]" />
                     </button>
                     <h1 className="text-xl font-['Unbounded'] text-[#1B0A3F]">Create New Courses</h1>
                 </div>
-                <button onClick={onSaveDraft} className="px-4 py-2 bg-[#BF4BF6] text-white rounded-lg font-['Nunito_Sans'] hover:bg-[#D68BF9] transition-colors h-10">
+                <button 
+                    onClick={onSaveDraft}
+                    disabled={isSubmitting}
+                    className="px-4 py-2 bg-[#BF4BF6] text-white rounded-lg font-['Nunito_Sans'] hover:bg-[#D68BF9] transition-colors h-10">
                     Save as Draft
                 </button>
             </div>

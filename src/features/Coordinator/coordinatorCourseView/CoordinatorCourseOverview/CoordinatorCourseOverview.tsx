@@ -24,7 +24,8 @@ import {
     getTechnologies,
     addLesson,
     updateLesson,
-    deleteLesson
+    deleteLesson,
+    publishCourse
 } from '../../../../api/services/Course/courseService';
 
 import { getQuizzesByLessonId, deleteQuiz } from '../../../../api/services/Course/quizService';
@@ -148,6 +149,34 @@ const CoordinatorCourseOverview: React.FC = () => {
         // Adding lastRefresh to dependencies so we can force a refetch when returning from edit quiz
     }, [courseId, navigate, lastRefresh]);
 
+    const handlePublishCourse = async () => {
+        if (!courseId) {
+            toast.error("Cannot publish without a course ID.");
+            return;
+        }
+
+     // Confirm with the user before publishing
+        if (!window.confirm("Are you sure you want to publish this course? Once published, it will be visible to learners and can no longer be deleted.")) {
+            return;
+        }   
+        setIsSaving(true);
+        const toastId = toast.loading("Publishing course...");
+
+        try {
+            await publishCourse(courseId);
+            toast.success("Course published! Redirecting...", { id: toastId });
+
+            // Navigate back to the course list page after a short delay
+            setTimeout(() => {
+                navigate("/coordinator/course-display-page");
+            }, 1500);
+
+        } catch (error) {
+            const errorMessage = (error as any).response?.data?.message || "Failed to publish the course.";
+            toast.error(errorMessage, { id: toastId });
+            setIsSaving(false); // Only stop saving on failure, as success will navigate away
+        }
+    };
     // Listen for route changes to refresh data when returning from quiz edit
     useEffect(() => {
         // Force a refresh when returning to this component
@@ -540,7 +569,7 @@ const CoordinatorCourseOverview: React.FC = () => {
             .then(quizzes => {
                 if (quizzes.length > 0) {
                     const quizId = quizzes[0].quizId;
-                    navigate(`/coordinator/edit-quiz/${quizId}?lessonId=${lessonId}&courseId=${courseId}`);
+                    navigate(`/coordinator/edit-quiz/${quizId}?lessonId=${lessonId}&courseId=${courseId}&source=course-view`);
                 } else {
                     toast.error("No quiz found for this lesson to edit. Please create one first.");
                 }
@@ -556,8 +585,18 @@ const CoordinatorCourseOverview: React.FC = () => {
             toast.error("Course ID is missing. Cannot create quiz.");
             return;
         }
-        navigate(`/coordinator/create-quiz/${lessonId}?courseId=${courseId}`);
+        // FIX: Added "&source=course-view" to ensure correct back-navigation
+        navigate(`/coordinator/create-quiz/${lessonId}?courseId=${courseId}&source=course-view`);
     }, [navigate, courseId]);
+
+
+    // const handleCreateQuiz = useCallback((lessonId: number) => {
+    //     if (!courseId) {
+    //         toast.error("Course ID is missing. Cannot create quiz.");
+    //         return;
+    //     }
+    //     navigate(`/coordinator/create-quiz/${lessonId}?courseId=${courseId}`);
+    // }, [navigate, courseId]);
 
     const handleRemoveQuiz = useCallback(async (lessonId: number) => {
         if (!courseId) {
@@ -862,6 +901,16 @@ const CoordinatorCourseOverview: React.FC = () => {
                                         <h1 className="text-2xl font-bold text-white">{courseData.title}</h1>
                                         
                                         <div className="flex gap-2">
+                                            {/* THIS IS THE NEW BUTTON LOGIC */}
+                                            {courseData.status === 'Draft' && (
+                                                <button 
+                                                    onClick={handlePublishCourse} 
+                                                    disabled={isSaving} 
+                                                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                                                >
+                                                     Publish
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={handleToggleEditMode}
                                                 disabled={isSaving}
@@ -905,7 +954,7 @@ const CoordinatorCourseOverview: React.FC = () => {
                                         </div>
                                         <div className="flex items-center">
                                             <Award className="w-4 h-4 mr-2 text-[#D68BF9]" />
-                                            Average Rating: {calculateTotalCoursePoints}/10
+                                            Average Points: {calculateTotalCoursePoints}/100
                                         </div>
                                     </div>
                                 </>

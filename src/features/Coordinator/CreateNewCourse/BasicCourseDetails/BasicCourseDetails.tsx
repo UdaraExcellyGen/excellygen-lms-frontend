@@ -26,6 +26,7 @@ import FormTextArea from './components/FormTextArea';
 import ThumbnailUpload from './components/ThumbnailUpload';
 import TechnologyDropdown from './components/TechnologyDropdown';
 import ProgressSteps from './components/ProgressSteps';
+import ConfirmationDialog from './components/ConfirmationDialog';
 
 const BasicCourseDetails: React.FC = () => {
     const navigate = useNavigate();
@@ -57,6 +58,8 @@ const BasicCourseDetails: React.FC = () => {
     const [isDraggingThumbnail, setIsDraggingThumbnail] = useState<boolean>(false);
     const [isTechnologiesDropdownOpen, setIsTechnologiesDropdownOpen] = useState<boolean>(false);
     const technologiesDropdownRef = useRef<HTMLDivElement>(null);
+
+    const [isConfirmLeaveOpen, setIsConfirmLeaveOpen] = useState(false);
 
     // Fetch lookups (categories, technologies)
     useEffect(() => {
@@ -147,7 +150,7 @@ const BasicCourseDetails: React.FC = () => {
         return () => { isMounted = false; };
     }, [courseIdFromParams, contextCourseData.createdCourseId, contextCourseData.basicDetails, 
         getInitialDetailsState, navigate, resetCourseContext, setCreatedCourseId, 
-        updateContextBasicDetails, currentEditingCourseId]); // Removed 'details' from dependency array
+        updateContextBasicDetails, currentEditingCourseId]); 
 
     // Click outside dropdown handler
     useEffect(() => {
@@ -165,7 +168,7 @@ const BasicCourseDetails: React.FC = () => {
         setDetails(prev => ({ ...prev, [name]: value }));
         setErrors(prev => ({ ...prev, [name]: '' }));
     }, []);
-
+//image validation
     const processAndSetThumbnail = useCallback((file: File) => {
         const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif'];
         const maxSizeMB = 2;
@@ -198,7 +201,7 @@ const BasicCourseDetails: React.FC = () => {
         }));
         setErrors(prev => ({ ...prev, technologies: '' }));
     }, []);
-
+//form validation
     const validateForm = useCallback((): boolean => {
         let isValid = true;
         const newErrors = { title: '', category: '', estimatedTime: '', technologies: '', thumbnail: errors.thumbnail };
@@ -218,11 +221,13 @@ const BasicCourseDetails: React.FC = () => {
         return isValid;
     }, [details, errors.thumbnail]);
 
+    //For next
     const performSaveOperation = async (isDraft: boolean) => {
         if (!validateForm() && !isDraft) {
-            toast.error('Please fix errors in the form.');
+            toast.error('Please complete all required fields on the form.');
             return;
         }
+        //For drafts
         if (isDraft && !details.title.trim()) {
             toast.error('Course Title is required to save a draft.');
             setErrors(prev => ({ ...prev, title: 'Course Title is required.'}));
@@ -251,17 +256,23 @@ const BasicCourseDetails: React.FC = () => {
                 toast.success(`Course '${response.title}' ${isDraft ? 'draft updated' : 'updated'}!`, { id: toastId });
             } else {
                 response = await createCourse(payload, details.thumbnail);
-                toast.success(`Course '${response.title}' ${isDraft ? 'draft created' : 'created'}!`, { id: toastId });
+               // toast.success(`Course '${response.title}' ${isDraft ? 'draft created' : 'created'}!`, { id: toastId });
             }
+            toast.dismiss(toastId);
 
             updateContextBasicDetails(details);
             setCreatedCourseId(response.id);
             setCurrentEditingCourseId(response.id);
 
             if (!isDraft) {
+                toast.success(`Course '${response.title}' ${activeCourseId ? 'updated' : 'created'}!`);
                 navigate(`/coordinator/upload-materials/${response.id}`);
             } else {
-                console.log(`Draft saved for course ID: ${response.id}`);
+                //console.log(`Draft saved for course ID: ${response.id}`);
+                // "Save as Draft" button was clicked
+                toast.success(`Draft for '${response.title}' saved successfully!`);
+                resetCourseContext(); // Clean up the context before leaving
+                navigate('/coordinator/course-display-page'); // Navigate to the dashboard
             }
         } catch (error) {
             toast.error(`${isDraft ? 'Draft save' : (activeCourseId ? 'Update' : 'Creation')} failed.`, { id: toastId });
@@ -280,16 +291,35 @@ const BasicCourseDetails: React.FC = () => {
 
     const handleGoBackToDashboard = useCallback(() => {
         const isDirty = details.title || details.description || details.categoryId || details.estimatedTime || details.technologies.length > 0 || details.thumbnail;
-        if (isDirty && !window.confirm("You have unsaved changes and are about to leave this page. Are you sure?")) {
-            return;
+        
+        if (isDirty) {
+            // If the form has changes, open the dialog instead of navigating
+            setIsConfirmLeaveOpen(true);
+        } else {
+            // If the form is clean, navigate away immediately
+            resetCourseContext();
+            setCurrentEditingCourseId(null);
+            setDetails(getInitialDetailsState());
+            navigate('/coordinator/dashboard');
         }
+    }, [details, navigate, resetCourseContext, getInitialDetailsState]);
+
+    const handleConfirmLeave = () => {
+        // This runs when the user clicks "Leave" in the dialog
+        setIsConfirmLeaveOpen(false); // Close the dialog
         resetCourseContext();
         setCurrentEditingCourseId(null);
         setDetails(getInitialDetailsState());
-        navigate('/coordinator/dashboard');
-    }, [details, navigate, resetCourseContext, getInitialDetailsState]);
-    
+        navigate('/coordinator/dashboard'); // Now, we navigate
+    };
+
+    const handleCancelLeave = () => {
+        // This runs when the user clicks "Stay" or closes the dialog
+        setIsConfirmLeaveOpen(false);
+    };
+
     const displayIdForTitle = currentEditingCourseId || contextCourseData.createdCourseId;
+
 
     if (isPageLoading) {
         return <div className="min-h-screen bg-[#52007C] p-6 flex justify-center items-center"><p className="text-white text-xl">Loading...</p></div>;
@@ -323,10 +353,10 @@ const BasicCourseDetails: React.FC = () => {
                 </div>
             </div>
 
-            <ProgressSteps currentStep={1} />
+            <ProgressSteps stage={1} />
 
-            <div className="bg-[#1B0A3F]/40 backdrop-blur-md rounded-2xl p-6 h-auto">
-                <h2 className="text-lg font-['Unbounded'] text-[#ffffff] mb-6">Course Details</h2>
+            <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6 h-auto">
+                <h2 className="text-lg font-['Unbounded'] text-[#1B0A3F] mb-6">Course Details</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="md:col-span-1">
                         <ThumbnailUpload 
@@ -375,9 +405,10 @@ const BasicCourseDetails: React.FC = () => {
                             error={!!errors.estimatedTime} 
                             errorMessage={errors.estimatedTime} 
                             type="text" 
-                            placeholder="e.g., 10" 
+                            placeholder="10 hours" 
                         />
-                        <TechnologyDropdown 
+                        <TechnologyDropdown
+                            label="Technology *" 
                             selectedTechnologyIds={details.technologies} 
                             availableTechnologies={availableTechnologies} 
                             error={!!errors.technologies} 
@@ -387,6 +418,17 @@ const BasicCourseDetails: React.FC = () => {
                             setIsOpen={setIsTechnologiesDropdownOpen} 
                             dropdownRef={technologiesDropdownRef} 
                         />
+
+                        <ConfirmationDialog
+                            isOpen={isConfirmLeaveOpen}
+                            onConfirm={handleConfirmLeave}
+                            onCancel={handleCancelLeave}
+                            title="Unsaved Changes"
+                            message="You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost."
+                            confirmText="Leave Page"
+                            cancelText="Stay on Page"
+                        />
+
                     </div>
                 </div>
                 <div className="flex justify-end mt-8">

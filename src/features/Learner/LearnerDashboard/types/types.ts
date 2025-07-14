@@ -45,6 +45,7 @@ export interface Course {
   
   export interface ActiveCoursesProps {
     courses: Course[];
+    isLoading?: boolean; // Add this line
   }
   
   export interface RecentActivitiesProps {

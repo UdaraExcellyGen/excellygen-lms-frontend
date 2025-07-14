@@ -1,4 +1,3 @@
-// src/features/Coordinator/QuizManagement/EditQuiz.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Plus, Save, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
@@ -43,6 +42,8 @@ const EditQuiz: React.FC = () => {
   const queryParams = new URLSearchParams(location.search);
   const lessonIdParam = queryParams.get('lessonId');
   const courseIdParam = queryParams.get('courseId');
+
+  const sourcePage = queryParams.get('source');
   
   // Parse and validate all IDs
   let quizId = 0;
@@ -85,23 +86,32 @@ const EditQuiz: React.FC = () => {
   // Form validation
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Helper function to safely navigate to course view
-  const navigateToCourseView = () => {
+  const handleBackNavigation = () => {
     const targetCourseId = originalCourseId || courseId;
-    if (targetCourseId) {
-      // Use absolute path to ensure correct navigation
+    if (!targetCourseId) {
+      // Safe fallback if courseId is somehow lost
+      navigate(-1); 
+      return;
+    }
+
+    if (sourcePage === 'course-view') {
+      // Navigate back to the course view page
       navigate(`/coordinator/course-view/${targetCourseId}`);
+    } else if (sourcePage === 'publish-course') {
+      // NEW: Navigate back to the publish course page
+      navigate(`/coordinator/publish-course/${targetCourseId}`);
     } else {
-      // Fallback if no courseId is available
-      navigate("/coordinator/course-display-page");
+      // (Default): Navigate back to the upload materials page
+      navigate(`/coordinator/upload-materials/${targetCourseId}`);
     }
   };
+
 
   useEffect(() => {
     const loadQuizData = async () => {
       if (!quizId || !lessonId || !courseId) {
         toast.error('Missing required parameters');
-        navigateToCourseView();
+        handleBackNavigation();
         return;
       }
 
@@ -157,7 +167,7 @@ const EditQuiz: React.FC = () => {
       } catch (error) {
         console.error('Error loading quiz data:', error);
         toast.error('Failed to load quiz data. Please try again.');
-        navigateToCourseView();
+        handleBackNavigation();
       } finally {
         setIsLoading(false);
       }
@@ -299,7 +309,7 @@ const EditQuiz: React.FC = () => {
 
   // Always use the safe navigation function
   const handleCancel = () => {
-    navigateToCourseView();
+    handleBackNavigation();
   };
 
   const handleSaveQuiz = async () => {
@@ -403,7 +413,7 @@ const EditQuiz: React.FC = () => {
       
       // Ensure we navigate after the toast is shown and use our safe navigation function
       setTimeout(() => {
-        navigateToCourseView();
+        handleBackNavigation();
       }, 100);
     } catch (error) {
       console.error('Error updating quiz:', error);
@@ -700,7 +710,7 @@ const EditQuiz: React.FC = () => {
                   className="px-5 py-2.5 border border-[#BF4BF6]/30 text-[#D68BF9] rounded-lg hover:bg-[#BF4BF6]/10 transition-colors flex items-center gap-2"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  Back to Details
+                  Back to Quiz Details
                 </button>
                 <button
                   onClick={handleSaveQuiz}
