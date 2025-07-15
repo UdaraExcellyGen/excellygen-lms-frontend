@@ -1,421 +1,482 @@
-// types/course.types.ts - Complete Updated Types with ExcellyGen Brand Guidelines
-
-// === EXISTING COURSE TYPES ===
-export interface CourseDto {
-  id: number;
-  title: string;
-  description: string;
-  categoryId: string;
-  category: CourseCategoryDto;
-  creatorId: string;
-  creator: UserDto;
-  status: CourseStatus;
-  thumbnailImagePath?: string;
-  createdAt: string;
-  updatedAt: string;
-  lessons?: LessonDto[];
-  technologies?: TechnologyDto[];
-}
-
-export interface LessonDto {
-  id: number;
-  courseId: number;
-  lessonName: string;
-  lessonOrder: number;
-  content?: string;
-  videoUrl?: string;
-  documents?: CourseDocumentDto[];
-}
-
-// Enhanced LearnerLessonDto with quiz completion tracking
-export interface LearnerLessonDto {
-  id: number;
-  courseId: number;
-  lessonName: string;
-  lessonOrder: number;
-  content?: string;
-  videoUrl?: string;
-  documents?: CourseDocumentDto[];
-  isCompleted: boolean;
-  hasQuiz: boolean;
-  quizId?: number;
-  isQuizCompleted: boolean;
-  lastAttemptId?: number;
-}
-
-export interface CourseDocumentDto {
-  id: number;
-  lessonId: number;
-  name: string;
-  filePath: string;
-  fileUrl: string;
-  documentType: DocumentType;
-  uploadedAt: string;
-}
-
-export interface CourseCategoryDto {
-  id: string;
-  name: string;
-  title: string; // Added for compatibility
-  description?: string;
-  iconName?: string;
-  isActive: boolean;
-}
-
-export interface TechnologyDto {
-  id: number;
-  name: string;
-  description?: string;
-  status: string;
-}
-
-export interface UserDto {
-  id: string;
-  name: string;
-  email: string;
-  roles: string[];
-}
-
-export interface LearnerCourseDto {
-  id: number;
-  title: string;
-  description: string;
-  category: CourseCategoryDto;
-  creator: UserDto;
-  status: CourseStatus;
-  thumbnailImagePath?: string;
-  thumbnailUrl?: string; // Added for compatibility
-  enrollmentStatus: 'active' | 'completed' | 'inactive';
-  progressPercentage: number;
-  enrolledAt?: string;
-  completedAt?: string;
-  lessons: LearnerLessonDto[]; // Updated to use LearnerLessonDto
-  technologies: TechnologyDto[];
-  totalLessons: number;
-  completedLessons: number;
-  estimatedTime: number;
-}
-
-export interface LessonProgressDto {
-  id: number;
-  userId: string;
-  lessonId: number;
-  isCompleted: boolean;
-  completedAt?: string;
-}
-
-export interface MarkLessonCompletedPayload {
-  lessonId: number;
-}
+// src/types/course.types.ts
+// =================================================================
+// --- Enums ---
+// =================================================================
 
 export enum CourseStatus {
-  Draft = 'Draft',
-  Published = 'Published',
-  Archived = 'Archived'
+    Draft = 'Draft',
+    Published = 'Published',
+    Archived = 'Archived'
 }
 
 export enum DocumentType {
-  PDF = 'PDF',
-  Video = 'Video',
-  PowerPoint = 'PowerPoint',
-  Word = 'Word',
-  Excel = 'Excel',
-  Other = 'Other'
+    PDF = 'PDF',
+    Video = 'Video',
+    Word = 'Word'
 }
 
-// === CERTIFICATE TYPES ===
 
-// Internal Certificate (from LMS courses)
+// =================================================================
+// --- Core DTOs (from Backend) ---
+// =================================================================
+
+export interface UserDto {
+    id: string;
+    name: string;
+    email: string;
+    roles: string[];
+}
+
+export interface CourseCategoryDto {
+    id: string;
+    title: string;
+    name: string; // for compatibility
+    description?: string;
+    iconName?: string;
+    isActive: boolean;
+}
+
+// FIX: Added a type alias for backward compatibility to resolve import errors.
+export type CategoryDto = CourseCategoryDto;
+
+export interface TechnologyDto {
+    id: string; // Using string to align with CreateCoursePayload
+    name: string;
+    description?: string;
+    status?: string;
+}
+
+export interface CourseDocumentDto {
+    id: number;
+    lessonId: number;
+    name: string;
+    documentType: DocumentType | string;
+    filePath: string;
+    fileUrl: string; // Publicly accessible URL
+    fileSize: number; // In bytes
+    uploadedAt: string; // ISO 8601 string
+    lastUpdatedDate: string; // ISO 8601 string for compatibility
+}
+
+export interface LessonDto {
+    id: number;
+    courseId: number;
+    lessonName: string;
+    lessonPoints: number;
+    lessonOrder: number;
+    content?: string;
+    videoUrl?: string;
+    lastUpdatedDate: string; // ISO 8601 string
+    documents: CourseDocumentDto[];
+    quizzes?: QuizDto[]; // This will now correctly use the unified QuizDto below
+}
+
+export interface CourseDto {
+    id: number;
+    title: string;
+    description: string | null;
+    estimatedTime: number; // In Hours
+    calculatedCoursePoints: number | null;
+    status: CourseStatus;
+    isInactive: boolean;
+    thumbnailUrl: string | null; // For frontend display
+    thumbnailImagePath?: string; // Path from backend
+    createdAt: string; // ISO 8601 string
+    lastUpdatedDate: string; // ISO 8601 string
+    creatorId: string;
+    creator: UserDto;
+    categoryId: string;
+    category: CourseCategoryDto;
+    lessons: LessonDto[];
+    technologies: TechnologyDto[];
+}
+
+
+// =================================================================
+// --- Learner-Specific DTOs ---
+// =================================================================
+
+export interface LearnerLessonDto {
+    id: number;
+    courseId: number;
+    lessonName: string;
+    lessonOrder: number;
+    lessonPoints: number;
+    content?: string;
+    videoUrl?: string;
+    documents: CourseDocumentDto[];
+    isCompleted: boolean;
+    hasQuiz: boolean;
+    quizId?: number | null;
+    isQuizCompleted: boolean;
+    lastAttemptId?: number | null;
+    quizAttemptCount?: number;
+    isQuizPassed?: boolean;
+}
+
+export interface LearnerCourseDto {
+    id: number;
+    title: string;
+    description: string | null;
+    estimatedTime: number;
+    status: CourseStatus;
+    isInactive: boolean;
+    thumbnailUrl: string | null;
+    thumbnailImagePath?: string;
+    category: CourseCategoryDto;
+    creator: UserDto;
+    technologies: TechnologyDto[];
+    lessons: LearnerLessonDto[];
+    enrollmentId: number | null;
+    isEnrolled: boolean;
+    enrollmentDate: string | null; // ISO 8601
+    enrollmentStatus: 'active' | 'completed' | 'inactive';
+    completedAt?: string | null; // ISO 8601
+    progressPercentage: number;
+    totalLessons: number;
+    completedLessons: number;
+}
+
+
+// =================================================================
+// --- Certificate Types ---
+// =================================================================
+
 export interface CertificateDto {
-  id: number;
-  title: string;
-  courseTitle: string;
-  userName: string;
-  completionDate: string;
-  certificateFileUrl?: string;
-  type: 'internal'; // Add type to distinguish
-  userId: string;
-  courseId: number;
+    id: number;
+    userId: string;
+    userName: string;
+    courseId: number;
+    courseTitle: string;
+    completionDate: string; // ISO 8601
+    title: string;
+    certificateFileUrl?: string;
+    type: 'internal';
 }
 
-// External Certificate (from other platforms)
 export interface ExternalCertificateDto {
-  id: string;
-  title: string;
-  issuer: string; // Udemy, Coursera, etc.
-  platform: string;
-  completionDate: string;
-  credentialUrl?: string;
-  credentialId?: string;
-  description?: string;
-  imageUrl?: string;
-  type: 'external'; // Add type to distinguish
-  userName: string;
-  userId: string;
-  createdAt: string;
-  updatedAt: string;
+    id: string;
+    userId: string;
+    userName: string;
+    title: string;
+    issuer: string;
+    platform: string;
+    completionDate: string; // ISO 8601
+    credentialUrl?: string;
+    credentialId?: string;
+    description?: string;
+    imageUrl?: string;
+    type: 'external';
+    createdAt: string; // ISO 8601
+    updatedAt: string; // ISO 8601
 }
 
-// Combined Certificate Type
 export type CombinedCertificateDto = CertificateDto | ExternalCertificateDto;
 
-// External Certificate Form Data
-export interface ExternalCertificateFormData {
-  title: string;
-  issuer: string;
-  platform: string;
-  completionDate: string;
-  credentialUrl?: string;
-  credentialId?: string;
-  description?: string;
-}
 
-// Generate Certificate Payload (for internal certificates)
-export interface GenerateCertificatePayload {
-  courseId: number;
-}
+// =================================================================
+// --- Quiz Types (FIXED: Unified from quiz.types.ts) ---
+// =================================================================
 
-// Add External Certificate Payload
-export interface AddExternalCertificatePayload extends ExternalCertificateFormData {
-  // Inherits all fields from ExternalCertificateFormData
-}
-
-// === BRAND COLORS FROM EXCELLYGEN GUIDELINES ===
-export const BRAND_COLORS = {
-  // Primary Colors
-  russianViolet: '#1B0A3F',
-  indigo: '#52007C',
-  phlox: '#BF4BF6',
-  white: '#FFFFFF',
-  heliotrope: '#D68BF9',
-  palePurple: '#F6E6FF',
-  frenchViolet: '#7A00B8',
-  persianIndigo: '#34137C',
-  
-  // Secondary Colors
-  deepSkyBlue: '#00BFFF',
-  federalBlue: '#03045e',
-  gunmetal: '#292f36',
-  black: '#030301',
-  paynesGray: '#586574',
-  timberwolf: '#D6D6D6',
-  mediumBlue: '#0609C6',
-  paleAzure: '#70DBFF'
-} as const;
-
-// === CERTIFICATE PLATFORMS ===
-export const CERTIFICATE_PLATFORMS = [
-  'Udemy',
-  'Coursera',
-  'edX',
-  'LinkedIn Learning',
-  'Pluralsight',
-  'Khan Academy',
-  'FreeCodeCamp',
-  'Codecademy',
-  'Google Cloud Skills Boost',
-  'AWS Training',
-  'Microsoft Learn',
-  'IBM SkillsBuild',
-  'Oracle University',
-  'Salesforce Trailhead',
-  'HubSpot Academy',
-  'Other'
-] as const;
-
-export type CertificatePlatform = typeof CERTIFICATE_PLATFORMS[number];
-
-// === THEME CONFIGURATIONS ===
-export const CERTIFICATE_THEMES = {
-  internal: {
-    // FIX: Wrapped template literals in backticks to form a valid string
-    gradient: `linear-gradient(135deg, ${BRAND_COLORS.indigo}, ${BRAND_COLORS.phlox})`,
-    primaryColor: BRAND_COLORS.indigo,
-    secondaryColor: BRAND_COLORS.heliotrope,
-    backgroundColor: BRAND_COLORS.palePurple,
-    badgeColor: `${BRAND_COLORS.phlox}15`,
-    textColor: BRAND_COLORS.frenchViolet
-  },
-  external: {
-    // FIX: Wrapped template literals in backticks to form a valid string
-    gradient: `linear-gradient(135deg, ${BRAND_COLORS.federalBlue}, ${BRAND_COLORS.mediumBlue})`,
-    primaryColor: BRAND_COLORS.federalBlue,
-    secondaryColor: BRAND_COLORS.paleAzure,
-    backgroundColor: `${BRAND_COLORS.deepSkyBlue}15`,
-    badgeColor: `${BRAND_COLORS.deepSkyBlue}15`,
-    textColor: BRAND_COLORS.federalBlue
-  }
-} as const;
-
-// === FONT CONFIGURATIONS (FROM BRAND GUIDELINES) ===
-export const BRAND_FONTS = {
-  primary: 'Unbounded', // Primary font
-  secondary: 'Nunito Sans', // Secondary font
-  weights: {
-    regular: 400,
-    medium: 500,
-    bold: 700
-  }
-} as const;
-
-// === QUIZ TYPES (EXISTING) ===
+// Summary DTO for listing quizzes
 export interface QuizDto {
-  quizId: number;
-  lessonId: number;
-  title: string;
-  description?: string;
-  timeLimit?: number;
-  passingScore: number;
-  isActive: boolean;
-  questions: QuizQuestionDto[];
+    quizId: number;
+    quizTitle: string;
+    timeLimitMinutes: number;
+    totalMarks: number;
+    quizSize: number;
+    quizBankId: number;
+    lessonId: number;
+    lessonName?: string;
 }
 
-export interface QuizQuestionDto {
-  questionId: number;
-  questionText: string;
-  questionType: 'MultipleChoice' | 'TrueFalse' | 'ShortAnswer';
-  points: number;
-  options: QuizOptionDto[];
+// Detailed DTO for quiz view/edit
+export interface QuizDetailDto {
+    quizId: number;
+    quizTitle: string;
+    timeLimitMinutes: number;
+    totalMarks: number;
+    quizSize: number;
+    quizBankId: number;
+    lessonId: number;
+    lessonName?: string;
+    questions: QuizBankQuestionDto[];
 }
 
-export interface QuizOptionDto {
-  optionId: number;
-  optionText: string;
-  isCorrect: boolean;
+export interface QuizBankQuestionDto {
+    quizBankQuestionId: number;
+    questionContent: string;
+    questionType: string;
+    questionBankOrder?: number;
+    options: MCQQuestionOptionDto[];
+}
+
+export interface MCQQuestionOptionDto {
+    mcqOptionId: number;
+    optionText: string;
+    isCorrect: boolean;
+}
+
+// DTOs for quiz attempts (learner-facing)
+export interface LearnerQuizQuestionDto {
+    quizBankQuestionId: number;
+    questionContent: string;
+    questionType: string;
+    options: LearnerMCQOptionDto[];
+}
+
+export interface LearnerMCQOptionDto {
+    mcqOptionId: number;
+    optionText: string;
 }
 
 export interface QuizAttemptDto {
-  attemptId: number;
-  quizId: number;
-  userId: string;
-  score: number;
-  totalScore: number;
-  percentage: number;
-  isPassing: boolean;
-  startedAt: string;
-  completedAt?: string;
-  answers: QuizAnswerDto[];
+    quizAttemptId: number;
+    quizId: number;
+    quizTitle: string;
+    timeLimitMinutes: number;
+    startTime: string; // ISO 8601
+    completionTime?: string | null; // ISO 8601
+    score?: number | null;
+    isCompleted: boolean;
+    totalQuestions: number;
+    correctAnswers: number;
+    timeRemainingSeconds?: number;
+    selectedAnswers?: Record<number, number>;
 }
 
-export interface QuizAnswerDto {
-  questionId: number;
-  selectedOptionId?: number;
-  textAnswer?: string;
-  isCorrect: boolean;
-  pointsEarned: number;
+export interface QuizAttemptAnswerDto {
+    quizAttemptAnswerId: number;
+    quizAttemptId: number;
+    quizBankQuestionId: number;
+    questionContent: string;
+    selectedOptionId?: number | null;
+    selectedOptionText?: string | null;
+    correctOptionId: number;
+    correctOptionText: string;
+    isCorrect: boolean;
 }
 
-// === ENROLLMENT TYPES (EXISTING) ===
+
+// =================================================================
+// --- Enrollment & Progress Types ---
+// =================================================================
+
 export interface EnrollmentDto {
-  id: number;
-  userId: string;
-  courseId: number;
-  enrolledAt: string;
-  status: 'active' | 'completed' | 'dropped';
-  progressPercentage: number;
-  completedAt?: string;
+    id: number;
+    userId: string;
+    userName: string;
+    courseId: number;
+    courseTitle: string;
+    enrolledAt: string; // ISO 8601
+    completedAt?: string | null; // ISO 8601
+    status: 'active' | 'completed' | 'dropped';
+    progressPercentage: number;
 }
 
-// === API RESPONSE TYPES ===
+export interface LessonProgressDto {
+    id: number;
+    userId: string;
+    lessonId: number;
+    lessonName: string;
+    isCompleted: boolean;
+    completionDate: string | null; // ISO 8601
+}
+
+
+// =================================================================
+// --- API Payloads ---
+// =================================================================
+
+export interface CreateCoursePayload {
+    title: string;
+    description?: string;
+    estimatedTime: number;
+    categoryId: string;
+    technologyIds: string[];
+}
+
+export interface UpdateCourseCoordinatorDtoFE {
+    title: string;
+    description?: string;
+    estimatedTime: number;
+    categoryId: string;
+    technologyIds: string[];
+}
+
+export interface CreateLessonPayload {
+    courseId: number;
+    lessonName: string;
+    lessonPoints: number;
+}
+
+export interface UpdateLessonPayload {
+    lessonName: string;
+    lessonPoints: number;
+}
+
+export interface MarkLessonCompletedPayload {
+    lessonId: number;
+}
+
+export interface CreateEnrollmentPayload {
+    userId: string;
+    courseId: number;
+    status?: string;
+}
+
+export interface UpdateEnrollmentPayload {
+    status: string;
+}
+
+export interface GenerateCertificatePayload {
+    courseId: number;
+}
+
+export interface ExternalCertificateFormData {
+    title: string;
+    issuer: string;
+    platform: string;
+    completionDate: string;
+    credentialUrl?: string;
+    credentialId?: string;
+    description?: string;
+}
+
+export interface AddExternalCertificatePayload extends ExternalCertificateFormData {}
+
+
+// =================================================================
+// --- API & Stats DTOs ---
+// =================================================================
+
 export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  errors?: string[];
+    success: boolean;
+    data?: T;
+    message?: string;
+    errors?: string[];
 }
 
 export interface PaginatedResponse<T> {
-  data: T[];
-  totalCount: number;
-  pageNumber: number;
-  pageSize: number;
-  totalPages: number;
-  hasPreviousPage: boolean;
-  hasNextPage: boolean;
+    data: T[];
+    totalCount: number;
+    pageNumber: number;
+    pageSize: number;
+    totalPages: number;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
 }
 
-// === FORM VALIDATION TYPES ===
-export interface ValidationError {
-  field: string;
-  message: string;
+export interface OverallLmsStatsDto {
+    totalCategories: number;
+    totalPublishedCourses: number;
+    totalActiveLearners: number;
+    totalActiveCoordinators: number;
+    totalProjectManagers: number;
+    averageCourseDurationOverall: string;
 }
 
-export interface FormState<T> {
-  data: T;
-  errors: ValidationError[];
-  isSubmitting: boolean;
-  isValid: boolean;
+
+// =================================================================
+// --- Frontend-Specific State Management Types ---
+// =================================================================
+
+// NEW: Added missing types for form dropdowns
+export interface CategoryOption {
+    id: string;
+    title: string;
 }
 
-// === UI COMPONENT PROPS ===
+export interface TechnologyOption {
+    id: string;
+    name: string;
+}
+
+
+export interface BasicCourseDetailsState {
+    title: string;
+    description: string;
+    estimatedTime: string; // Stored as string for input field binding
+    categoryId: string;
+    technologies: string[]; // Stores technology IDs
+    thumbnail: File | null;
+}
+
+export interface SubtopicFE {
+    id: number; // Corresponds to Lesson ID
+    lessonName: string;
+    lessonPoints: number;
+    courseId: number;
+    documents: CourseDocumentDto[];
+    isEditing?: boolean;
+    originalName?: string;
+    originalPoints?: number;
+    isNew?: boolean; // ADDED: Flag to identify newly added subtopics on the frontend
+}
+
+export interface CourseContextState {
+    createdCourseId: number | null;
+    basicDetails: BasicCourseDetailsState;
+    lessons: SubtopicFE[];
+    lessonsLoaded: boolean;
+}
+
+
+// =================================================================
+// --- UI & Brand Guideline Constants ---
+// =================================================================
+
+export const BRAND_COLORS = {
+    russianViolet: '#1B0A3F',
+    indigo: '#52007C',
+    phlox: '#BF4BF6',
+    white: '#FFFFFF',
+    heliotrope: '#D68BF9',
+    palePurple: '#F6E6FF',
+    frenchViolet: '#7A00B8',
+    persianIndigo: '#34137C',
+    deepSkyBlue: '#00BFFF',
+    federalBlue: '#03045e',
+    gunmetal: '#292f36',
+    black: '#030301',
+    paynesGray: '#586574',
+    timberwolf: '#D6D6D6',
+    mediumBlue: '#0609C6',
+    paleAzure: '#70DBFF'
+} as const;
+
+export const CERTIFICATE_PLATFORMS = [
+    'Udemy', 'Coursera', 'edX', 'LinkedIn Learning', 'Pluralsight',
+    'Khan Academy', 'FreeCodeCamp', 'Codecademy', 'Google Cloud Skills Boost',
+    'AWS Training', 'Microsoft Learn', 'IBM SkillsBuild', 'Oracle University',
+    'Salesforce Trailhead', 'HubSpot Academy', 'Other'
+] as const;
+
+
+// =================================================================
+// --- UI Component Props & Utility Types ---
+// =================================================================
+
 export interface CertificateCardProps {
-  certificate: CombinedCertificateDto;
-  onView?: (certificate: CombinedCertificateDto) => void;
-  onEdit?: (certificate: ExternalCertificateDto) => void;
-  onDelete?: (id: string | number) => void;
-  showActions?: boolean;
+    certificate: CombinedCertificateDto;
+    onView?: (certificate: CombinedCertificateDto) => void;
+    onEdit?: (certificate: ExternalCertificateDto) => void;
+    onDelete?: (id: string | number) => void;
+    showActions?: boolean;
 }
 
-export interface CertificateFilterProps {
-  currentFilter: string;
-  onFilterChange: (filter: string) => void;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
-}
-
-export interface CertificateStatsProps {
-  totalCertificates: number;
-  internalCertificates: number;
-  externalCertificates: number;
-  coursesInProgress: number;
-}
-
-// === UTILITY TYPES ===
 export type CertificateType = 'internal' | 'external';
 export type CertificateFilter = 'all' | 'internal' | 'external';
 
-// Helper function to check certificate type
+
+// =================================================================
+// --- Type Guards & Helper Functions ---
+// =================================================================
+
 export const isInternalCertificate = (cert: CombinedCertificateDto): cert is CertificateDto => {
-  return cert.type === 'internal';
+    return cert.type === 'internal';
 };
 
 export const isExternalCertificate = (cert: CombinedCertificateDto): cert is ExternalCertificateDto => {
-  return cert.type === 'external';
-};
-
-// Helper function to get certificate theme
-export const getCertificateTheme = (type: CertificateType) => {
-  return CERTIFICATE_THEMES[type];
-};
-
-// Helper function to format certificate date
-export const formatCertificateDate = (dateString: string): string => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-};
-
-// Helper function to get platform icon color
-export const getPlatformIconColor = (platform: string): string => {
-  const platformColors: Record<string, string> = {
-    'Udemy': '#EC5252',
-    'Coursera': '#0056D3',
-    'edX': '#02262B',
-    'LinkedIn Learning': '#0077B5',
-    'Pluralsight': '#F15B2A',
-    'Khan Academy': '#14BF96',
-    'FreeCodeCamp': '#0A0A23',
-    'Codecademy': '#1F4056',
-    'Google Cloud Skills Boost': '#4285F4',
-    'AWS Training': '#FF9900',
-    'Microsoft Learn': '#00BCF2',
-    'IBM SkillsBuild': '#1261FE',
-    'Oracle University': '#F80000',
-    'Salesforce Trailhead': '#00A1E0',
-    'HubSpot Academy': '#FF7A59'
-  };
-  
-  return platformColors[platform] || BRAND_COLORS.federalBlue;
+    return cert.type === 'external';
 };

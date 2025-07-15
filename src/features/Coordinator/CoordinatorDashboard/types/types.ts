@@ -33,6 +33,7 @@ export interface HeaderProps {
   notifications?: Notification[];
   coordinatorName?: string;
   role?: string;
+  avatar?: string | null;
 }
 
 export interface NotificationCardProps {
