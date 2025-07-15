@@ -1,14 +1,15 @@
 // components/QuizList.tsx
 import React from 'react';
 import { QuizDto } from '../../../../../types/quiz.types';
-import { BookCheck, Edit } from 'lucide-react';
+import { BookCheck, Edit, Eye } from 'lucide-react'; // Added Eye icon for clarity
 
 interface QuizListProps {
     quizzes?: QuizDto[];
     handleEditQuiz: () => void;
+    isPublished: boolean;
 }
 
-const QuizList: React.FC<QuizListProps> = ({ quizzes, handleEditQuiz }) => {
+const QuizList: React.FC<QuizListProps> = ({ quizzes, handleEditQuiz, isPublished }) => {
     return (
         <ul className="space-y-3">
             {quizzes?.map((quiz) => (
@@ -27,12 +28,14 @@ const QuizList: React.FC<QuizListProps> = ({ quizzes, handleEditQuiz }) => {
                             </p>
                         </div>
                     </div>
+                    {/* UPDATED: Button is no longer disabled. It will navigate to a view or edit page. */}
                     <button
                         onClick={handleEditQuiz}
                         className="p-1 rounded-full text-gray-400 hover:text-[#D68BF9] transition-colors duration-200 ml-2 flex-shrink-0"
-                        aria-label={`Edit quiz ${quiz.quizTitle}`}
+                        aria-label={isPublished ? `View quiz ${quiz.quizTitle}` : `Edit quiz ${quiz.quizTitle}`}
                     >
-                        <Edit size={16} />
+                        {/* Show a different icon based on the mode for better UX */}
+                        {isPublished ? <Eye size={16} /> : <Edit size={16} />}
                     </button>
                 </li>
             ))}

@@ -1,10 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, BookOpen, CheckCircle, List, Clock, FileText, Download, PlayCircle, AlertCircle, Award } from 'lucide-react';
+import { ArrowLeft, BookOpen, CheckCircle, List, Clock, FileText, Download, PlayCircle, AlertCircle, Award, AlertTriangle} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { LearnerCourseDto, LearnerLessonDto } from '../../../types/course.types';
-import { QuizDto } from '../../../types/quiz.types';
 import { generateCertificate } from '../../../api/services/Course/certificateService';
 import { getLearnerCourseDetails, markLessonCompleted } from '../../../api/services/Course/learnerCourseService';
 import { logCourseAccess } from '../../../api/services/Course/courseAccessService';
@@ -61,6 +60,7 @@ const LearnerCourseOverview: React.FC = () => {
       try {
         setIsLoading(true);
         const course = await getLearnerCourseDetails(courseId);
+        console.log("DATA RECEIVED FROM API:", course);
         
         // Initialize expanded state for lessons
         const initialExpandedState: Record<number, boolean> = {};
@@ -295,6 +295,18 @@ const LearnerCourseOverview: React.FC = () => {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Courses
         </button>
+
+        {courseData.isInactive && (
+                    <div className="bg-yellow-500/20 border-2 border-yellow-500 text-yellow-200 p-4 rounded-xl flex items-center gap-4 shadow-lg">
+                        <AlertTriangle className="w-8 h-8 flex-shrink-0" />
+                        <div>
+                            <h3 className="font-bold text-lg">This Course is Currently Inactive</h3>
+                            <p className="text-sm">
+                                You can still view your progress and access the content, but this course is no longer available for new enrollments.
+                            </p>
+                        </div>
+                    </div>
+                )}
 
         {/* Course Header */}
         <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-2xl p-6">

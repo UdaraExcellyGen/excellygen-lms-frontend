@@ -1,5 +1,6 @@
 // src/api/services/Course/quizService.ts
 import apiClient from '../../apiClient';
+import { AxiosRequestConfig } from 'axios'; // Import AxiosRequestConfig
 import {
   QuizDto,
   QuizDetailDto,
@@ -20,8 +21,8 @@ import {
 // ----- Coordinator Quiz Management -----
 
 // Get quizzes for a lesson
-export const getQuizzesByLessonId = async (lessonId: number): Promise<QuizDto[]> => {
-  const response = await apiClient.get<QuizDto[]>(`/quiz/lesson/${lessonId}`);
+export const getQuizzesByLessonId = async (lessonId: number, config?: AxiosRequestConfig): Promise<QuizDto[]> => {
+  const response = await apiClient.get<QuizDto[]>(`/quiz/lesson/${lessonId}`, config);
   return response.data;
 };
 
@@ -49,14 +50,11 @@ export const deleteQuiz = async (quizId: number): Promise<void> => {
 
 // ----- Quiz Bank Management -----
 
-// Get quiz bank details
 export const getQuizBank = async (quizBankId: number): Promise<QuizBankDto> => {
   const response = await apiClient.get<QuizBankDto>(`/quiz/bank/${quizBankId}`);
   return response.data;
 };
 
-// Create a quiz bank for a lesson
-// In quizService.ts
 export const createQuizBank = async (lessonId: number, createQuizBankDto: CreateQuizBankDto): Promise<QuizBankDto> => {
   const response = await apiClient.post<QuizBankDto>(`/quiz/bank/lesson/${lessonId}`, createQuizBankDto);
   return response.data;
@@ -64,49 +62,41 @@ export const createQuizBank = async (lessonId: number, createQuizBankDto: Create
 
 // ----- Question Management -----
 
-// Get a specific question
 export const getQuestion = async (questionId: number): Promise<QuizBankQuestionDto> => {
   const response = await apiClient.get<QuizBankQuestionDto>(`/quiz/question/${questionId}`);
   return response.data;
 };
 
-// Get all questions for a quiz bank
 export const getQuestionsForBank = async (quizBankId: number): Promise<QuizBankQuestionDto[]> => {
   const response = await apiClient.get<QuizBankQuestionDto[]>(`/quiz/bank/${quizBankId}/questions`);
   return response.data;
 };
 
-// Add a question to a quiz bank
 export const addQuestionToBank = async (quizBankId: number, createQuestionDto: CreateQuizBankQuestionDto): Promise<QuizBankQuestionDto> => {
   const response = await apiClient.post<QuizBankQuestionDto>(`/quiz/bank/${quizBankId}/question`, createQuestionDto);
   return response.data;
 };
 
-// Update a question
 export const updateQuestion = async (questionId: number, updateQuestionDto: UpdateQuizBankQuestionDto): Promise<void> => {
   await apiClient.put(`/quiz/question/${questionId}`, updateQuestionDto);
 };
 
-// Delete a question
 export const deleteQuestion = async (questionId: number): Promise<void> => {
   await apiClient.delete(`/quiz/question/${questionId}`);
 };
 
 // ----- Learner Quiz Interface -----
 
-// Get questions for a learner to take a quiz
 export const getQuestionsForLearner = async (quizId: number): Promise<LearnerQuizQuestionDto[]> => {
   const response = await apiClient.get<LearnerQuizQuestionDto[]>(`/quiz/learner/${quizId}`);
   return response.data;
 };
 
-// Start a quiz attempt
 export const startQuizAttempt = async (quizId: number): Promise<QuizAttemptDto> => {
   const response = await apiClient.post<QuizAttemptDto>('/quiz/attempt/start', { quizId } as StartQuizAttemptDto);
   return response.data;
 };
 
-// Submit an answer
 export const submitQuizAnswer = async (attemptId: number, questionId: number, selectedOptionId: number): Promise<boolean> => {
   const payload: SubmitQuizAnswerDto = {
     quizAttemptId: attemptId,
@@ -117,7 +107,6 @@ export const submitQuizAnswer = async (attemptId: number, questionId: number, se
   return response.data;
 };
 
-// Complete a quiz attempt
 export const completeQuizAttempt = async (attemptId: number): Promise<QuizAttemptDto> => {
   const response = await apiClient.post<QuizAttemptDto>('/quiz/attempt/complete', { quizAttemptId: attemptId } as CompleteQuizAttemptDto);
   return response.data;
@@ -125,19 +114,16 @@ export const completeQuizAttempt = async (attemptId: number): Promise<QuizAttemp
 
 // ----- Quiz Results -----
 
-// Get quiz attempt details
 export const getQuizAttemptDetails = async (attemptId: number): Promise<QuizAttemptDetailDto> => {
   const response = await apiClient.get<QuizAttemptDetailDto>(`/quiz/attempt/${attemptId}`);
   return response.data;
 };
 
-// Get all attempts for a user
 export const getUserAttempts = async (): Promise<QuizAttemptDto[]> => {
   const response = await apiClient.get<QuizAttemptDto[]>('/quiz/attempts/user');
   return response.data;
 };
 
-// Get all attempts for a quiz (coordinator view)
 export const getQuizAttempts = async (quizId: number): Promise<QuizAttemptDto[]> => {
   const response = await apiClient.get<QuizAttemptDto[]>(`/quiz/attempts/quiz/${quizId}`);
   return response.data;
