@@ -17,6 +17,20 @@ export const getUserCertificates = async (): Promise<CertificateDto[]> => {
     return response.data.map(cert => ({ ...cert, type: 'internal' as const }));
 };
 
+// ========================================================================
+// NEW: Get internal certificates for a specific user (for public profile)
+// ========================================================================
+export const getCertificatesForUser = async (userId: string): Promise<CertificateDto[]> => {
+    try {
+        const response = await apiClient.get<CertificateDto[]>(`/Certificates/user/${userId}`);
+        return response.data.map(cert => ({ ...cert, type: 'internal' as const }));
+    } catch (error) {
+        console.error(`Error fetching internal certificates for user ${userId}`, error);
+        return [];
+    }
+};
+// ========================================================================
+
 // Generate a certificate for a completed course for the current user
 export const generateCertificate = async (courseId: number): Promise<CertificateDto> => {
     const payload: GenerateCertificatePayload = { courseId };
@@ -40,10 +54,23 @@ export const getExternalCertificates = async (): Promise<ExternalCertificateDto[
         return response.data.map(cert => ({ ...cert, type: 'external' as const }));
     } catch (error) {
         console.error('Error fetching external certificates:', error);
-        // Return empty array if endpoint doesn't exist yet
         return [];
     }
 };
+
+// ========================================================================
+// NEW: Get external certificates for a specific user (for public profile)
+// ========================================================================
+export const getExternalCertificatesForUser = async (userId: string): Promise<ExternalCertificateDto[]> => {
+    try {
+        const response = await apiClient.get<ExternalCertificateDto[]>(`/ExternalCertificates/user/${userId}`);
+        return response.data.map(cert => ({ ...cert, type: 'external' as const }));
+    } catch (error) {
+        console.error(`Error fetching external certificates for user ${userId}`, error);
+        return [];
+    }
+};
+// ========================================================================
 
 // Add a new external certificate
 export const addExternalCertificate = async (certificateData: AddExternalCertificatePayload): Promise<ExternalCertificateDto> => {
