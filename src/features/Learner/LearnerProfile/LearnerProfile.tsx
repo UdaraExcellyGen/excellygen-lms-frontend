@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Sidebar/Layout';
 import { toast } from 'react-hot-toast';
+import { Loader2 } from 'lucide-react';
 
 // Import components
 import ProfileHeader from './components/ProfileHeader';
@@ -13,564 +14,252 @@ import ProjectsList from './components/ProjectsList';
 import CertificationsList from './components/CertificationsList';
 
 // Import services
-import { 
-  getUserProfile, 
-  updateUserProfile, 
-  uploadUserAvatar, 
-  deleteUserAvatar 
-} from '../../../api/services/LearnerProfile/userProfileService';
-import { getUserBadgeSummary } from '../../../api/services/LearnerProfile/userBadgeService';
+import { getUserProfile, updateUserProfile, uploadUserAvatar, deleteUserAvatar } from '../../../api/services/LearnerProfile/userProfileService';
+import { getBadgesForUser } from '../../../api/services/Learner/badgesAndRewardsService';
 import { getUserTechnologies, addUserTechnology, removeUserTechnology, getAvailableTechnologies } from '../../../api/services/LearnerProfile/userTechnologyService';
 import { getUserProjects } from '../../../api/services/LearnerProfile/userProjectService';
-import { getUserCertifications } from '../../../api/services/LearnerProfile/userCertificationService';
+// FIX: Importing from the updated Course services
+import { getCertificatesForUser, getExternalCertificatesForUser } from '../../../api/services/Course/certificateService'; 
 
 // Import types
 import { ProfileData } from './types';
+import { useAuth } from '../../../contexts/AuthContext';
 
-const LearnerProfile = () => {
-  const { id } = useParams();
+const LearnerProfile: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user: loggedInUser } = useAuth();
+
   const [isEditing, setIsEditing] = useState(false);
-  const [isViewOnly, setIsViewOnly] = useState(false);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [originalProfileData, setOriginalProfileData] = useState<ProfileData | null>(null);
   const [availableTechnologies, setAvailableTechnologies] = useState<string[]>([]);
   
-  // Loading states
   const [isLoading, setIsLoading] = useState(true);
-  const [loadingErrors, setLoadingErrors] = useState<Record<string, boolean>>({});
   const [isSaving, setIsSaving] = useState(false);
-  const [technologyOperation, setTechnologyOperation] = useState<{
-    type: 'add' | 'remove' | null;
-    name: string | null;
-    inProgress: boolean;
-  }>({ type: null, name: null, inProgress: false });
+  const [loadingError, setLoadingError] = useState<string | null>(null);
+  const [isTechOperationInProgress, setIsTechOperationInProgress] = useState(false);
 
-  // Determine if viewing own profile or someone else's
-  useEffect(() => {
-    console.log("ID Parameter:", id);
-    
-    if (id) {
-      // This is someone else's profile - view only mode
-      setIsViewOnly(true);
-    } else {
-      // This is the user's own profile - editable mode
-      setIsViewOnly(false);
-    }
-    
-    // Fetch profile data
-    fetchProfileData();
-  }, [id]);
-
-  // Fetch technologies separately to avoid UI flashes
-  const fetchTechnologies = useCallback(async (userId: string) => {
-    try {
-      // Get user technologies
-      const technologies = await getUserTechnologies(userId);
-      
-      // Update only the skills part of profile data
-      setProfileData(prevData => {
-        if (!prevData) return prevData;
-        
-        return {
-          ...prevData,
-          skills: technologies.map(tech => ({ name: tech.name, id: tech.id }))
-        };
-      });
-      
-      // If not in view-only mode, also fetch available technologies
-      if (!isViewOnly) {
-        try {
-          const availableTechs = await getAvailableTechnologies(userId);
-          setAvailableTechnologies(availableTechs.map(tech => tech.name));
-        } catch (error) {
-          console.error('Error fetching available technologies:', error);
-          // Don't show error toast here to avoid too many notifications
-        }
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error fetching technologies:', error);
-      return false;
-    }
-  }, [isViewOnly]);
+  const isViewOnly = !!id && id !== loggedInUser?.id;
 
   const fetchProfileData = useCallback(async () => {
     setIsLoading(true);
-    setLoadingErrors({});
+    setLoadingError(null);
     
-    try {
-      // First try URL parameter
-      let userId = id || '';
-      
-      // If no URL parameter, try localStorage
-      if (!userId) {
-        userId = localStorage.getItem('userId') || '';
-        console.log("Using userId from localStorage:", userId);
-      }
-      
-      // If still no userId, try to get from user object
-      if (!userId) {
-        const userJson = localStorage.getItem('user');
-        if (userJson) {
-          try {
-            const user = JSON.parse(userJson);
-            if (user && user.id) {
-              userId = user.id;
-              console.log("Found userId in user object:", userId);
-              localStorage.setItem('userId', userId);
-            }
-          } catch (e) {
-            console.error("Error parsing user from localStorage:", e);
-          }
-        }
-      }
-      
-      if (!userId) {
-        toast.error('User ID not found');
+    const userIdToFetch = id || loggedInUser?.id;
+
+    if (!userIdToFetch) {
+        toast.error('Could not determine user profile to load.');
+        setLoadingError('User ID not found.');
         setIsLoading(false);
         return;
-      }
-      
-      console.log("Fetching profile for user ID:", userId);
-      
-      // Default empty data structure to handle partial failures
-      const defaultProfileData: ProfileData = {
-        id: userId,
-        name: 'User',
-        email: '',
-        phone: '',
-        department: '',
-        role: '',
-        about: '',
-        skills: [],
-        certifications: [],
-        projects: [],
-        rewards: {
-          totalBadges: 0,
-          thisMonth: 0,
-          recentBadges: []
-        }
-      };
-      
-      let newProfileData: ProfileData = { ...defaultProfileData };
-      const errors: Record<string, boolean> = {};
-      
-      // Get user profile
-      try {
-        console.log(`Making API request to /user-profile/${userId}`);
-        const profileResponse = await getUserProfile(userId);
-        console.log("Profile response received:", profileResponse);
-        
-        newProfileData = {
-          ...newProfileData,
-          id: profileResponse.id,
-          name: profileResponse.name,
-          email: profileResponse.email,
-          phone: profileResponse.phone,
-          department: profileResponse.department,
-          role: profileResponse.jobRole || '',
-          about: profileResponse.about || '',
-          avatar: profileResponse.avatar,
-          roles: profileResponse.roles
-        };
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-        errors.profile = true;
-      }
-      
-      // Get badge summary
-      try {
-        const badgeSummary = await getUserBadgeSummary(userId);
-        newProfileData.rewards = {
-          totalBadges: badgeSummary.totalBadges,
-          thisMonth: badgeSummary.thisMonth,
-          recentBadges: badgeSummary.recentBadges
-        };
-      } catch (error) {
-        console.error('Error fetching badge summary:', error);
-        errors.badges = true;
-      }
-      
-      // Get technologies using specialized function
-      try {
-        // Set initial skills array
-        setProfileData({
-          ...newProfileData,
-          skills: [] // Set empty skills initially to avoid UI glitches
-        });
-        
-        const techSuccess = await fetchTechnologies(userId);
-        if (!techSuccess) {
-          errors.technologies = true;
-        }
-      } catch (error) {
-        console.error('Error fetching technologies:', error);
-        errors.technologies = true;
-      }
-      
-      // Get projects
-      try {
-        const projects = await getUserProjects(userId);
-        
-        // Update profile data with projects
-        setProfileData(prevData => {
-          if (!prevData) return null;
-          return {
-            ...prevData,
-            projects: projects
-          };
-        });
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-        errors.projects = true;
-      }
-      
-      // Get certifications
-      try {
-        const certifications = await getUserCertifications(userId);
-        
-        // Update profile data with certifications
-        setProfileData(prevData => {
-          if (!prevData) return null;
-          return {
-            ...prevData,
-            certifications: certifications
-          };
-        });
-      } catch (error) {
-        console.error('Error fetching certifications:', error);
-        errors.certifications = true;
-      }
-      
-      // Set profile base data if not already set
-      setProfileData(prevData => {
-        if (!prevData) return newProfileData;
-        return prevData;
-      });
-      
-      // Update loading errors state
-      setLoadingErrors(errors);
-      
-      // Show toast for partial failures
-      if (Object.keys(errors).length > 0) {
-        toast.error('Some profile data could not be loaded completely');
-      }
-    } catch (error) {
-      console.error('Error in fetch profile operation:', error);
-      toast.error('Failed to load profile data');
-    } finally {
-      setIsLoading(false);
     }
-  }, [id, fetchTechnologies]);
 
-  // Optimized function to add a technology with better error handling
-  const handleSkillAdd = useCallback(async (skillName: string) => {
-    if (!profileData || technologyOperation.inProgress) return;
-    
     try {
-      // Set technology operation state
-      setTechnologyOperation({ type: 'add', name: skillName, inProgress: true });
-      
-      const userId = id || localStorage.getItem('userId') || '';
-      
-      // Don't immediately update UI - wait for successful API call
-      console.log(`Adding technology: ${skillName} for user: ${userId}`);
-      
-      try {
-        // Our updated service will handle the conversion from technology name to ID
-        const addedTechnology = await addUserTechnology(userId, skillName);
-        
-        // Only update UI after successful API call
-        setProfileData(prevData => {
-          if (!prevData) return prevData;
-          
-          // Check if already exists to prevent duplicates
-          if (prevData.skills.some(s => s.name === addedTechnology.name)) {
-            return prevData;
-          }
-          
-          // Update with the data from the API to ensure consistency
-          return {
-            ...prevData,
-            skills: [
-              ...prevData.skills, 
-              { name: addedTechnology.name, id: addedTechnology.id }
-            ]
-          };
-        });
-        
-        toast.success(`Added ${skillName} to your technologies`);
-      } catch (error) {
-        console.error('Error adding technology:', error);
-        toast.error('Failed to add technology');
-      }
-    } finally {
-      // Reset technology operation state
-      setTechnologyOperation({ type: null, name: null, inProgress: false });
-    }
-  }, [id, profileData, technologyOperation]);
+        // Fetch all data in parallel using the updated services
+        const promises = [
+            getUserProfile(userIdToFetch),
+            getBadgesForUser(userIdToFetch),
+            getUserProjects(userIdToFetch),
+            getCertificatesForUser(userIdToFetch),         // Internal Certs
+            getExternalCertificatesForUser(userIdToFetch),  // External Certs
+            getUserTechnologies(userIdToFetch)
+        ];
 
-  // Optimized function to remove a technology with better error handling
-  const handleSkillRemove = useCallback(async (skillName: string) => {
-    if (!profileData || technologyOperation.inProgress) return;
-    
-    try {
-      // Set technology operation state
-      setTechnologyOperation({ type: 'remove', name: skillName, inProgress: true });
-      
-      const userId = id || localStorage.getItem('userId') || '';
-      const skill = profileData.skills.find(s => s.name === skillName);
-      
-      if (!skill || !skill.id) {
-        toast.error(`Cannot remove ${skillName}: ID not found`);
-        setTechnologyOperation({ type: null, name: null, inProgress: false });
-        return;
-      }
-      
-      // Store the skill info before removal for recovery if needed
-      const skillToRestore = { ...skill };
-      
-      // Optimistic UI update - remove immediately for better UX
-      setProfileData(prevData => {
-        if (!prevData) return prevData;
+        const [profileResult, badgesResult, projectsResult, internalCertsResult, externalCertsResult, techResult] = await Promise.allSettled(promises);
+
+        let baseProfile: Omit<ProfileData, 'skills' | 'projects' | 'certifications' | 'rewards'> | null = null;
+        if (profileResult.status === 'fulfilled' && profileResult.value) {
+            const p = profileResult.value;
+            baseProfile = { id: p.id, name: p.name, email: p.email, phone: p.phone, department: p.department, role: p.jobRole, about: p.about, avatar: p.avatar, roles: p.roles };
+        } else {
+            throw new Error('Could not load essential profile information.');
+        }
+
+        const badges = badgesResult.status === 'fulfilled' ? badgesResult.value : [];
+        const projects = projectsResult.status === 'fulfilled' ? projectsResult.value : [];
+        const internalCerts = internalCertsResult.status === 'fulfilled' ? (internalCertsResult.value as any[]) : [];
+        const externalCerts = externalCertsResult.status === 'fulfilled' ? (externalCertsResult.value as any[]) : [];
+        const skills = techResult.status === 'fulfilled' ? techResult.value : [];
+
+        // Combine and map both certificate types into the structure needed by ProfileData
+        const combinedCerts = [
+            ...internalCerts.map(c => ({
+                id: c.id.toString(),
+                name: c.courseTitle, // Internal uses courseTitle
+                issuingOrganization: 'ExcellyGen LMS',
+                issueDate: new Date(c.completionDate).toLocaleDateString(),
+                status: 'Completed',
+                imageUrl: c.imageUrl,
+                description: c.description
+            })),
+            ...externalCerts.map(c => ({
+                id: c.id,
+                name: c.title, // External uses title
+                issuingOrganization: c.issuer, // External uses issuer
+                issueDate: new Date(c.completionDate).toLocaleDateString(),
+                status: 'Completed',
+                imageUrl: c.imageUrl,
+                description: c.description
+            }))
+        ];
         
-        return {
-          ...prevData,
-          skills: prevData.skills.filter(s => s.name !== skillName)
+        const claimedBadges = badges.filter(b => b.isClaimed);
+        const thisMonthBadges = claimedBadges.filter(b => b.dateEarned && new Date(b.dateEarned).getMonth() === new Date().getMonth()).length;
+
+        const finalProfileData: ProfileData = {
+            ...baseProfile,
+            skills,
+            projects,
+            certifications: combinedCerts, // Use the combined list
+            rewards: {
+                totalBadges: claimedBadges.length,
+                thisMonth: thisMonthBadges,
+                recentBadges: claimedBadges.sort((a, b) => new Date(b.dateEarned!).getTime() - new Date(a.dateEarned!).getTime()).slice(0, 10)
+            }
         };
-      });
-      
-      try {
-        // Attempt to remove on the backend
-        await removeUserTechnology(userId, skill.id);
-        toast.success(`Removed ${skillName} from your technologies`);
-      } catch (error) {
-        // If removal fails, restore the skill to the UI
-        console.error('Error removing technology:', error);
-        toast.error('Failed to remove technology');
         
-        // Restore the removed skill
-        setProfileData(prevData => {
-          if (!prevData) return prevData;
-          
-          return {
-            ...prevData,
-            skills: [...prevData.skills, skillToRestore]
-          };
-        });
-      }
-    } catch (error) {
-      console.error('Error in skill removal process:', error);
-      toast.error('An unexpected error occurred');
-    } finally {
-      // Reset technology operation state
-      setTechnologyOperation({ type: null, name: null, inProgress: false });
-    }
-  }, [id, profileData, technologyOperation]);
+        setProfileData(finalProfileData);
+        setOriginalProfileData(finalProfileData);
 
-  // Event handlers
-  const handleEdit = useCallback(() => {
-    if (!isViewOnly) setIsEditing(true);
-  }, [isViewOnly]);
+        if (!isViewOnly) {
+          getAvailableTechnologies(userIdToFetch).then(techs => setAvailableTechnologies(techs.map(t => t.name))).catch(e => console.error("Could not fetch available techs", e));
+        }
+
+    } catch (error: any) {
+        setLoadingError(error.message || 'An unexpected error occurred while loading the profile.');
+        toast.error(error.message || 'Failed to load profile.');
+    } finally {
+        setIsLoading(false);
+    }
+  }, [id, loggedInUser, isViewOnly]);
+
+  useEffect(() => {
+    fetchProfileData();
+  }, [fetchProfileData]);
   
-  const handleSave = useCallback(async () => {
+  // Handlers and JSX remain the same...
+  const handleEdit = () => setIsEditing(true);
+  const handleCancel = () => {
+      setIsEditing(false);
+      setProfileData(originalProfileData);
+  };
+  
+  const handleSave = async () => {
     if (!profileData) return;
-    
     setIsSaving(true);
     try {
-      const userId = id || localStorage.getItem('userId') || '';
-      
-      await updateUserProfile(userId, {
-        jobRole: profileData.role,
-        about: profileData.about
-      });
-      
+      const { id, role, about } = profileData;
+      await updateUserProfile(id, { jobRole: role, about });
       setIsEditing(false);
-      toast.success('Profile updated successfully');
-      await fetchProfileData(); // Refresh data
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast.error('Failed to update profile');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [id, profileData, fetchProfileData]);
+      setOriginalProfileData(profileData);
+      toast.success('Profile updated successfully!');
+    } catch (error) { toast.error('Failed to update profile.'); } 
+    finally { setIsSaving(false); }
+  };
   
-  const handleCancel = useCallback(() => {
-    setIsEditing(false);
-    fetchProfileData(); // Revert to original data
-  }, [fetchProfileData]);
-
-  const handleAvatarUpload = useCallback(async (file: File) => {
-    if (!profileData) return;
-    
+  const handleAvatarUpload = async (file: File) => {
+    if (!profileData || isViewOnly) return;
+    const toastId = toast.loading('Uploading avatar...');
     try {
-      const userId = id || localStorage.getItem('userId') || '';
-      
-      // Show loading state
-      const toastId = toast.loading('Uploading avatar...');
-      
-      const avatarUrl = await uploadUserAvatar(userId, file);
-      
-      // Update profile data with new avatar
-      setProfileData(prevData => {
-        if (!prevData) return prevData;
-        
-        return {
-          ...prevData,
-          avatar: avatarUrl
-        };
-      });
-      
-      toast.dismiss(toastId);
-      toast.success('Avatar uploaded successfully');
-    } catch (error) {
-      console.error('Error uploading avatar:', error);
-      toast.dismiss();
-      toast.error('Failed to upload avatar');
-    }
-  }, [id, profileData]);
+      const avatarUrl = await uploadUserAvatar(profileData.id, file);
+      const updatedProfile = { ...profileData, avatar: avatarUrl };
+      setProfileData(updatedProfile);
+      setOriginalProfileData(updatedProfile);
+      toast.success('Avatar uploaded successfully', { id: toastId });
+    } catch (error) { toast.error('Failed to upload avatar', { id: toastId }); }
+  };
 
-  // New function to handle avatar deletion
-  const handleAvatarDelete = useCallback(async () => {
-    if (!profileData) return;
-    
+  const handleAvatarDelete = async () => {
+    if (!profileData || isViewOnly) return;
+    const toastId = toast.loading('Deleting avatar...');
     try {
-      const userId = id || localStorage.getItem('userId') || '';
-      
-      // Show loading state
-      const toastId = toast.loading('Deleting avatar...');
-      
-      await deleteUserAvatar(userId);
-      
-      // Update profile data to remove avatar
-      setProfileData(prevData => {
-        if (!prevData) return prevData;
-        
-        return {
-          ...prevData,
-          avatar: null
-        };
-      });
-      
-      toast.dismiss(toastId);
-      toast.success('Avatar deleted successfully');
-    } catch (error) {
-      console.error('Error deleting avatar:', error);
-      toast.dismiss();
-      toast.error('Failed to delete avatar');
-    }
-  }, [id, profileData]);
+      await deleteUserAvatar(profileData.id);
+      const updatedProfile = { ...profileData, avatar: undefined };
+      setProfileData(updatedProfile);
+      setOriginalProfileData(updatedProfile);
+      toast.success('Avatar deleted successfully', { id: toastId });
+    } catch (error) { toast.error('Failed to delete avatar', { id: toastId }); }
+  };
+  
+  const handleSkillAdd = async (skillName: string) => {
+    if (!profileData || isTechOperationInProgress || isViewOnly) return;
+    setIsTechOperationInProgress(true);
+    try {
+      const addedTechnology = await addUserTechnology(profileData.id, skillName);
+      const newSkills = [...profileData.skills, addedTechnology];
+      setProfileData(p => p ? { ...p, skills: newSkills } : null);
+      setOriginalProfileData(p => p ? { ...p, skills: newSkills } : null);
+      toast.success(`Added ${skillName}`);
+    } catch (error) { toast.error(`Failed to add ${skillName}`); } 
+    finally { setIsTechOperationInProgress(false); }
+  };
+  
+  const handleSkillRemove = async (skillId: string) => {
+    if (!profileData || isTechOperationInProgress || isViewOnly) return;
+    setIsTechOperationInProgress(true);
+    try {
+      await removeUserTechnology(profileData.id, skillId);
+      const updatedSkills = profileData.skills.filter(s => s.id !== skillId);
+      setProfileData(p => p ? { ...p, skills: updatedSkills } : null);
+      setOriginalProfileData(p => p ? { ...p, skills: updatedSkills } : null);
+      toast.success('Technology removed');
+    } catch (error) { toast.error('Failed to remove technology'); } 
+    finally { setIsTechOperationInProgress(false); }
+  };
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
-        <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
-          {/* Page Title */}
-          <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold text-white">Learner Profile</h1>
-          </div>
-
-          {/* Loading State */}
+      <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-4 sm:p-6 lg:p-8">
+        <div className="max-w-6xl mx-auto">
           {isLoading ? (
-            <div className="bg-white/90 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 shadow-lg p-8">
-              <div className="flex flex-col items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#BF4BF6] mb-4"></div>
-                <p className="text-[#52007C] text-lg">Loading profile data...</p>
-              </div>
+            <div className="flex justify-center items-center h-96 text-white text-lg">
+                <Loader2 className="animate-spin mr-3" size={32}/> Loading Profile...
             </div>
-          ) : !profileData ? (
-            <div className="bg-white/90 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 shadow-lg p-8">
-              <div className="flex flex-col items-center justify-center h-64 text-center">
-                <p className="text-center text-red-500 mb-6">Failed to load profile data. Please try again.</p>
-                <button 
-                  onClick={fetchProfileData}
-                  className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
-                >
-                  Retry
-                </button>
-              </div>
+          ) : loadingError || !profileData ? (
+            <div className="text-center py-20 text-red-300 bg-red-500/10 rounded-lg">
+                <p className="font-semibold text-xl">Error</p>
+                <p className="mt-2">{loadingError}</p>
+                <button onClick={fetchProfileData} className="mt-4 px-4 py-2 bg-red-400 text-white rounded-lg hover:bg-red-500 transition-colors">Retry</button>
             </div>
           ) : (
-            <div className="bg-white/90 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 shadow-lg">
-              {/* Error Notifications */}
-              {Object.keys(loadingErrors).length > 0 && (
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-                  <div className="flex">
-                    <div className="ml-3">
-                      <p className="text-sm text-yellow-700">
-                        Some profile data couldn't be loaded. You may see partial information.
-                      </p>
-                      <button
-                        onClick={fetchProfileData}
-                        className="mt-2 text-sm font-medium text-yellow-700 hover:text-yellow-600 underline"
-                      >
-                        Retry Loading
-                      </button>
-                    </div>
+            <>
+              <div className="flex flex-col md:flex-row justify-between items-start mb-8">
+                  <h1 className="text-3xl font-bold text-white font-unbounded">
+                    {isViewOnly ? `${profileData.name}'s Profile` : 'My Profile'}
+                  </h1>
+                  <div className="flex items-center gap-4 mt-4 md:mt-0">
+                      {!isViewOnly && (
+                          isEditing ? (
+                              <>
+                                  <button onClick={handleCancel} disabled={isSaving} className="px-5 py-2.5 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 font-medium">Cancel</button>
+                                  <button onClick={handleSave} disabled={isSaving} className="px-5 py-2.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 flex items-center font-medium">{isSaving && <Loader2 className="animate-spin mr-2" size={16}/>} Save Changes</button>
+                              </>
+                          ) : (
+                              <button onClick={handleEdit} className="px-5 py-2.5 rounded-lg bg-white/20 text-white hover:bg-white/30 font-medium">Edit Profile</button>
+                          )
+                      )}
+                      <button onClick={() => navigate(`/cv?userId=${profileData.id}`)} className="px-5 py-2.5 rounded-lg bg-purple-500 text-white hover:bg-purple-600 font-medium">View CV</button>
+                  </div>
+              </div>
+            
+              <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
+                  <div className="lg:col-span-4 xl:col-span-3 lg:border-r border-gray-200/80 p-6 space-y-6">
+                    <ProfileHeader profileData={profileData} isEditing={isEditing && !isViewOnly} onAvatarUpload={handleAvatarUpload} onAvatarDelete={handleAvatarDelete}/>
+                    <ContactInfo profileData={profileData} />
+                    <Bio profileData={profileData} isEditing={isEditing && !isViewOnly} setProfileData={setProfileData} />
+                  </div>
+                  
+                  <div className="lg:col-span-8 xl:col-span-9 p-6 space-y-8">
+                    <TechnologyStack profileData={profileData} isEditing={isEditing && !isViewOnly} onSkillRemove={handleSkillRemove} onSkillAdd={handleSkillAdd} availableTechnologies={availableTechnologies} isTechOperationInProgress={isTechOperationInProgress}/>
+                    <RewardsBadges profileData={profileData} />
+                    <ProjectsList projects={profileData.projects} />
+                    <CertificationsList certifications={profileData.certifications} />
                   </div>
                 </div>
-              )}
-
-              {/* Profile Components */}
-              <ProfileHeader 
-                profileData={profileData}
-                isEditing={isEditing}
-                setProfileData={setProfileData}
-                handleEdit={handleEdit}
-                handleSave={handleSave}
-                handleCancel={handleCancel}
-                isViewOnly={isViewOnly}
-                onAvatarUpload={handleAvatarUpload}
-                onAvatarDelete={handleAvatarDelete}
-                isSaving={isSaving}
-              />
-
-              <ContactInfo 
-                profileData={profileData}
-                isEditing={isEditing && !isViewOnly}
-                setProfileData={setProfileData}
-              />
-
-              <Bio 
-                profileData={profileData}
-                isEditing={isEditing && !isViewOnly}
-                setProfileData={setProfileData}
-              />
-
-              <RewardsBadges profileData={profileData} />
-
-              <TechnologyStack 
-                profileData={profileData}
-                setProfileData={setProfileData}
-                viewOnly={isViewOnly}
-                availableTechnologies={availableTechnologies}
-                onSkillAdd={handleSkillAdd}
-                onSkillRemove={handleSkillRemove}
-              />
-
-              <ProjectsList 
-                profileData={profileData} 
-                viewOnly={isViewOnly}
-              />
-
-              <CertificationsList 
-                profileData={profileData} 
-                viewOnly={isViewOnly}
-              />
-
-              {/* Back button (only shown in view-only mode) */}
-              {isViewOnly && (
-                <div className="p-6 border-t">
-                  <button
-                    onClick={() => window.history.back()}
-                    className="bg-gradient-to-r from-[#7A00B8] to-[#BF4BF6] text-white px-4 py-2.5 rounded-lg inline-flex items-center gap-2 hover:from-[#52007C] hover:to-[#A030D6] transition-colors shadow-md"
-                  >
-                    Back to Search Results
-                  </button>
-                </div>
-              )}
-            </div>
+              </div>
+            </>
           )}
         </div>
       </div>

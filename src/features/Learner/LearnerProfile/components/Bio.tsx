@@ -4,31 +4,23 @@ import { ProfileData } from '../types';
 interface BioProps {
   profileData: ProfileData;
   isEditing: boolean;
-  setProfileData: React.Dispatch<React.SetStateAction<ProfileData>>;
+  setProfileData: React.Dispatch<React.SetStateAction<ProfileData | null>>;
 }
 
-const Bio: React.FC<BioProps> = ({
-  profileData,
-  isEditing,
-  setProfileData
-}) => {
-  return (
-    <div className="p-6 border-b border-[#BF4BF6]/20">
-      <h2 className="text-xl font-semibold text-[#1B0A3F] mb-4">About</h2>
-      {isEditing ? (
-        <textarea
-          value={profileData.about || ''}
-          onChange={(e) => setProfileData({ ...profileData, about: e.target.value })}
-          className="w-full bg-[#F6E6FF]/50 border border-[#BF4BF6]/30 rounded-xl px-4 py-3 h-36 focus:outline-none focus:border-[#BF4BF6]"
-          placeholder="Tell us about yourself..."
-        />
-      ) : (
-        <p className="text-[#1B0A3F] leading-relaxed bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-[#BF4BF6]/10 shadow-sm">
-          {profileData.about || 'No bio provided.'}
-        </p>
-      )}
-    </div>
-  );
-};
+const Bio: React.FC<BioProps> = ({ profileData, isEditing, setProfileData }) => (
+  <div>
+    <h3 className="text-lg font-semibold text-gray-700 border-b border-gray-200 pb-3 mb-4">About Me</h3>
+    {isEditing ? (
+      <textarea
+        value={profileData.about || ''}
+        onChange={(e) => setProfileData(p => p ? { ...p, about: e.target.value } : null)}
+        className="w-full h-32 p-3 border rounded-lg bg-indigo-50/50 border-indigo-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+        placeholder="Tell us a little about yourself..."
+      />
+    ) : (
+      <p className="text-gray-600 leading-relaxed text-sm">{profileData.about || 'No bio information provided.'}</p>
+    )}
+  </div>
+);
 
 export default Bio;
