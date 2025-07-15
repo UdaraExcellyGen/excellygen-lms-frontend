@@ -1,30 +1,34 @@
 import { FC } from 'react';
 
+// This is the new, correct Badge type from the Badges & Rewards page.
+export interface Badge {
+  id: string;
+  title: string; // Changed from name to title to match new service
+  description: string;
+  howToEarn: string;
+  iconPath: string; // Changed from icon to iconPath
+  currentProgress: number;
+  targetProgress: number;
+  isUnlocked: boolean;
+  isClaimed: boolean;
+  dateEarned?: string;
+  category: string;
+  color: string;
+}
+
 export interface Skill {
   name: string;
   id?: string;
-  addedDate?: Date;
 }
 
 export interface Certification {
   id: string;
   name: string;
-  issuingOrganization?: string;
-  description?: string;
+  issuingOrganization: string;
   issueDate: string;
   status: string;
-  credentialId?: string;
   imageUrl?: string;
-}
-
-export interface Badge {
-  id?: string;
-  name: string;
-  icon?: FC<{ className?: string }>;
-  color?: string;
-  description: string;
-  imageUrl?: string;
-  earnedDate?: Date;
+  description?: string;
 }
 
 export interface Project {

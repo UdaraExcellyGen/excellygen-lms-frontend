@@ -5,9 +5,11 @@ import { EnrollmentDto, CreateEnrollmentPayload, UpdateEnrollmentPayload } from 
 // OPTIMIZATION: Add enrollment cache for better performance
 let enrollmentCache: {
   userEnrollments: { data: EnrollmentDto[] | null; timestamp: number; isLoading: boolean };
+  adminEnrollments: { data: EnrollmentDto[] | null; timestamp: number; isLoading: boolean };
   enrollmentDetails: { [enrollmentId: number]: { data: EnrollmentDto | null; timestamp: number; isLoading: boolean } };
 } = {
   userEnrollments: { data: null, timestamp: 0, isLoading: false },
+  adminEnrollments: { data: null, timestamp: 0, isLoading: false },
   enrollmentDetails: {}
 };
 
@@ -50,6 +52,8 @@ export const createEnrollment = async (courseId: number): Promise<EnrollmentDto>
         // OPTIMIZATION: Clear enrollment cache since new enrollment was created
         enrollmentCache.userEnrollments.data = null;
         enrollmentCache.userEnrollments.timestamp = 0;
+        enrollmentCache.adminEnrollments.data = null;
+        enrollmentCache.adminEnrollments.timestamp = 0;
         
         console.log('Enrollment created successfully, cache cleared');
         
@@ -92,6 +96,8 @@ export const deleteEnrollment = async (enrollmentId: number): Promise<void> => {
         // OPTIMIZATION: Clear enrollment cache since enrollment was deleted
         enrollmentCache.userEnrollments.data = null;
         enrollmentCache.userEnrollments.timestamp = 0;
+        enrollmentCache.adminEnrollments.data = null;
+        enrollmentCache.adminEnrollments.timestamp = 0;
         
         // Clear specific enrollment from cache
         if (enrollmentCache.enrollmentDetails[enrollmentId]) {
@@ -249,6 +255,77 @@ export const getMyEnrollments = async (): Promise<EnrollmentDto[]> => {
 };
 
 /**
+ * Get all enrollments for admin/coordinator view with caching
+ * This function fetches all enrollments that administrators or coordinators can view
+ */
+export const getAllEnrollmentsAdminView = async (): Promise<EnrollmentDto[]> => {
+    const now = Date.now();
+    const { adminEnrollments } = enrollmentCache;
+    
+    // Return cached data if fresh
+    if (adminEnrollments.data && (now - adminEnrollments.timestamp) < ENROLLMENT_CACHE_DURATION && !adminEnrollments.isLoading) {
+        console.log('Returning cached admin enrollments');
+        return adminEnrollments.data;
+    }
+    
+    // Wait for existing request if already loading
+    if (adminEnrollments.isLoading) {
+        console.log('Admin enrollments request in progress, waiting...');
+        let attempts = 0;
+        while (adminEnrollments.isLoading && attempts < 50) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        if (adminEnrollments.data) return adminEnrollments.data;
+    }
+    
+    try {
+        adminEnrollments.isLoading = true;
+        console.log('Fetching admin enrollments...');
+        
+        // This endpoint should return all enrollments for admin/coordinator view
+        // The backend endpoint /enrollments needs to handle this logic for admin/coordinator roles
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        
+        const response = await apiClient.get<EnrollmentDto[]>('/enrollments', {
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        // Update cache
+        adminEnrollments.data = response.data;
+        adminEnrollments.timestamp = now;
+        
+        console.log(`Fetched ${response.data.length} enrollments for admin view`);
+        
+        return response.data;
+    } catch (error: any) {
+        console.error('Error fetching admin enrollments:', error);
+        
+        // Return cached data if available (even if expired)
+        if (adminEnrollments.data) {
+            console.log('Returning expired cached admin enrollments due to error');
+            return adminEnrollments.data;
+        }
+        
+        // Provide better error messages
+        if (error.name === 'AbortError') {
+            throw new Error('Request timed out. Please check your connection and try again.');
+        } else if (error.response?.status === 403) {
+            throw new Error('You do not have permission to view all enrollments.');
+        } else if (error.response?.status === 404) {
+            throw new Error('Enrollments endpoint not found.');
+        }
+        
+        throw error;
+    } finally {
+        adminEnrollments.isLoading = false;
+    }
+};
+
+/**
  * Update enrollment status (e.g., to 'completed' or 'withdrawn') with cache invalidation
  */
 export const updateEnrollmentStatus = async (enrollmentId: number, status: string): Promise<EnrollmentDto> => {
@@ -272,9 +349,11 @@ export const updateEnrollmentStatus = async (enrollmentId: number, status: strin
             enrollmentCache.enrollmentDetails[enrollmentId].timestamp = Date.now();
         }
         
-        // Clear user enrollments cache since status changed
+        // Clear user and admin enrollments cache since status changed
         enrollmentCache.userEnrollments.data = null;
         enrollmentCache.userEnrollments.timestamp = 0;
+        enrollmentCache.adminEnrollments.data = null;
+        enrollmentCache.adminEnrollments.timestamp = 0;
         
         console.log('Enrollment status updated successfully, cache updated');
         
@@ -300,6 +379,7 @@ export const updateEnrollmentStatus = async (enrollmentId: number, status: strin
  */
 export const clearEnrollmentCaches = () => {
     enrollmentCache.userEnrollments = { data: null, timestamp: 0, isLoading: false };
+    enrollmentCache.adminEnrollments = { data: null, timestamp: 0, isLoading: false };
     enrollmentCache.enrollmentDetails = {};
     console.log('Enrollment caches cleared');
 };
@@ -309,6 +389,15 @@ export const clearEnrollmentCaches = () => {
  */
 export const preloadUserEnrollments = () => {
     getMyEnrollments().catch(() => {
+        // Silently handle errors for preload
+    });
+};
+
+/**
+ * Preload admin enrollments
+ */
+export const preloadAdminEnrollments = () => {
+    getAllEnrollmentsAdminView().catch(() => {
         // Silently handle errors for preload
     });
 };

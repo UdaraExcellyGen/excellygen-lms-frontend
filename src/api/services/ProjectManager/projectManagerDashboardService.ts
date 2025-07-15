@@ -94,12 +94,13 @@ export const getDashboardStats = async (): Promise<ProjectManagerDashboardStats>
  */
 const fetchStatsFromAPI = async (): Promise<ProjectManagerDashboardStats> => {
   // Fetch all data in parallel for better performance
-  const [allProjects, allEmployees, allTechnologies] = await Promise.all([
+  const [allProjects, allEmployeesResponse, allTechnologies] = await Promise.all([
     getAllProjects().catch(err => {
       console.error('Error fetching projects:', err);
       return [];
     }),
-    employeeApi.getAvailableEmployees().catch(err => {
+    // FIX: Use the new getAllEmployees method that returns Employee[] directly
+    employeeApi.getAllEmployees().catch(err => {
       console.error('Error fetching employees:', err);
       return [];
     }),
@@ -110,6 +111,9 @@ const fetchStatsFromAPI = async (): Promise<ProjectManagerDashboardStats> => {
   ]);
 
   console.log('Dashboard data fetched successfully');
+
+  // FIXED: allEmployeesResponse is now an array directly (Employee[])
+  const allEmployees = allEmployeesResponse;
 
   // Calculate project statistics
   const totalProjects = allProjects.length;
@@ -211,7 +215,8 @@ export const getProjectStats = async () => {
  */
 export const getEmployeeStats = async () => {
   try {
-    const allEmployees = await employeeApi.getAvailableEmployees();
+    // Use getAllEmployees which returns Employee[] directly
+    const allEmployees = await employeeApi.getAllEmployees();
     return {
       total: allEmployees.length,
       active: allEmployees.filter(employee => employee.status === 'active').length

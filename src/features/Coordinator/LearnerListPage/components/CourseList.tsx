@@ -12,7 +12,7 @@ interface CourseListProps {
 const CourseList: React.FC<CourseListProps> = ({ courses, selectedCourseTitle, searchTerm }) => {
     if (courses.length === 0) {
         return (
-            <div className="text-center py-12 text-gray-600 italic rounded-2xl">
+            <div className="text-center py-12 text-gray-600 italic rounded-sxl">
                 {selectedCourseTitle && selectedCourseTitle !== 'all' && searchTerm === '' ? `No students found for course "${selectedCourseTitle}"` :
                     searchTerm !== '' ? `No courses or learners found matching "${searchTerm}"` : "No courses with enrolled students found."}
             </div>

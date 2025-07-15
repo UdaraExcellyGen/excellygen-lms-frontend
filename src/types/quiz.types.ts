@@ -63,12 +63,15 @@ export interface QuizAttemptDto {
   quizAttemptId: number;
   quizId: number;
   quizTitle: string;
+  timeLimitMinutes: number; // ADDED: To get time limit on start
   startTime: string;
   completionTime?: string | null;
   score?: number | null;
   isCompleted: boolean;
   totalQuestions: number;
   correctAnswers: number;
+  timeRemainingSeconds?: number; // ADDED: For resuming quizzes accurately
+  selectedAnswers?: Record<number, number>; // ADDED: For resuming with previous answers
 }
 
 export interface QuizAttemptDetailDto {
@@ -113,7 +116,7 @@ export interface CreateQuizBankQuestionDto {
   questionContent: string;
   questionType?: string; // Optional, defaults to "mcq"
   questionBankOrder?: number; // Optional
-  options: CreateMCQOptionDto[];
+  options: (CreateMCQOptionDto & { mcqOptionId?: number })[];
 }
 
 export interface CreateMCQOptionDto {
@@ -153,7 +156,7 @@ export interface QuizCreationState {
   timeLimitMinutes: number;
   quizSize: number;
   quizBankSize: number;
-  questions: CreateQuizBankQuestionDto[];
+  questions: (CreateQuizBankQuestionDto & { questionBankQuestionId?: number })[];
   currentQuestionIndex: number;
   lessonId: number;
 }
@@ -169,4 +172,14 @@ export interface ActiveQuizState {
   startTime: Date;
   timeRemaining: number; // in seconds
   isCompleted: boolean;
+}
+
+export interface QuizBank {
+    id: number; // Corresponds to quizId
+    title: string;
+    description: string;
+    questions: QuizBankQuestionDto[]; // Array of questions
+    timeLimitMinutes: number;
+    totalMarks: number;
+    lessonId: number;
 }

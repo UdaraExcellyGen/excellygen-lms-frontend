@@ -1,22 +1,23 @@
 // src/features/Learner/BadgesAndRewards/types/Badge.ts
-import { ElementType } from 'react';
 
 export interface Badge {
-  id: number;
+  id: string;
   title: string;
   description: string;
+  howToEarn: string;
   iconPath: string;
   currentProgress: number;
   targetProgress: number;
   isUnlocked: boolean;
+  isClaimed: boolean;
   dateEarned?: string;
   category: string;
-  color: string; // Brand color for the badge
+  color: string;
 }
 
-export interface BadgeStat {
-  icon: ElementType;
-  label: string;
-  value: string | number;
-  gradient: string;
+export interface UserBadgeSummary {
+    totalBadges: number;
+    earnedCount: number;
+    readyToClaimCount: number;
+    recentBadges: Badge[];
 }

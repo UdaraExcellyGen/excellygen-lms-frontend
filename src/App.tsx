@@ -79,7 +79,6 @@ const ProjectCruds = lazy(() => import('./features/ProjectManager/ProjectCruds/P
 
 // Search Components
 const SearchResults = lazy(() => import('./components/Sidebar/SearchResults'));
-const ViewLearnerProfile = lazy(() => import('./components/Sidebar/ViewLearnerProfile'));
 
 // Landing and Auth (keep these loaded immediately as they're entry points)
 import LandingPage from './features/landing/AnimatedLandingPage';
@@ -113,7 +112,6 @@ const AuthCleanup: React.FC = () => {
   useEffect(() => {
     if (!user) {
       console.log('User logged out, clearing session data...');
-      // Simple cleanup - only clear what's necessary
       try {
         sessionStorage.removeItem('course_categories');
         console.log('Session data cleared');
@@ -128,16 +126,20 @@ const AuthCleanup: React.FC = () => {
 
 function AppWrapper() {
   return (
-    <I18nextProvider i18n={i18n}> {/* CRITICAL: This wraps the entire app */}
+    <I18nextProvider i18n={i18n}>
       <BrowserRouter>
         <LoadingProvider>
           <AuthProvider>
           <NotificationProvider>
-              <ApiLoadingInterceptor />
-            <AuthCleanup />
-              <BookLoader />
-              <App />
-              <Toaster position="top-right" />
+            <SidebarProvider>
+              <SearchProvider>
+                <ApiLoadingInterceptor />
+                <AuthCleanup />
+                <BookLoader />
+                <App />
+                <Toaster position="top-right" />
+              </SearchProvider>
+            </SidebarProvider>
           </NotificationProvider>
           </AuthProvider>
         </LoadingProvider>
@@ -156,15 +158,11 @@ function App() {
     </CourseProvider>
   );
 
-  // Helper function to wrap component with SidebarProvider and SearchProvider
-  const withSidebarAndSearch = (Component: React.ComponentType) => (
-    <SidebarProvider>
-      <SearchProvider>
-        <Suspense fallback={<PageLoader />}>
-          <Component />
-        </Suspense>
-      </SearchProvider>
-    </SidebarProvider>
+  // Re-usable suspense wrapper
+  const suspenseWrapper = (Component: React.ComponentType) => (
+    <Suspense fallback={<PageLoader />}>
+      <Component />
+    </Suspense>
   );
 
   const CourseAssignLearners = () => {
@@ -175,19 +173,16 @@ function App() {
   return (
     <div className="min-h-screen flex flex-col">
       <Routes>
-        {/* Public Routes - Keep immediately loaded */}
+        {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LandingPage />} />
         
-        {/* CV Page Route - Protected, accessible after login */}
-        {/* This route is placed here so it's not nested under role-specific base paths */}
+        {/* CV Page Route */}
         <Route
           path="/cv"
           element={
-            <ProtectedRoute> {/* Ensures user is logged in */}
-              <Suspense fallback={<PageLoader />}>
-                <CvPage />
-              </Suspense>
+            <ProtectedRoute>
+              {suspenseWrapper(CvPage)}
             </ProtectedRoute>
           }
         />
@@ -202,426 +197,103 @@ function App() {
           } 
         />
 
-        {/* LEARNER ROUTES - All lazy loaded */}
+        {/* LEARNER ROUTES */}
         <Route path="/learner">
-          <Route 
-            path="dashboard" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
-                {withSidebarAndSearch(LearnerDashboard)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="profile" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
-                {withSidebarAndSearch(LearnerProfile)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="badges-rewards" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
-                {withSidebarAndSearch(BadgesAndRewards)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="projects" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
-                {withSidebarAndSearch(LearnerProjects)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="certificate" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
-                {withSidebarAndSearch(CertificatesPage)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="forum" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
-                {withSidebarAndSearch(DiscussionForum)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="notifications" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
-                {withSidebarAndSearch(LearnerNotifications)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="leaderboard" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
-                {withSidebarAndSearch(Leaderboard)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="course-categories" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
-                {withSidebarAndSearch(CourseCategories)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="courses/:categoryId" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
-                {withSidebarAndSearch(CourseContent)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="course-view/:courseId" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
-                {withSidebarAndSearch(LearnerCourseOverview)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="take-quiz/:quizId" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
-                {withSidebarAndSearch(TakeQuiz)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="quiz-results/:attemptId" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Learner]}>
-                {withSidebarAndSearch(QuizResults)}
-              </ProtectedRoute>
-            } 
-          />
+          <Route path="dashboard" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(LearnerDashboard)}</ProtectedRoute>} />
+          <Route path="profile" element={<ProtectedRoute>{suspenseWrapper(LearnerProfile)}</ProtectedRoute>} />
+          <Route path="profile/:id" element={<ProtectedRoute>{suspenseWrapper(LearnerProfile)}</ProtectedRoute>} />
+          <Route path="badges-rewards" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(BadgesAndRewards)}</ProtectedRoute>} />
+          <Route path="projects" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(LearnerProjects)}</ProtectedRoute>} />
+          <Route path="certificate" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(CertificatesPage)}</ProtectedRoute>} />
+          <Route path="forum" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(DiscussionForum)}</ProtectedRoute>} />
+          <Route path="notifications" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(LearnerNotifications)}</ProtectedRoute>} />
+          <Route path="leaderboard" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(Leaderboard)}</ProtectedRoute>} />
+          <Route path="course-categories" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(CourseCategories)}</ProtectedRoute>} />
+          <Route path="courses/:categoryId" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(CourseContent)}</ProtectedRoute>} />
+          <Route path="course-view/:courseId" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(LearnerCourseOverview)}</ProtectedRoute>} />
+          <Route path="take-quiz/:quizId" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(TakeQuiz)}</ProtectedRoute>} />
+          <Route path="quiz-results/:attemptId" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(QuizResults)}</ProtectedRoute>} />
         </Route>
 
-        {/* Search Routes */}
-        <Route 
-          path="/search-results" 
-          element={
-            <ProtectedRoute>
-              {withSidebarAndSearch(SearchResults)}
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/learner/:id" 
-          element={
-            <ProtectedRoute>
-              {withSidebarAndSearch(ViewLearnerProfile)}
-            </ProtectedRoute>
-          } 
-        />
+        {/* Search Route */}
+        <Route path="/search-results" element={<ProtectedRoute>{suspenseWrapper(SearchResults)}</ProtectedRoute>} />
 
-        {/* ADMIN ROUTES - All lazy loaded */}
+        {/* ADMIN ROUTES */}
         <Route path="/admin">
-          <Route 
-            path="dashboard" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Admin]}>
-                <Suspense fallback={<PageLoader />}>
-                  <AdminDashboard/>
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="notifications" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Admin]}>
-                <Suspense fallback={<PageLoader />}>
-                  <AdminNotifications/>
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="analytics" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Admin]}>
-                <Suspense fallback={<PageLoader />}>
-                  <AdminAnalytics/>
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="manage-users" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Admin]}>
-                <Suspense fallback={<PageLoader />}>
-                  <ManageUsers/>
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="manage-tech" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Admin]}>
-                <Suspense fallback={<PageLoader />}>
-                  <ManageTech/>
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="course-categories" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Admin]}>
-                <Suspense fallback={<PageLoader />}>
-                  <ManageCourseCategory/>
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="categories/:categoryId" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.Admin]}>
-                <Suspense fallback={<PageLoader />}>
-                  <CategoryCoursesPage/>
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
+          <Route path="dashboard" element={<ProtectedRoute allowedRoles={[UserRole.Admin]}>{suspenseWrapper(AdminDashboard)}</ProtectedRoute>} />
+          <Route path="notifications" element={<ProtectedRoute allowedRoles={[UserRole.Admin]}>{suspenseWrapper(AdminNotifications)}</ProtectedRoute>} />
+          <Route path="analytics" element={<ProtectedRoute allowedRoles={[UserRole.Admin]}>{suspenseWrapper(AdminAnalytics)}</ProtectedRoute>} />
+          <Route path="manage-users" element={<ProtectedRoute allowedRoles={[UserRole.Admin]}>{suspenseWrapper(ManageUsers)}</ProtectedRoute>} />
+          <Route path="manage-tech" element={<ProtectedRoute allowedRoles={[UserRole.Admin]}>{suspenseWrapper(ManageTech)}</ProtectedRoute>} />
+          <Route path="course-categories" element={<ProtectedRoute allowedRoles={[UserRole.Admin]}>{suspenseWrapper(ManageCourseCategory)}</ProtectedRoute>} />
+          <Route path="categories/:categoryId" element={<ProtectedRoute allowedRoles={[UserRole.Admin]}>{suspenseWrapper(CategoryCoursesPage)}</ProtectedRoute>} />
         </Route>
         
-        {/* COORDINATOR ROUTES - All lazy loaded */}
+        {/* COORDINATOR ROUTES */}
         <Route path="/coordinator">
-          <Route 
-            path="dashboard" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                <Suspense fallback={<PageLoader />}>
-                  <CourseCoordinatorDashboard/>
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="analytics" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                <Suspense fallback={<PageLoader />}>
-                  <CourseCoordinatorAnalytics/>
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="notifications" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                <Suspense fallback={<PageLoader />}>
-                  <CCNotifications/>
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="learner-list" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                <Suspense fallback={<PageLoader />}>
-                  <LearnerListPage/>
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="quiz-learner-view" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                <Suspense fallback={<PageLoader />}>
-                  <LearnerQuizPage/>
-                </Suspense>
-              </ProtectedRoute>
-            }
-          />
-          <Route 
-            path="quiz-creator" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                {withCourseContext(QuizCreator)}
-              </ProtectedRoute>
-            }
-          />
-          <Route 
-            path="upload-materials/:courseId"
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                {withCourseContext(UploadMaterials)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="publish-Course/:courseId" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                {withCourseContext(PublishCoursePage)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="course-display-page" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                {withCourseContext(CoursesDisplayPage)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="course-details/:courseId?" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                {withCourseContext(CourseDetails)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="course-view/:courseId" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                {withSidebarAndSearch(CoordinatorCourseOverview)}
-              </ProtectedRoute>
-            }
-          />
-          <Route 
-            path="assign-learners" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                {withCourseContext(CourseAssignLearners)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="create-quiz/:lessonId" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                {withSidebarAndSearch(CreateQuiz)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="edit-quiz/:quizId" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                {withSidebarAndSearch(EditQuiz)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="quiz-list/:lessonId" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                {withSidebarAndSearch(QuizList)}
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="quiz-results/:quizId" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>
-                {withSidebarAndSearch(QuizResultsCoordinator)}
-              </ProtectedRoute>
-            } 
-          />
+          <Route path="dashboard" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(CourseCoordinatorDashboard)}</ProtectedRoute>} />
+          <Route path="analytics" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(CourseCoordinatorAnalytics)}</ProtectedRoute>} />
+          <Route path="notifications" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(CCNotifications)}</ProtectedRoute>} />
+          <Route path="learner-list" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(LearnerListPage)}</ProtectedRoute>} />
+          <Route path="quiz-learner-view" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(LearnerQuizPage)}</ProtectedRoute>} />
+          <Route path="quiz-creator" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{withCourseContext(QuizCreator)}</ProtectedRoute>} />
+          <Route path="upload-materials/:courseId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{withCourseContext(UploadMaterials)}</ProtectedRoute>} />
+          <Route path="publish-Course/:courseId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{withCourseContext(PublishCoursePage)}</ProtectedRoute>} />
+          <Route path="course-display-page" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{withCourseContext(CoursesDisplayPage)}</ProtectedRoute>} />
+          <Route path="course-details/:courseId?" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{withCourseContext(CourseDetails)}</ProtectedRoute>} />
+          <Route path="course-view/:courseId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(CoordinatorCourseOverview)}</ProtectedRoute>} />
+          <Route path="assign-learners" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{withCourseContext(CourseAssignLearners)}</ProtectedRoute>} />
+          <Route path="create-quiz/:lessonId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(CreateQuiz)}</ProtectedRoute>} />
+          <Route path="edit-quiz/:quizId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(EditQuiz)}</ProtectedRoute>} />
+          <Route path="quiz-list/:lessonId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(QuizList)}</ProtectedRoute>} />
+          <Route path="quiz-results/:quizId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(QuizResultsCoordinator)}</ProtectedRoute>} />
         </Route>
         
-        {/* PROJECT MANAGER ROUTES - All lazy loaded */}
+        {/* PROJECT MANAGER ROUTES */}
         <Route path="/project-manager">
-          <Route 
-            path="dashboard" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
-                <Suspense fallback={<PageLoader />}>
-                  <ProjectManagerDashboard/>
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="notifications" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
-                <Suspense fallback={<PageLoader />}>
-                  <ProjectManagerNotification/>
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="employee-assign" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
-                <Suspense fallback={<PageLoader />}>
-                  <EmployeeManagement/>
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="project-cruds" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
-                <Suspense fallback={<PageLoader />}>
-                  <ProjectCruds />
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="project-cruds/technologies" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
-                <Suspense fallback={<PageLoader />}>
-                  <ProjectCruds />
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="project-cruds/roles" 
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
-                <Suspense fallback={<PageLoader />}>
-                  <ProjectCruds />
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
+          <Route path="dashboard" element={<ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>{suspenseWrapper(ProjectManagerDashboard)}</ProtectedRoute>} />
+          <Route path="notifications" element={<ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>{suspenseWrapper(ProjectManagerNotification)}</ProtectedRoute>} />
+          <Route path="employee-assign" element={<ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>{suspenseWrapper(EmployeeManagement)}</ProtectedRoute>} />
+          <Route path="project-cruds" element={<ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>{suspenseWrapper(ProjectCruds)}</ProtectedRoute>} />
         </Route>
         
         {/* Legacy path for ProjectManager notifications */}
-        <Route 
-          path="/ProjectManager/notifications" 
-          element={
-            <ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>
-              <Suspense fallback={<PageLoader />}>
-                <ProjectManagerNotification/>
-              </Suspense>
-            </ProtectedRoute>
-          } 
-        />
+        <Route path="/ProjectManager/notifications" element={<ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>{suspenseWrapper(ProjectManagerNotification)}</ProtectedRoute>} />
       </Routes>
     </div>
   );
 }
 
-export default AppWrapper;
+
+function Root() {
+  // This component wraps the main App with all necessary providers.
+  return (
+    <I18nextProvider i18n={i18n}>
+      <BrowserRouter>
+        <LoadingProvider>
+          <AuthProvider>
+            <NotificationProvider>
+                <SearchProvider>
+                  <ApiLoadingInterceptor />
+                  <AuthCleanup />
+                  <BookLoader />
+                  <AppWithSidebar />
+                  <Toaster position="top-right" />
+                </SearchProvider>
+            </NotificationProvider>
+          </AuthProvider>
+        </LoadingProvider>
+      </BrowserRouter>
+    </I18nextProvider>
+  )
+}
+
+function AppWithSidebar(){
+  return (
+    <SidebarProvider>
+      <App/>
+    </SidebarProvider>
+  )
+}
+
+export default Root;

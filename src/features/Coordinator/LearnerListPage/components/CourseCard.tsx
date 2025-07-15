@@ -10,8 +10,8 @@ interface CourseCardProps {
 const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
     return (
         <div className="mb-8">
-            <h2 className="text-xl font-bold text-white mb-3">{course.title}</h2>
-            <ul className="divide-y divide-gray-200 shadow overflow-hidden sm:rounded-2xl bg-white">
+            <h2 className="text-2xl font-bold text-white mb-3">{course.title}</h2>
+            <ul className="divide-y divide-gray-200 shadow overflow-hidden sm:rounded-xl bg-white">
                 {course.students.length > 0 ? (
                     course.students.map((student) => (
                         <LearnerListItem key={student.id} student={student} />

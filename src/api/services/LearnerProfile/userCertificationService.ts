@@ -11,29 +11,41 @@ export interface Certification {
   imageUrl: string;
 }
 
-// Get all certifications for a user
+// Fetches INTERNAL certificates
 export const getUserCertifications = async (userId: string): Promise<Certification[]> => {
   try {
     const response = await apiClient.get(`/user-certifications/${userId}`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching user certifications:', error);
-    throw error;
+    console.error(`Error fetching internal user certifications for ${userId}:`, error);
+    return [];
   }
 };
 
-// Get specific certification details
+// =================================================================
+// NEW FUNCTION to fetch EXTERNAL certificates for a specific user
+// =================================================================
+export const getExternalUserCertifications = async (userId: string): Promise<Certification[]> => {
+    try {
+        const response = await apiClient.get(`/user-certifications/${userId}/external`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching external user certifications for ${userId}:`, error);
+        return [];
+    }
+}
+// =================================================================
+
 export const getUserCertification = async (userId: string, certificationId: string): Promise<Certification> => {
   try {
     const response = await apiClient.get(`/user-certifications/${userId}/${certificationId}`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching user certification:', error);
+    console.error(`Error fetching user certification ${certificationId}:`, error);
     throw error;
   }
 };
 
-// Add user certification
 export const addUserCertification = async (
   userId: string, 
   certificationData: {
@@ -51,7 +63,6 @@ export const addUserCertification = async (
   }
 };
 
-// Update user certification
 export const updateUserCertification = async (
   userId: string,
   certificationId: string,
@@ -69,7 +80,6 @@ export const updateUserCertification = async (
   }
 };
 
-// Delete user certification
 export const deleteUserCertification = async (userId: string, certificationId: string): Promise<void> => {
   try {
     await apiClient.delete(`/user-certifications/${userId}/${certificationId}`);
