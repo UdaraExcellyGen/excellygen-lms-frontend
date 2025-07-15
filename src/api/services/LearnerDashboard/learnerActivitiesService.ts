@@ -5,7 +5,6 @@ import { formatDistanceToNow } from 'date-fns';
 
 const BADGE_CLAIM_STORAGE_KEY = 'recentBadgeClaims';
 
-// This interface represents the unified structure for any activity we process.
 interface ProcessedActivity {
   id: string;
   type: 'Certificate Earned' | 'Badge Earned';
@@ -13,7 +12,6 @@ interface ProcessedActivity {
   date: Date;
 }
 
-// This interface represents the data for a claimed badge.
 interface StoredBadgeClaimDto {
     badgeId: string;
     badgeTitle: string;
@@ -45,13 +43,11 @@ const getRecentBadgeClaimsFromSession = async (): Promise<StoredBadgeClaimDto[]>
  */
 export const getRecentActivities = async (): Promise<Activity[]> => {
     try {
-        // Fetch all data sources in parallel.
         const [certificates, badgeClaims] = await Promise.all([
             getAllCertificates(),
             getRecentBadgeClaimsFromSession(),
         ]);
 
-        // 1. Process earned certificates into the unified format.
         const certificateActivities: ProcessedActivity[] = certificates.map((cert: CombinedCertificateDto) => ({
             id: `cert-${cert.id}`,
             type: 'Certificate Earned',
@@ -59,7 +55,6 @@ export const getRecentActivities = async (): Promise<Activity[]> => {
             date: new Date(cert.completionDate),
         }));
 
-        // 2. Process claimed badges into the unified format.
         const badgeActivities: ProcessedActivity[] = badgeClaims.map((badge) => ({
             id: `badge-${badge.badgeId}`,
             type: 'Badge Earned',
@@ -67,21 +62,19 @@ export const getRecentActivities = async (): Promise<Activity[]> => {
             date: new Date(badge.claimTime),
         }));
 
-        // 3. Combine all activities, sort by date (most recent first), and take the top 3.
         const allActivities = [...certificateActivities, ...badgeActivities];
         allActivities.sort((a, b) => b.date.getTime() - a.date.getTime());
         const latestActivities = allActivities.slice(0, 3);
 
-        // 4. Format the final list for the UI component.
         return latestActivities.map((activity, index) => ({
-            id: index, // The UI component uses index as a key.
+            id: index, 
             type: activity.type,
-            course: activity.description, // 'course' prop is used for the main description text.
+            course: activity.description, 
             time: formatDistanceToNow(activity.date, { addSuffix: true }),
         }));
 
     } catch (error) {
         console.error("Failed to fetch recent activities:", error);
-        return []; // Return an empty array on failure to prevent crashes.
+        return []; 
     }
 };

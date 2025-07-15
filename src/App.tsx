@@ -266,7 +266,6 @@ function App() {
 
 
 function Root() {
-  // This component wraps the main App with all necessary providers.
   return (
     <I18nextProvider i18n={i18n}>
       <BrowserRouter>
