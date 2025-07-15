@@ -10,7 +10,7 @@ import {
   LearningActivityChart 
 } from './components/Sections';
 import { weeklyTimeData } from './data/mockData';
-import LearnerHeaderImage from '../../../assets/LearnerHeader.svg';
+// import LearnerHeaderImage from '../../../assets/LearnerHeader.svg'; // REMOVED
 import { getEnrolledCoursesForLearner, getLearnerCourseDetails } from '../../../api/services/Course/learnerCourseService';
 import { getRecentlyAccessedCourseIds } from '../../../api/services/Course/courseAccessService';
 import { getRecentActivities } from '../../../api/services/LearnerDashboard/learnerActivitiesService';
@@ -241,7 +241,7 @@ const LearnerDashboard: React.FC = () => {
               
               <div className="relative">
                 <div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-8 md:gap-4">
-                  <div className="w-full md:w-auto z-10">
+                  <div className="w-full z-10">
                     <h1 className="text-3xl md:text-4xl font-bold font-['Unbounded'] mb-4 text-white">
                       {user ? user.name : 'Learner Name'}
                     </h1>
@@ -250,13 +250,7 @@ const LearnerDashboard: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="md:ml-auto">
-                    <img 
-                      src={LearnerHeaderImage}
-                      alt="Developer illustration" 
-                      className="h-40 md:h-52 w-auto object-contain"
-                    />
-                  </div>
+                  {/* REMOVED THE IMAGE AND ITS CONTAINER */}
                 </div>
               </div>
             </div>
