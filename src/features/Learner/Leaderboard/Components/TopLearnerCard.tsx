@@ -4,6 +4,13 @@ import { Crown, Medal, Star } from 'lucide-react';
 const TopLearnerCard = ({ rank, learner }) => {
   if (!learner) return null;
 
+  // Create a user-friendly avatar from the first letters of the name if no image is provided
+  const avatarText = learner.name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .substring(0, 2);
+
   const backgrounds = {
     1: 'bg-gradient-to-br from-[#FFD700] via-[#FFA500] to-[#FF8C00]', // Gold
     2: 'bg-gradient-to-br from-[#C0C0C0] via-[#A8A8A8] to-[#808080]', // Silver
@@ -33,12 +40,20 @@ const TopLearnerCard = ({ rank, learner }) => {
       <div className="relative z-10">
         <div className="space-y-3 md:space-y-4">
           <div className="flex md:flex-col items-center md:items-center gap-3 md:gap-2">
-            <div className="h-12 md:h-16 w-12 md:w-16 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-xl md:text-2xl font-bold ring-2 md:ring-4 ring-white/30 md:mx-auto">
-              {learner.avatar}
-            </div>
+            
+            {/* THIS IS THE CORRECTED SECTION */}
+            {learner.avatar ? (
+                <img src={learner.avatar} alt={learner.name} className="h-12 md:h-16 w-12 md:w-16 rounded-xl object-cover ring-2 md:ring-4 ring-white/30" />
+            ) : (
+                <div className="h-12 md:h-16 w-12 md:w-16 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-xl md:text-2xl font-bold ring-2 md:ring-4 ring-white/30">
+                  {avatarText}
+                </div>
+            )}
+            {/* END OF CORRECTION */}
+
             <div className="md:text-center">
               <h3 className="text-base md:text-xl font-bold">{learner.name}</h3>
-              <p className="text-sm md:text-base text-white/90">{learner.title}</p>
+              <p className="text-sm md:text-base text-white/90">{learner.title || 'Learner'}</p>
             </div>
           </div>
           

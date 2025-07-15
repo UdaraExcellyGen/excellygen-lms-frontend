@@ -1,4 +1,3 @@
-// src/features/Learner/CourseContent/LearnerCourseOverview.tsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, BookOpen, CheckCircle, List, Clock, FileText, Download, PlayCircle, AlertCircle, Award, AlertTriangle} from 'lucide-react';
@@ -8,6 +7,7 @@ import { LearnerCourseDto, LearnerLessonDto } from '../../../types/course.types'
 import { generateCertificate } from '../../../api/services/Course/certificateService';
 import { getLearnerCourseDetails, markLessonCompleted } from '../../../api/services/Course/learnerCourseService';
 import { logCourseAccess } from '../../../api/services/Course/courseAccessService';
+import { useBadgeChecker } from '../../../hooks/useBadgeChecker';
 
 const LearnerCourseOverview: React.FC = () => {
   const { courseId: courseIdParam } = useParams<{ courseId: string }>();
@@ -20,6 +20,10 @@ const LearnerCourseOverview: React.FC = () => {
   const [isMarkingComplete, setIsMarkingComplete] = useState<{[key: number]: boolean}>({});
   const [isGeneratingCertificate, setIsGeneratingCertificate] = useState(false);
   const [expandedLessons, setExpandedLessons] = useState<Record<number, boolean>>({});
+
+  // Badge checker implementation
+  const [courseCompletionTrigger, setCourseCompletionTrigger] = useState(0);
+  useBadgeChecker(courseCompletionTrigger);
 
   // Centralized function to refetch data from the backend
   const fetchCourseData = useCallback(async () => {
@@ -124,7 +128,6 @@ const LearnerCourseOverview: React.FC = () => {
 
   const handleGoBack = () => {
     if (courseData && courseData.category && courseData.category.id) {
-      // FIX: Used template literal for string interpolation
       navigate(`/learner/courses/${courseData.category.id}`);
     } else {
       // Fallback if category ID is not available
@@ -161,6 +164,7 @@ const LearnerCourseOverview: React.FC = () => {
     try {
       await markLessonCompleted(lessonId);
       
+      let courseIsNowComplete = false;
       // Update the local state
       setCourseData(prev => {
         if (!prev) return null;
@@ -174,6 +178,11 @@ const LearnerCourseOverview: React.FC = () => {
         const completedLessons = updatedLessons.filter(l => l.isCompleted).length;
         const progressPercentage = Math.round((completedLessons / totalLessons) * 100);
         
+        // Check if course was just completed
+        if (progressPercentage === 100 && prev.progressPercentage < 100) {
+          courseIsNowComplete = true;
+        }
+        
         return {
           ...prev,
           lessons: updatedLessons,
@@ -181,6 +190,11 @@ const LearnerCourseOverview: React.FC = () => {
           progressPercentage
         };
       });
+      
+      // If the course was just completed, trigger the badge check
+      if (courseIsNowComplete) {
+        setCourseCompletionTrigger(count => count + 1);
+      }
       
       toast.success("Lesson marked as completed!");
     } catch (error) {
@@ -209,12 +223,10 @@ const LearnerCourseOverview: React.FC = () => {
     if (!lesson.quizId) return;
     
     if (lesson.isQuizCompleted && lesson.lastAttemptId) {
-      // FIX: Used template literal for string interpolation
       navigate(`/learner/quiz-results/${lesson.lastAttemptId}`, { 
         state: { courseId: courseId } 
       });
     } else {
-      // FIX: Used template literal for string interpolation
       navigate(`/learner/take-quiz/${lesson.quizId}`, { 
         state: { courseId: courseId } 
       });
@@ -222,7 +234,6 @@ const LearnerCourseOverview: React.FC = () => {
   };
 
   const handleStartQuiz = (quizId: number) => {
-    // FIX: Used template literal for string interpolation
     navigate(`/learner/take-quiz/${quizId}`, { 
       state: { courseId: courseId } 
     });
@@ -241,7 +252,6 @@ const LearnerCourseOverview: React.FC = () => {
     try {
       await generateCertificate(courseId);
       toast.success("Certificate generated successfully!");
-      // FIX: Used a simple string for navigation
       navigate('/learner/certificate');
     } catch (error) {
       console.error("Error generating certificate:", error);
