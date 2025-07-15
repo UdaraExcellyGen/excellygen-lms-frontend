@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Users, Loader } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext'; 
-import { CourseDto, EnrollmentDto } from '../../../types/course.types';
+import { EnrollmentDto } from '../../../types/course.types';
 import { getAllCourses } from '../../../api/services/Course/courseService';
 import { getAllEnrollmentsAdminView } from '../../../api/services/Course/enrollmentService';
 
@@ -11,6 +11,7 @@ import Header from './components/Header';
 import StatCard from './components/StatCard';
 import NotificationCard from './components/NotificationCard';
 import QuickActionsGrid from './components/QuickActionsGrid';
+import { getUserProfile } from '../../../api/services/LearnerProfile/userProfileService';
 
 // Import Data
 import { initialNotifications, getQuickActions } from './data/dashboardData';
@@ -21,6 +22,7 @@ const CourseCoordinatorDashboard: React.FC = () => {
 
   const [courseStats, setCourseStats] = useState<{ total: number; active: number }>({ total: 0, active: 0 });
   const [studentStats, setStudentStats] = useState<{ total: number; active: number }>({ total: 0, active: 0 });
+  const [avatar, setAvatar] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +37,15 @@ const CourseCoordinatorDashboard: React.FC = () => {
       setIsLoading(true);
       setError(null);
       try {
-        const allCoursesResponse: CourseDto[] = await getAllCourses();
+        const [allCoursesResponse, userProfile] = await Promise.all([
+          getAllCourses(),
+          getUserProfile(user.id)
+        ]);
+
+        // Set the avatar from the fetched profile
+        if (userProfile?.avatar) {
+          setAvatar(userProfile.avatar);
+        }
         const coordinatorCourses = allCoursesResponse.filter(
           (course) => course.creator && course.creator.id === user.id
         );
@@ -123,6 +133,7 @@ const CourseCoordinatorDashboard: React.FC = () => {
             notifications={initialNotifications}
             coordinatorName={user.name || "Course Coordinator"}
             role="Course Coordinator"
+            avatar={avatar}
           />
         </div>
 
