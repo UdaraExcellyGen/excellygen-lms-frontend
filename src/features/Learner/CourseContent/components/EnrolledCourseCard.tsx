@@ -83,8 +83,16 @@ const EnrolledCourseCard: React.FC<EnrolledCourseCardProps> = ({ course, onUnenr
             <BookOpen className="w-12 h-12 text-[#D68BF9]" />
           </div>
         )}
-        <div className="absolute top-2 right-2 bg-[#34137C] px-2 py-1 rounded-full text-xs text-white">
-          {course.category.title}
+        <div className="absolute top-2 right-2 flex flex-col items-end gap-2">
+            <span className="bg-[#34137C] px-2 py-1 rounded-full text-xs text-white">
+                {course.category.title}
+            </span>
+            {/* THIS IS THE FIX: Conditionally render the "Inactive" badge */}
+            {course.isInactive && (
+                <span className="bg-red-700 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                    Inactive
+                </span>
+            )}
         </div>
         
         {/* Progress Indicator */}

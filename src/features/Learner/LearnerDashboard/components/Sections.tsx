@@ -71,6 +71,14 @@ const CustomBar = (props: any) => {
 };
 
 
+// A simple skeleton loader for activities
+const ActivitySkeleton = () => (
+  <div className="border-l-4 border-gray-200 pl-4 py-2 animate-pulse">
+    <div className="h-4 bg-gray-300 rounded w-1/2 mb-2"></div>
+    <div className="h-3 bg-gray-300 rounded w-3/4"></div>
+  </div>
+);
+
 export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses, isLoading }) => {
   const navigate = useNavigate();
   const handleCourseClick = (courseId: number) => navigate(`/learner/course-view/${courseId}`);
@@ -82,6 +90,14 @@ export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses, isLoading
             <div className="p-2 rounded-lg bg-[#F6E6FF]"><Book className="text-[#BF4BF6]" /></div>
             Active Courses
         </CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-[#1B0A3F] font-['Unbounded'] flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-[#F6E6FF]">
+              <Book className="text-[#BF4BF6]" />
+            </div>
+            Recent Courses
+          </CardTitle>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -123,6 +139,39 @@ export const RecentActivities: React.FC<RecentActivitiesProps> = ({ activities }
         </div>
       </CardContent>
     </Card>
+
+export const RecentActivities: React.FC<RecentActivitiesProps> = ({ activities, isLoading }) => (
+  <Card>
+    <CardHeader>
+      <CardTitle className="text-[#1B0A3F] font-['Unbounded'] flex items-center gap-2">
+        <div className="p-2 rounded-lg bg-[#F6E6FF]">
+          <Clock className="text-[#BF4BF6]" />
+        </div>
+        Recent Activities
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-4">
+        {isLoading ? (
+          <>
+            <ActivitySkeleton />
+            <ActivitySkeleton />
+            <ActivitySkeleton />
+          </>
+        ) : activities.length > 0 ? (
+          activities.map(activity => (
+            <div key={activity.id} className="border-l-4 border-[#BF4BF6] pl-4 py-2 hover:bg-[#F6E6FF]/50 rounded-r-lg transition-colors">
+              <p className="font-medium text-[#1B0A3F]">{activity.type}</p>
+              <p className="text-sm text-[#52007C]">{activity.course}</p>
+              {activity.time && <p className="text-xs text-[#7A00B8]">{activity.time}</p>}
+            </div>
+          ))
+        ) : (
+          <p className="text-center text-gray-500 py-4">No recent activities to show.</p>
+        )}
+      </div>
+    </CardContent>
+  </Card>
 );
 
 const LearningActivitySkeleton = () => (

@@ -12,10 +12,12 @@ const roleIcons: Record<string, React.ReactNode> = {
   ProjectManager: <Book size={16} />
 };
 
+// --- 1. MODIFICATION: Add the 'avatar' prop ---
 const Header: React.FC<HeaderProps> = ({
   notifications = [],
   coordinatorName = "Coordinator Name",
-  role = "Course Coordinator"
+  role = "Course Coordinator",
+  avatar
 }) => {
   const navigate = useNavigate();
   const { user, currentRole, selectRole, logout, navigateToRoleSelection } = useAuth();
@@ -23,6 +25,12 @@ const Header: React.FC<HeaderProps> = ({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
+
+  // --- 2. MODIFICATION: Add state and effect for handling avatar image errors ---
+  const [avatarError, setAvatarError] = useState(false);
+  useEffect(() => {
+    setAvatarError(false);
+  }, [avatar]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -45,7 +53,6 @@ const Header: React.FC<HeaderProps> = ({
     }
   };
   
-  // CORRECTED: This function now handles navigation
   const handleNotificationClick = () => {
       setShowNotifications(prev => !prev);
       navigate('/coordinator/notifications');
@@ -59,12 +66,32 @@ const Header: React.FC<HeaderProps> = ({
     return role;
   };
 
+  // --- 3. MODIFICATION: Add a helper to get initials for the fallback ---
+  const getInitials = (name: string): string => {
+    if (!name) return '';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
   return (
     <div className="p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4 mb-4 sm:mb-0">
-          <div className="w-12 sm:w-16 h-12 sm:h-16 rounded-full bg-gradient-to-br from-[#52007C] to-[#BF4BF6] border-2 border-[#BF4BF6] flex items-center justify-center transition-transform duration-300 hover:scale-105">
-            <GraduationCap className="w-6 sm:w-8 h-6 sm:h-8 text-white" />
+          {/* --- 4. MODIFICATION: Replace static icon with avatar logic --- */}
+          <div className="w-12 sm:w-16 h-12 sm:h-16 rounded-full bg-gradient-to-br from-[#52007C] to-[#BF4BF6] border-2 border-[#BF4BF6] flex items-center justify-center transition-transform duration-300 hover:scale-105 overflow-hidden">
+            {avatar && !avatarError ? (
+              <img
+                src={avatar}
+                alt={coordinatorName}
+                className="w-full h-full object-cover"
+                onError={() => setAvatarError(true)}
+                loading="lazy"
+              />
+            ) : (
+              // Fallback to initials or original icon
+              <span className="text-xl sm:text-2xl font-bold text-white">
+                {getInitials(coordinatorName) || <GraduationCap className="w-6 sm:w-8 h-6 sm:h-8 text-white" />}
+              </span>
+            )}
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl text-[#1B0A3F] font-['Unbounded']">{coordinatorName}</h1>
