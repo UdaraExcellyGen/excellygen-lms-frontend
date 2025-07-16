@@ -18,18 +18,18 @@ import {
   DailyLearningTime
 } from '../types/types';
 
-// THIS IS THE FINAL, RE-ENGINEERED CUSTOM BAR COMPONENT
+// THIS IS THE FINAL, RE-ENGINEERED CUSTOM BAR COMPONENT.
 const CustomBar = (props: any) => {
     const { x, y, width, height, payload, isSelected } = props;
 
-    // If data is null for a future day, render nothing.
+    // Render nothing for future days.
     if (payload.totalMinutes === null) {
         return null; 
     }
 
     const isToday = payload.isToday;
 
-    // For any past day, the logic is simple: dark if selected, light if not.
+    // Logic for PAST days: Dark if selected, light if not.
     if (!isToday) {
         return (
             <rect 
@@ -44,10 +44,10 @@ const CustomBar = (props: any) => {
         );
     }
     
-    // For Today's Bar: This structure creates the filling effect correctly.
+    // Logic for TODAY'S bar: This structure creates the filling effect.
     return (
         <g>
-            {/* Layer 1: The static, light purple base. This is the "empty glass". */}
+            {/* Layer 1: The static, light purple base "container". */}
             <rect 
                 x={x} 
                 y={y} 
@@ -56,7 +56,7 @@ const CustomBar = (props: any) => {
                 fill="#CDB4DB"
                 radius={[4, 4, 0, 0]} 
             />
-            {/* Layer 2: The dark purple overlay. This is the "water" that fills up. */}
+            {/* Layer 2: The dark purple overlay with the "filling" animation. */}
             <rect 
                 x={x} 
                 y={y} 
@@ -64,114 +64,24 @@ const CustomBar = (props: any) => {
                 height={height} 
                 fill="#52007C" 
                 radius={[4, 4, 0, 0]} 
-                className="animate-liquid-fill" // The new, correct animation class.
+                className="animate-liquid-fill"
             />
         </g>
     );
 };
 
+const CourseSkeleton = () => (
+  <div className="bg-[#F6E6FF] rounded-xl p-4 animate-pulse">
+    <div className="h-5 bg-gray-300 rounded w-3/4 mb-4"></div>
+    <div className="relative mt-6"><div className="h-2 bg-gray-300 rounded-full"></div></div>
+  </div>
+);
 
-// A simple skeleton loader for activities
 const ActivitySkeleton = () => (
   <div className="border-l-4 border-gray-200 pl-4 py-2 animate-pulse">
     <div className="h-4 bg-gray-300 rounded w-1/2 mb-2"></div>
     <div className="h-3 bg-gray-300 rounded w-3/4"></div>
   </div>
-);
-
-export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses, isLoading }) => {
-  const navigate = useNavigate();
-  const handleCourseClick = (courseId: number) => navigate(`/learner/course-view/${courseId}`);
-
-  return (
-    <Card className="lg:col-span-2">
-      <CardHeader>
-        <CardTitle className="text-[#1B0A3F] font-['Unbounded'] flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-[#F6E6FF]"><Book className="text-[#BF4BF6]" /></div>
-            Active Courses
-        </CardTitle>
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-[#1B0A3F] font-['Unbounded'] flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-[#F6E6FF]">
-              <Book className="text-[#BF4BF6]" />
-            </div>
-            Recent Courses
-          </CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {isLoading ? <>...</> : courses.length > 0 ? (
-            courses.map(course => (
-              <div key={course.id} className="bg-[#F6E6FF] rounded-xl p-4 hover:bg-[#F0D6FF] transition-colors cursor-pointer" onClick={() => handleCourseClick(course.id)}>
-                <h3 className="font-medium text-[#1B0A3F]">{course.title}</h3>
-                <div className="relative mt-6">
-                  <div className="h-2 bg-white rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-[#52007C] to-[#BF4BF6]" style={{ width: `${course.progress}%` }}/>
-                  </div>
-                  <span className="absolute right-0 -top-6 text-sm font-medium text-[#52007C]">{course.progress}%</span>
-                </div>
-              </div>))
-          ) : (<p className="text-center text-gray-500 py-4">No active courses found.</p>)}
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-export const RecentActivities: React.FC<RecentActivitiesProps> = ({ activities }) => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-[#1B0A3F] font-['Unbounded'] flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-[#F6E6FF]"><Clock className="text-[#BF4BF6]" /></div>
-          Recent Activities
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {activities.map(activity => (
-            <div key={activity.id} className="border-l-4 border-[#BF4BF6] pl-4 py-2 hover:bg-[#F6E6FF]/50 rounded-r-lg">
-              <p className="font-medium text-[#1B0A3F]">{activity.type}</p>
-              <p className="text-sm text-[#52007C]">{activity.course}</p>
-              {activity.time && <p className="text-xs text-[#7A00B8]">{activity.time}</p>}
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-
-export const RecentActivities: React.FC<RecentActivitiesProps> = ({ activities, isLoading }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="text-[#1B0A3F] font-['Unbounded'] flex items-center gap-2">
-        <div className="p-2 rounded-lg bg-[#F6E6FF]">
-          <Clock className="text-[#BF4BF6]" />
-        </div>
-        Recent Activities
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="space-y-4">
-        {isLoading ? (
-          <>
-            <ActivitySkeleton />
-            <ActivitySkeleton />
-            <ActivitySkeleton />
-          </>
-        ) : activities.length > 0 ? (
-          activities.map(activity => (
-            <div key={activity.id} className="border-l-4 border-[#BF4BF6] pl-4 py-2 hover:bg-[#F6E6FF]/50 rounded-r-lg transition-colors">
-              <p className="font-medium text-[#1B0A3F]">{activity.type}</p>
-              <p className="text-sm text-[#52007C]">{activity.course}</p>
-              {activity.time && <p className="text-xs text-[#7A00B8]">{activity.time}</p>}
-            </div>
-          ))
-        ) : (
-          <p className="text-center text-gray-500 py-4">No recent activities to show.</p>
-        )}
-      </div>
-    </CardContent>
-  </Card>
 );
 
 const LearningActivitySkeleton = () => (
@@ -188,6 +98,73 @@ const LearningActivitySkeleton = () => (
             </div>
         </CardContent>
     </Card>
+);
+
+export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses, isLoading }) => {
+  const navigate = useNavigate();
+  const handleCourseClick = (courseId: number) => navigate(`/learner/course-view/${courseId}`);
+
+  return (
+    <Card className="lg:col-span-2">
+      <CardHeader>
+        <CardTitle className="text-[#1B0A3F] font-['Unbounded'] flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-[#F6E6FF]"><Book className="text-[#BF4BF6]" /></div>
+          Active Courses
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {isLoading ? (
+            <><CourseSkeleton /><CourseSkeleton /><CourseSkeleton /></>
+          ) : courses.length > 0 ? (
+            courses.map(course => (
+              <div 
+                key={course.id} 
+                className="bg-[#F6E6FF] rounded-xl p-4 hover:bg-[#F0D6FF] transition-colors cursor-pointer"
+                onClick={() => handleCourseClick(course.id)}
+                role="button" tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCourseClick(course.id); }}}
+              >
+                <h3 className="font-medium text-[#1B0A3F]">{course.title}</h3>
+                <div className="relative mt-6">
+                  <div className="h-2 bg-white rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-[#52007C] to-[#BF4BF6]" style={{ width: `${course.progress}%` }}/>
+                  </div>
+                  <span className="absolute right-0 -top-6 text-sm font-medium text-[#52007C]">{course.progress}%</span>
+                </div>
+              </div>
+            ))
+          ) : (<p className="text-center text-gray-500 py-4">No active courses found.</p>)}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export const RecentActivities: React.FC<RecentActivitiesProps> = ({ activities, isLoading }) => (
+  <Card>
+    <CardHeader>
+      <CardTitle className="text-[#1B0A3F] font-['Unbounded'] flex items-center gap-2">
+        <div className="p-2 rounded-lg bg-[#F6E6FF]"><Clock className="text-[#BF4BF6]" /></div>
+        Recent Activities
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-4">
+        {isLoading ? (
+          <><ActivitySkeleton /><ActivitySkeleton /><ActivitySkeleton /></>
+        ) : activities.length > 0 ? (
+          activities.map(activity => (
+            <div key={activity.id} className="border-l-4 border-[#BF4BF6] pl-4 py-2 hover:bg-[#F6E6FF]/50 rounded-r-lg">
+              <p className="font-medium text-[#1B0A3F]">{activity.type}</p>
+              <p className="text-sm text-[#52007C]">{activity.course}</p>
+              {activity.time && <p className="text-xs text-[#7A00B8]">{activity.time}</p>}
+            </div>
+          ))
+        ) : (<p className="text-center text-gray-500 py-4">No recent activities to show.</p>)}
+      </div>
+    </CardContent>
+  </Card>
 );
 
 export const LearningActivityChart: React.FC<LearningActivityChartProps> = ({ data, isLoading }) => {
@@ -216,7 +193,6 @@ export const LearningActivityChart: React.FC<LearningActivityChartProps> = ({ da
       return <LearningActivitySkeleton />;
   }
 
-  // Dynamic Y-Axis logic for clean, natural numbers
   const maxMinutes = Math.max(...data.map(d => d.totalMinutes || 0), 60);
   const maxHours = Math.ceil(maxMinutes / 60);
   const hourTicks = Array.from({ length: maxHours + 1 }, (_, i) => i * 60);
