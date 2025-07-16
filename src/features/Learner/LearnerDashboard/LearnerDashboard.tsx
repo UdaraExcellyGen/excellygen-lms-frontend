@@ -3,16 +3,17 @@ import { Calendar, FileText, Users, ChevronDown, Check } from 'lucide-react';
 import Layout from '../../../components/Sidebar/Layout';
 import { useAuth } from '../../../contexts/AuthContext';
 import { UserRole } from '../../../types/auth.types';
-import { Course } from './types/types';
+import { Course, DailyLearningTime } from './types/types';
 import { 
   ActiveCourses, 
   RecentActivities, 
   LearningActivityChart 
 } from './components/Sections';
-import { activities, weeklyTimeData } from './data/mockData';
+import { activities } from './data/mockData'; // This mock data is for a different component and is okay
 import LearnerHeaderImage from '../../../assets/LearnerHeader.svg';
 import { getEnrolledCoursesForLearner, getLearnerCourseDetails } from '../../../api/services/Course/learnerCourseService';
 import { getRecentlyAccessedCourseIds } from '../../../api/services/Course/courseAccessService';
+import { getWeeklyActivity } from '../../../api/services/LearnerDashboard/learnerOverallStatsService';
 
 const LearnerDashboard: React.FC = () => {
   const { user, currentRole, selectRole, navigateToRoleSelection } = useAuth();
@@ -24,18 +25,21 @@ const LearnerDashboard: React.FC = () => {
   const [activeCourses, setActiveCourses] = useState<Course[]>([]);
   const [isLoadingCourses, setIsLoadingCourses] = useState(true);
 
+  // This state holds the REAL data from the API
+  const [learningActivity, setLearningActivity] = useState<DailyLearningTime[]>([]);
+  const [isLoadingActivity, setIsLoadingActivity] = useState(true);
+
   useEffect(() => {
     const controller = new AbortController();
 
     const fetchActiveCourses = async () => {
       setIsLoadingCourses(true);
       try {
-        // FIX: Call the function without arguments to match the expected signature
         const allEnrolledCourses = await getEnrolledCoursesForLearner();
         
         if (!allEnrolledCourses || allEnrolledCourses.length === 0) {
           setActiveCourses([]);
-          setIsLoadingCourses(false); // Stop loading if no courses
+          setIsLoadingCourses(false);
           return;
         }
 
@@ -76,8 +80,22 @@ const LearnerDashboard: React.FC = () => {
       }
     };
 
+    const fetchLearningActivity = async () => {
+        setIsLoadingActivity(true);
+        try {
+            const weeklyData = await getWeeklyActivity();
+            setLearningActivity(weeklyData); // This correctly updates our state with REAL data
+        } catch (error) {
+            console.error("Failed to fetch learning activity", error);
+            setLearningActivity([]);
+        } finally {
+            setIsLoadingActivity(false);
+        }
+    }
+
     if (user?.id) {
       fetchActiveCourses();
+      fetchLearningActivity();
     }
 
     return () => {
@@ -244,10 +262,13 @@ const LearnerDashboard: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* FIX: Pass the isLoadingCourses prop */}
             <ActiveCourses courses={activeCourses} isLoading={isLoadingCourses} />
             <RecentActivities activities={activities} />
-            <LearningActivityChart data={weeklyTimeData} />
+
+            {/* THIS IS THE CRITICAL FIX: */}
+            {/* We are now passing the REAL `learningActivity` state to the chart, not the fake mock data. */}
+            <LearningActivityChart data={learningActivity} isLoading={isLoadingActivity} />
+            
           </div>
         </div>
       </div>

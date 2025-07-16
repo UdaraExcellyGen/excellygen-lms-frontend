@@ -544,3 +544,22 @@
 .animate-progress {
   animation: progress 1.5s ease-in-out infinite;
 }
+
+/* ... all your existing css ... */
+
+@keyframes liquid-fill {
+  0%, 100% {
+    /* The bar is 100% clipped from the top, so it is invisible */
+    clip-path: inset(100% 0 0 0);
+  }
+  50% {
+    /* The clip is removed, revealing the entire bar */
+    clip-path: inset(0% 0 0 0);
+  }
+}
+
+/* This class applies the animation with a slower duration */
+.animate-liquid-fill {
+  /* THIS IS THE ONLY LINE THAT HAS CHANGED */
+  animation: liquid-fill 6s ease-in-out infinite; /* Slower 6-second duration */
+}

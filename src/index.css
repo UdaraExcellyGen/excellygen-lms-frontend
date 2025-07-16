@@ -5,3 +5,22 @@
 /* Import fonts */
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700&display=swap');
+
+@keyframes filling-animation {
+  0% {
+    transform: scaleY(0); /* Starts at 0 height */
+  }
+  50% {
+    transform: scaleY(1); /* Grows to full height */
+  }
+  100% {
+    transform: scaleY(0); /* Shrinks back to 0 height */
+  }
+}
+
+/* This class applies the animation to the correct element */
+.animate-filling {
+  /* This is the most important line: It forces the animation to grow from the bottom up. */
+  transform-origin: bottom;
+  animation: filling-animation 3s ease-in-out infinite;
+}
