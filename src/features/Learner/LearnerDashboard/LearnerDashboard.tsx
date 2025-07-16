@@ -10,7 +10,6 @@ import {
   LearningActivityChart 
 } from './components/Sections';
 import { weeklyTimeData } from './data/mockData';
-// import LearnerHeaderImage from '../../../assets/LearnerHeader.svg'; // REMOVED
 import { getEnrolledCoursesForLearner, getLearnerCourseDetails } from '../../../api/services/Course/learnerCourseService';
 import { getRecentlyAccessedCourseIds } from '../../../api/services/Course/courseAccessService';
 import { getRecentActivities } from '../../../api/services/LearnerDashboard/learnerActivitiesService';

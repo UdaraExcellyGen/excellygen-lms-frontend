@@ -50,7 +50,7 @@ export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses, isLoading
             <div className="p-2 rounded-lg bg-[#F6E6FF]">
               <Book className="text-[#BF4BF6]" />
             </div>
-            Active Courses
+            Recent Courses
           </CardTitle>
         </div>
       </CardHeader>
