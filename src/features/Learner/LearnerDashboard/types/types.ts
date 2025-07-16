@@ -50,6 +50,7 @@ export interface Course {
   
   export interface RecentActivitiesProps {
     activities: Activity[];
+    isLoading?: boolean; // Add this line
   }
   
   export interface LearningActivityChartProps {
