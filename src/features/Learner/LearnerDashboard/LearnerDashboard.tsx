@@ -2,17 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, FileText, Users, ChevronDown, Check } from 'lucide-react';
 import Layout from '../../../components/Sidebar/Layout';
 import { useAuth } from '../../../contexts/AuthContext';
-import { Course, Activity ,DailyLearningTime } from './types/types';
+import { UserRole } from '../../../types/auth.types';
+import { Course, Activity, DailyLearningTime } from './types/types';
 import { 
   ActiveCourses, 
   RecentActivities, 
   LearningActivityChart 
 } from './components/Sections';
-import { activities } from './data/mockData';
-import { weeklyTimeData } from './data/mockData';
 import { getEnrolledCoursesForLearner, getLearnerCourseDetails } from '../../../api/services/Course/learnerCourseService';
 import { getRecentlyAccessedCourseIds } from '../../../api/services/Course/courseAccessService';
 import { getRecentActivities } from '../../../api/services/LearnerDashboard/learnerActivitiesService';
+// THIS IS THE CRITICAL IMPORT THAT WAS MISSING
+import { getWeeklyActivity } from '../../../api/services/LearnerDashboard/learnerOverallStatsService';
 
 const LearnerDashboard: React.FC = () => {
   const { user, currentRole, selectRole, navigateToRoleSelection } = useAuth();
@@ -26,8 +27,9 @@ const LearnerDashboard: React.FC = () => {
 
   const [learningActivity, setLearningActivity] = useState<DailyLearningTime[]>([]);
   const [isLoadingActivity, setIsLoadingActivity] = useState(true);
-  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
 
+  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
+  const [isLoadingActivities, setIsLoadingActivities] = useState(true);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -80,22 +82,21 @@ const LearnerDashboard: React.FC = () => {
       }
     };
 
+    // THIS IS THE CRITICAL FIX: REMOVED MOCK DATA, USING REAL API
     const fetchLearningActivity = async () => {
-        setIsLoadingActivity(true);
-        try {
-            const weeklyData = await getWeeklyActivity();
-            setLearningActivity(weeklyData); // This correctly updates our state with REAL data
-        } catch (error) {
-            console.error("Failed to fetch learning activity", error);
-            setLearningActivity([]);
-        } finally {
-            setIsLoadingActivity(false);
-        }
-    }
+      setIsLoadingActivity(true);
+      try {
+        // This now calls your real, working backend API
+        const weeklyData = await getWeeklyActivity();
+        setLearningActivity(weeklyData);
+      } catch (error) {
+        console.error("Failed to fetch learning activity", error);
+        setLearningActivity([]);
+      } finally {
+        setIsLoadingActivity(false);
+      }
+    };
 
-    if (user?.id) {
-      fetchActiveCourses();
-      fetchLearningActivity();
     const fetchRecentActivities = async () => {
       setIsLoadingActivities(true);
       try {
@@ -113,6 +114,7 @@ const LearnerDashboard: React.FC = () => {
 
     if (user?.id) {
       fetchActiveCourses();
+      fetchLearningActivity();
       fetchRecentActivities();
     }
 
@@ -144,9 +146,7 @@ const LearnerDashboard: React.FC = () => {
     };
   }, [dropdownRef]);
 
-  const toggleDropdown = () => {
-    setDropdownOpen(!dropdownOpen);
-  };
+  const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
 
   const formatRoleName = (role: string) => {
     if (role === 'CourseCoordinator') return 'Course Coordinator';
@@ -155,15 +155,15 @@ const LearnerDashboard: React.FC = () => {
   };
 
   const handleSwitchRole = async (role: UserRole) => {
-    try {
-      if (role === currentRole) {
+    if (role === currentRole) {
         setDropdownOpen(false);
         return;
-      }
-      setDropdownOpen(false);
-      await selectRole(role);
+    }
+    setDropdownOpen(false);
+    try {
+        await selectRole(role);
     } catch (error) {
-      console.error('Error switching role:', error);
+        console.error('Error switching role:', error);
     }
   };
 
@@ -201,9 +201,6 @@ const LearnerDashboard: React.FC = () => {
                     <button 
                       onClick={toggleDropdown}
                       className="flex items-center space-x-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-md transition-all duration-300 backdrop-blur-md border border-white/20 text-sm"
-                      aria-label="Switch role"
-                      aria-expanded={dropdownOpen}
-                      aria-haspopup="true"
                     >
                       <span className="text-sm">Role: {currentRole && formatRoleName(currentRole as string)}</span>
                       <ChevronDown 
@@ -211,44 +208,28 @@ const LearnerDashboard: React.FC = () => {
                         className={`transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`}
                       />
                     </button>
-                    
                     {dropdownOpen && (
-                      <div className="fixed right-auto mt-1 w-48 rounded-md shadow-xl bg-[#1B0A3F]/90 backdrop-blur-lg border border-[#BF4BF6]/40 overflow-hidden" style={{ zIndex: 9999, boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)' }}>
-                        <div className="text-xs text-white/80 px-3 py-1.5 border-b border-white/10 bg-[#BF4BF6]/20">
-                          Switch Role
-                        </div>
+                      <div className="fixed right-auto mt-1 w-48 rounded-md shadow-xl bg-[#1B0A3F]/90 backdrop-blur-lg border border-[#BF4BF6]/40 overflow-hidden" style={{ zIndex: 9999 }}>
+                        <div className="text-xs text-white/80 px-3 py-1.5 border-b border-white/10 bg-[#BF4BF6]/20">Switch Role</div>
                         <div className="py-1">
                           {user.roles.map((role) => (
                             <button
                               key={role}
                               onClick={() => handleSwitchRole(role as UserRole)}
-                              className={`flex items-center w-full text-left px-3 py-1.5 text-xs transition-colors duration-200 ${
-                                role === currentRole 
-                                  ? 'bg-[#BF4BF6]/30 text-white font-medium' 
-                                  : 'text-white/80 hover:bg-[#BF4BF6]/20 hover:text-white'
-                              }`}
+                              className={`flex items-center w-full text-left px-3 py-1.5 text-xs transition-colors duration-200 ${role === currentRole ? 'bg-[#BF4BF6]/30 text-white font-medium' : 'text-white/80 hover:bg-[#BF4BF6]/20 hover:text-white'}`}
                             >
                               <div className="flex items-center justify-between w-full">
                                 <div className="flex items-center space-x-1.5">
-                                  <span className="w-4 h-4 flex items-center justify-center">
-                                    {roleIcons[role] || <Users size={12} />}
-                                  </span>
+                                  <span className="w-4 h-4 flex items-center justify-center">{roleIcons[role] || <Users size={12} />}</span>
                                   <span>{formatRoleName(role)}</span>
                                 </div>
-                                {role === currentRole && (
-                                  <Check size={12} className="text-white" />
-                                )}
+                                {role === currentRole && <Check size={12} className="text-white" />}
                               </div>
                             </button>
                           ))}
                         </div>
                         <div className="border-t border-white/10">
-                          <button
-                            onClick={handleViewAllRoles}
-                            className="flex items-center w-full text-left px-3 py-1.5 text-xs text-white/80 hover:bg-[#BF4BF6]/20 hover:text-white transition-colors duration-200"
-                          >
-                            View All Roles
-                          </button>
+                          <button onClick={handleViewAllRoles} className="flex items-center w-full text-left px-3 py-1.5 text-xs text-white/80 hover:bg-[#BF4BF6]/20 hover:text-white transition-colors">View All Roles</button>
                         </div>
                       </div>
                     )}
@@ -259,15 +240,11 @@ const LearnerDashboard: React.FC = () => {
               <div className="relative">
                 <div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-8 md:gap-4">
                   <div className="w-full z-10">
-                    <h1 className="text-3xl md:text-4xl font-bold font-['Unbounded'] mb-4 text-white">
-                      {user ? user.name : 'Learner Name'}
-                    </h1>
+                    <h1 className="text-3xl md:text-4xl font-bold font-['Unbounded'] mb-4 text-white">{user ? user.name : 'Learner Name'}</h1>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
                       <p className="text-[#D68BF9] px-3 py-1 bg-white/10 rounded-full text-sm">Software Engineer</p>
                     </div>
                   </div>
-                  
-                  {/* REMOVED THE IMAGE AND ITS CONTAINER */}
                 </div>
               </div>
             </div>
@@ -275,16 +252,8 @@ const LearnerDashboard: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <ActiveCourses courses={activeCourses} isLoading={isLoadingCourses} />
-            <RecentActivities activities={activities} />
-
-            {/* THIS IS THE CRITICAL FIX: */}
-            {/* We are now passing the REAL `learningActivity` state to the chart, not the fake mock data. */}
-            <LearningActivityChart data={learningActivity} isLoading={isLoadingActivity} />
-            
-
             <RecentActivities activities={recentActivities} isLoading={isLoadingActivities} />
-            <LearningActivityChart data={weeklyTimeData} />
-
+            <LearningActivityChart data={learningActivity} isLoading={isLoadingActivity} />
           </div>
         </div>
       </div>

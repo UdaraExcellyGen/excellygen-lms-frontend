@@ -1,5 +1,6 @@
 import React from 'react';
 
+// Core Data Types
 export interface Course {
   id: number;
   title: string;
@@ -11,6 +12,12 @@ export interface Activity {
   type: string;
   course: string;
   time?: string;
+}
+
+// Time Data Types
+export interface WeeklyTimeData {
+  week: string;
+  hours: number;
 }
 
 // THIS IS THE UPDATED TYPE
@@ -28,6 +35,7 @@ export interface LearningStat {
   link?: string;
 }
 
+// Card Component Props
 export interface CardProps {
   children: React.ReactNode;
   className?: string;
@@ -47,6 +55,7 @@ export interface CardContentProps {
   className?: string;
 }
 
+// Feature Component Props
 export interface ActiveCoursesProps {
   courses: Course[];
   isLoading?: boolean;
@@ -54,11 +63,17 @@ export interface ActiveCoursesProps {
 
 export interface RecentActivitiesProps {
   activities: Activity[];
+  isLoading?: boolean;
 }
 
 export interface LearningActivityChartProps {
   data: DailyLearningTime[];
   isLoading: boolean;
+}
+
+// Legacy Chart Props (for backward compatibility)
+export interface LearningActivityChartPropsLegacy {
+  data: WeeklyTimeData[];
 }
 
 export interface RecentAchievementsProps {
@@ -70,74 +85,5 @@ export interface RecentAchievementsProps {
   nextBadges: Array<{
     name: string;
     progress: number;
-
   }>;
 }
-
-  }
-  
-  export interface Activity {
-    id: number;
-    type: string;
-    course: string;
-    time?: string;
-  }
-  
-  export interface WeeklyTimeData {
-    week: string;
-    hours: number;
-  }
-  
-  export interface LearningStat {
-    title: string;
-    value: number | string;
-    trend: string;
-    link?: string;
-  }
-  
-  // Props Types
-  export interface CardProps {
-    children: React.ReactNode;
-    className?: string;
-  }
-  
-  export interface CardHeaderProps {
-    children: React.ReactNode;
-  }
-  
-  export interface CardTitleProps {
-    children: React.ReactNode;
-    className?: string;
-  }
-  
-  export interface CardContentProps {
-    children: React.ReactNode;
-    className?: string;
-  }
-  
-  export interface ActiveCoursesProps {
-    courses: Course[];
-    isLoading?: boolean; // Add this line
-  }
-  
-  export interface RecentActivitiesProps {
-    activities: Activity[];
-    isLoading?: boolean; // Add this line
-  }
-  
-  export interface LearningActivityChartProps {
-    data: WeeklyTimeData[];
-  }
-  
-  export interface RecentAchievementsProps {
-    badges: Array<{
-      icon: React.ReactNode;
-      name: string;
-      color: string;
-    }>;
-    nextBadges: Array<{
-      name: string;
-      progress: number;
-    }>;
-  }
-
