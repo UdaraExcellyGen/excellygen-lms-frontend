@@ -182,8 +182,8 @@ const LearnerDashboard: React.FC = () => {
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
-        <div className="max-w-7xl mx-auto px-8 space-y-8">
-          <div className="mb-6">
+        <div className="max-w-7xl mx-auto px-8 space-y-6">
+          <div className="mb-2">
             <div className="p-2">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0 border-b border-white/10 pb-6 mb-6">
                 <div className="flex items-center space-x-4">
@@ -240,8 +240,8 @@ const LearnerDashboard: React.FC = () => {
               <div className="relative">
                 <div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-8 md:gap-4">
                   <div className="w-full z-10">
-                    <h1 className="text-3xl md:text-4xl font-bold font-['Unbounded'] mb-4 text-white">{user ? user.name : 'Learner Name'}</h1>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+                    <h1 className="text-2xl md:text-3xl font-bold font-['Unbounded'] mb-2 text-white">Hi, {user ? user.name : 'Learner Name'} 👋</h1>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-2">
                       <p className="text-[#D68BF9] px-3 py-1 bg-white/10 rounded-full text-sm">Software Engineer</p>
                     </div>
                   </div>
