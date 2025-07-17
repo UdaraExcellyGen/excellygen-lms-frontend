@@ -30,6 +30,12 @@ export enum EnrollmentStatus {
   COMPLETED = 'completed'
 }
 
+// Ownership filter options
+export enum OwnershipFilter {
+  ALL = 'all',
+  MINE = 'mine'
+}
+
 // Enhanced coordinator course data
 export type ApiCoordinatorCourse = {
   courseId: number;
@@ -38,8 +44,6 @@ export type ApiCoordinatorCourse = {
   categoryId: string; // String to match backend
   categoryName: string;
   totalEnrollments: number;
-  ongoingEnrollments: number;
-  completedEnrollments: number;
   isCreatedByCurrentCoordinator: boolean;
 };
 
@@ -65,36 +69,33 @@ export type ApiMarkRangeData = {
 
 // Filter state management
 export interface AnalyticsFilters {
-  selectedCategoryId: string | null; // String to match backend
+  selectedCategoryId: string | null;
   enrollmentStatus: EnrollmentStatus;
+  ownershipFilter: OwnershipFilter;
   selectedCourseId: number | null;
   selectedQuizId: number | null;
 }
 
 // Component Props
-export interface HeaderProps {
-  title: string;
-  subtitle: string;
-  onBackClick: () => void;
-}
-
 export interface EnrollmentChartProps {
-  data: ProcessedEnrollmentData[]; // Updated to use processed data
+  data: ProcessedEnrollmentData[];
   categories: ApiCourseCategory[];
-  selectedCategoryId: string | null; // String to match backend
+  selectedCategoryId: string | null;
   enrollmentStatus: EnrollmentStatus;
+  ownershipFilter: OwnershipFilter;
   onCategoryChange: (categoryId: string | null) => void;
   onStatusChange: (status: EnrollmentStatus) => void;
+  onOwnershipChange: (ownership: OwnershipFilter) => void;
   loading?: boolean;
 }
 
 export interface QuizPerformanceProps {
   availableCourses: ApiCoordinatorCourse[];
   selectedCourseId: number | null;
-  onCourseChange: (courseId: number) => void;
+  onCourseChange: (courseId: number | null) => void;
   availableQuizzes: ApiCourseQuiz[];
   selectedQuizId: number | null;
-  onQuizChange: (quizId: number) => void;
+  onQuizChange: (quizId: number | null) => void;
   performanceData: ApiMarkRangeData[];
   loading?: boolean;
 }
@@ -107,24 +108,15 @@ export interface CustomTooltipProps {
 
 // Chart data processing types
 export type ProcessedEnrollmentData = {
-  course: string;
+  course: string; // short name for chart axis
   fullCourseName: string;
   count: number;
   categoryName: string;
-  status: string;
   coordinatorName: string;
   courseId: number;
 };
 
-export type ProcessedQuizData = {
-  range: string;
-  count: number;
-  percentage: number;
-  minMark: number;
-  maxMark: number;
-};
-
-// API Response types for new endpoints
+// API Response types
 export interface EnrollmentAnalyticsResponse {
   enrollments: ApiEnrollmentData[];
   categories: ApiCourseCategory[];

@@ -44,10 +44,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
               Students: <span className="font-bold">{data.count}</span>
             </p>
             <p className="text-gray-600">
-              Percentage: <span className="font-medium">{data.percentage.toFixed(1)}%</span>
-            </p>
-            <p className="text-gray-500 text-xs">
-              Score range: {data.minMark}% - {data.maxMark}%
+              Percentage of Total: <span className="font-medium">{data.percentage.toFixed(1)}%</span>
             </p>
           </div>
         </div>
