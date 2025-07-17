@@ -109,7 +109,7 @@ export const ActiveCourses: React.FC<ActiveCoursesProps> = ({ courses, isLoading
       <CardHeader>
         <CardTitle className="text-[#1B0A3F] font-['Unbounded'] flex items-center gap-2">
           <div className="p-2 rounded-lg bg-[#F6E6FF]"><Book className="text-[#BF4BF6]" /></div>
-          Active Courses
+          Recent Courses
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -202,7 +202,7 @@ export const LearningActivityChart: React.FC<LearningActivityChartProps> = ({ da
         <CardHeader>
             <CardTitle className="text-[#1B0A3F] font-['Unbounded'] flex items-center gap-2">
                 <div className="p-2 rounded-lg bg-[#F6E6FF]"><BarChart2 className="text-[#BF4BF6]" /></div>
-                Learning Activity
+                Learner Screen Time
             </CardTitle>
              <div className="mt-4 pl-1">
                 <p className="text-4xl font-bold text-[#1B0A3F]">
