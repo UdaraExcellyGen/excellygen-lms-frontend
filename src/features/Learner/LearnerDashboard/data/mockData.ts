@@ -14,11 +14,7 @@ export const courses: Course[] = [
   { id: 3, title: 'Cloud Architecture', progress: 30 }
 ];
 
-export const activities: Activity[] = [
-  { id: 1, type: 'Quiz Completed', course: 'Web Development Fundamentals' },
-  { id: 2, type: 'Badge Earned', course: 'Machine Learning Fundamentals' },
-  { id: 3, type: 'Course Started', course: 'Cloud Architecture' }
-];
+// REMOVED the static activities array as it's now dynamic.
 
 export const weeklyTimeData: WeeklyTimeData[] = [
   { week: 'Week 1', hours: 12 },

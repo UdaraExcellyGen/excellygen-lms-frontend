@@ -1,30 +1,17 @@
-// src/services/SessionService.ts
-import ActivityTracker from './ActivityTracker';
 import { heartbeat } from '../authApi';
-
-interface SessionConfig {
-  // Time before token expiry to refresh (in milliseconds)
-  refreshWindow: number;
-  // Maximum time without activity to still refresh token (in milliseconds)
-  maxIdleBeforeRefresh: number;
-  // How often to check if token needs refreshing (in milliseconds)
-  heartbeatInterval: number;
-}
+import ActivityTracker from './ActivityTracker';
 
 class SessionService {
   private static instance: SessionService;
+  private activityLogIntervalId: number | null = null;
   private activityTracker: ActivityTracker;
-  private intervalId: number | null = null;
-  private tokenExpiryTime: number | null = null;
-  private config: SessionConfig = {
-    refreshWindow: 10 * 60 * 1000, // 10 minutes before expiry
-    maxIdleBeforeRefresh: 30 * 60 * 1000, // 30 minutes of inactivity max
-    heartbeatInterval: 5 * 60 * 1000, // Check every 5 minutes
-  };
-  
+
+  // The interval for logging user activity (1 minute)
+  private readonly LOG_INTERVAL = 60 * 1000;
+
   private constructor() {
     this.activityTracker = ActivityTracker.getInstance();
-    console.log('Session service initialized');
+    console.log('Session Service Initialized.');
   }
 
   public static getInstance(): SessionService {
@@ -34,90 +21,52 @@ class SessionService {
     return SessionService.instance;
   }
 
+  /**
+   * Starts the session manager which is responsible for logging user activity.
+   */
   public startSessionManager(): void {
-    // Set token expiry time based on localStorage
-    this.updateTokenExpiryFromStorage();
+    this.stopSessionManager(); // Ensure no multiple intervals are running
     
-    // Start heartbeat
-    this.startHeartbeat();
+    // Immediately log an activity event on start, then start the interval
+    this.logActivity(); 
     
-    // Subscribe to activity events
-    this.activityTracker.onActivity(() => {
-      // When user is active, we could check if token needs refresh
-      this.checkAndRefreshIfNeeded();
-    });
-    
-    console.log('Session manager started');
+    this.activityLogIntervalId = window.setInterval(() => {
+      this.logActivity();
+    }, this.LOG_INTERVAL);
+
+    console.log(`Session Manager Started: Logging activity every ${this.LOG_INTERVAL / 1000} seconds.`);
   }
 
-  private updateTokenExpiryFromStorage(): void {
-    const expiryString = localStorage.getItem('token_expiry');
-    if (expiryString) {
-      this.tokenExpiryTime = new Date(expiryString).getTime();
-      console.log(`Token expires at: ${new Date(this.tokenExpiryTime).toLocaleTimeString()}`);
-    }
-  }
-
-  private startHeartbeat(): void {
-    // Clear any existing interval
-    if (this.intervalId) {
-      window.clearInterval(this.intervalId);
-    }
-    
-    // Set up the heartbeat interval
-    this.intervalId = window.setInterval(() => {
-      this.checkAndRefreshIfNeeded();
-    }, this.config.heartbeatInterval);
-    
-    console.log(`Heartbeat started, checking every ${this.config.heartbeatInterval / 1000} seconds`);
-  }
-
-  private checkAndRefreshIfNeeded(): void {
-    if (!this.tokenExpiryTime) {
-      this.updateTokenExpiryFromStorage();
-      if (!this.tokenExpiryTime) return; // Still no expiry time
-    }
-    
-    const now = Date.now();
-    const timeUntilExpiry = this.tokenExpiryTime - now;
-    const idleTime = this.activityTracker.getIdleTime();
-    
-    // Check if we're within the refresh window and user is not too idle
-    if (timeUntilExpiry < this.config.refreshWindow && idleTime < this.config.maxIdleBeforeRefresh) {
-      this.refreshToken();
-    }
-  }
-
-  private async refreshToken(): Promise<void> {
-    try {
-      const accessToken = localStorage.getItem('access_token');
-      
-      if (!accessToken) {
-        console.error('No tokens available for refresh');
-        return;
-      }
-      
-      console.log('Proactively refreshing token due to user activity...');
-      
-      // Call the heartbeat endpoint to extend the session
-      const response = await heartbeat();
-      
-      console.log('Token refreshed successfully via heartbeat');
-      
-      // Update the expiry time from storage after refresh
-      this.updateTokenExpiryFromStorage();
-    } catch (error) {
-      console.error('Failed to refresh token:', error);
-    }
-  }
-
+  /**
+   * Stops the session manager and clears the activity logging interval.
+   */
   public stopSessionManager(): void {
-    if (this.intervalId) {
-      window.clearInterval(this.intervalId);
-      this.intervalId = null;
+    if (this.activityLogIntervalId) {
+      window.clearInterval(this.activityLogIntervalId);
+      this.activityLogIntervalId = null;
     }
-    
-    console.log('Session manager stopped');
+    console.log('Session Manager Stopped.');
+  }
+
+  /**
+   * Calls the backend heartbeat endpoint to log one minute of activity.
+   * It only logs if the user has been active recently.
+   */
+  private async logActivity(): Promise<void> {
+    // We only log activity if the user has not been idle for more than the interval itself.
+    if (this.activityTracker.getIdleTime() < this.LOG_INTERVAL) {
+      try {
+        console.log('Sending heartbeat to log user activity...');
+        // The backend's /heartbeat endpoint now logs 1 minute of activity.
+        await heartbeat();
+      } catch (error) {
+        console.error('Failed to send activity heartbeat:', error);
+        // If heartbeat fails (e.g., token expired), stop trying to prevent spamming errors.
+        this.stopSessionManager();
+      }
+    } else {
+        console.log('User is idle. Skipping activity log.');
+    }
   }
 }
 

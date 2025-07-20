@@ -1,12 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { 
   login as apiLogin, 
   logout as apiLogout, 
   selectRole as apiSelectRole, 
   resetPassword as apiResetPassword,
-  refreshToken as apiRefreshToken,
   changePassword as apiChangePassword,
   heartbeat
 } from '../api/authApi';
@@ -48,17 +47,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [state, setState] = useState<AuthState>(initialState);
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const stateRef = useRef<AuthState>(initialState);
   const sessionService = useRef(SessionService.getInstance());
 
-  // Keep stateRef updated with the latest state
-  useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
-
-  // Function to reset auth state
   const resetAuthState = useCallback(() => {
+    sessionService.current.stopSessionManager();
     localStorage.removeItem(AUTH_STORAGE_KEY);
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
@@ -66,194 +58,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem(CURRENT_ROLE_STORAGE_KEY);
     localStorage.removeItem('userId');
     localStorage.removeItem(REQUIRE_PASSWORD_CHANGE_KEY);
-    
-    // Clear any existing refresh timer
-    if (refreshTimerRef.current) {
-      clearInterval(refreshTimerRef.current);
-      refreshTimerRef.current = null;
-    }
   }, []);
 
-  // Special function to navigate to role selection
   const navigateToRoleSelection = useCallback(() => {
-    console.log('Navigating to role selection from auth context');
     navigate('/role-selection');
   }, [navigate]);
 
-  // Function to navigate based on role
   const navigateByRole = useCallback((role: UserRole) => {
-    console.log(`Navigating by role: ${role}`);
-    const currentPath = location.pathname;
-    let targetPath = '/';
-    
-    switch (role) {
-      case UserRole.Admin:
-        targetPath = '/admin/dashboard';
-        break;
-      case UserRole.Learner:
-        targetPath = '/learner/dashboard';
-        break;
-      case UserRole.CourseCoordinator:
-        targetPath = '/coordinator/dashboard';
-        break;
-      case UserRole.ProjectManager:
-        targetPath = '/project-manager/dashboard';
-        break;
-      default:
-        targetPath = '/';
-    }
-    
-    // Only navigate if we're not already at the target path
-    if (currentPath !== targetPath) {
-      console.log(`Navigating from ${currentPath} to ${targetPath}`);
+    const rolePaths: Record<string, string> = {
+      Admin: '/admin/dashboard',
+      Learner: '/learner/dashboard',
+      CourseCoordinator: '/coordinator/dashboard',
+      ProjectManager: '/project-manager/dashboard',
+    };
+    const targetPath = rolePaths[role] || '/';
+    if (location.pathname !== targetPath) {
       navigate(targetPath);
     }
   }, [navigate, location.pathname]);
 
-  // OPTIMIZED: Simplified token refresh without complex retry logic
-  const handleTokenRefresh = useCallback(async () => {
-    try {
-      const accessToken = localStorage.getItem(TOKEN_STORAGE_KEY);
-      const refreshToken = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
-      
-      if (!accessToken || !refreshToken) {
-        throw new Error('No tokens available');
-      }
-      
-      console.log('Refreshing token...');
-      
-      // OPTIMIZATION: Simplified token refresh - try heartbeat first, fallback to standard refresh
-      let tokenData;
-      
-      try {
-        // Try heartbeat first for active users
-        const activityTracker = ActivityTracker.getInstance();
-        const idleTime = activityTracker.getIdleTime();
-        const maxIdleTime = 30 * 60 * 1000; // 30 minutes
-        
-        if (idleTime < maxIdleTime) {
-          console.log('User is active, using heartbeat to refresh token');
-          const heartbeatResponse = await heartbeat();
-          tokenData = {
-            accessToken: heartbeatResponse.accessToken,
-            refreshToken: refreshToken,
-            expiresAt: heartbeatResponse.expiresAt,
-            currentRole: localStorage.getItem(CURRENT_ROLE_STORAGE_KEY) || '',
-            requirePasswordChange: stateRef.current.requirePasswordChange
-          };
-        } else {
-          throw new Error('User idle, use standard refresh');
-        }
-      } catch {
-        // Fallback to standard refresh
-        console.log('Using standard token refresh');
-        tokenData = await apiRefreshToken();
-      }
-      
-      // Update stored tokens
-      localStorage.setItem(TOKEN_STORAGE_KEY, tokenData.accessToken);
-      localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, tokenData.refreshToken);
-      localStorage.setItem(TOKEN_EXPIRY_STORAGE_KEY, tokenData.expiresAt);
-      localStorage.setItem(CURRENT_ROLE_STORAGE_KEY, tokenData.currentRole);
-      
-      if (tokenData.requirePasswordChange !== undefined) {
-        localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, tokenData.requirePasswordChange.toString());
-      }
-      
-      setState(prevState => ({
-        ...prevState,
-        currentRole: tokenData.currentRole as UserRole,
-        requirePasswordChange: tokenData.requirePasswordChange
-      }));
-      
-      if (tokenData.requirePasswordChange) {
-        setShowPasswordChangeModal(true);
-      }
-      
-      console.log('Token refreshed successfully');
-      return true;
-    } catch (error) {
-      console.error('Token refresh failed:', error);
-      
-      // Reset auth and navigate to login
-      resetAuthState();
-      setState({
-        ...initialState,
-        initialized: true,
-        error: 'Session expired. Please login again.'
-      });
-      
-      if (location.pathname !== '/') {
-        toast.error('Your session has expired. Please login again.');
-        navigate('/');
-      }
-      
-      return false;
-    }
-  }, [resetAuthState, navigate, location.pathname]);
-
-  // Setup token refresh timer
-  const setupRefreshTimer = useCallback(() => {
-    if (refreshTimerRef.current) {
-      clearInterval(refreshTimerRef.current);
-      refreshTimerRef.current = null;
-    }
-
-    const expiryString = localStorage.getItem(TOKEN_EXPIRY_STORAGE_KEY);
-    if (!expiryString) return;
-
-    const expiryDate = new Date(expiryString);
-    const timeUntilExpiry = expiryDate.getTime() - Date.now();
-    
-    if (timeUntilExpiry < 5000) {
-      console.log('Token is expired or will expire very soon');
-      handleTokenRefresh();
-      return;
-    }
-    
-    const refreshTime = Math.min(timeUntilExpiry * 0.75, timeUntilExpiry - 10 * 60 * 1000);
-    console.log(`Setting up refresh timer for ${Math.round(refreshTime / 1000)} seconds from now`);
-    
-    refreshTimerRef.current = setInterval(() => {
-      handleTokenRefresh();
-    }, refreshTime);
-  }, [handleTokenRefresh]);
-
-  // OPTIMIZED: Simplified initialization without complex retry logic
   useEffect(() => {
-    const initAuth = async () => {
+    const initAuth = () => {
       try {
-        console.log('Initializing auth state...');
-        
         const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
         const token = localStorage.getItem(TOKEN_STORAGE_KEY);
         const currentRole = localStorage.getItem(CURRENT_ROLE_STORAGE_KEY);
         const requirePasswordChange = localStorage.getItem(REQUIRE_PASSWORD_CHANGE_KEY) === 'true';
 
         if (storedUser && token && currentRole) {
-          console.log('Found stored auth data');
-          
           const user = JSON.parse(storedUser) as User;
-          
-          if (user.id) {
-            localStorage.setItem('userId', user.id);
-          }
-          
           setState({
             user,
             currentRole: currentRole as UserRole,
             loading: false,
             initialized: true,
             error: null,
-            requirePasswordChange: requirePasswordChange
+            requirePasswordChange
           });
           
-          // Setup refresh timer
-          setTimeout(() => {
-            setupRefreshTimer();
-          }, 0);
-          
-          // Start session tracking
           sessionService.current.startSessionManager();
           
           if (requirePasswordChange) {
@@ -265,199 +107,100 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
           }
         } else {
-          console.log('No stored auth data found');
-          setState({
-            ...initialState,
-            initialized: true
-          });
+          setState({ ...initialState, initialized: true });
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
         resetAuthState();
-        setState({
-          ...initialState,
-          initialized: true,
-          error: 'Failed to initialize authentication'
-        });
+        setState({ ...initialState, initialized: true, error: 'Failed to initialize authentication' });
       }
     };
 
     initAuth();
     
-    return () => {
-      if (refreshTimerRef.current) {
-        clearInterval(refreshTimerRef.current);
-      }
-      sessionService.current.stopSessionManager();
-    };
-  }, [resetAuthState, navigateByRole, setupRefreshTimer, location.pathname]);
+    return () => sessionService.current.stopSessionManager();
+  }, [resetAuthState, navigateByRole]);
 
-  // Listen for auth:expired events
   useEffect(() => {
     const handleAuthExpired = () => {
-      console.log('Auth expired event received');
       resetAuthState();
-      setState({
-        ...initialState,
-        initialized: true,
-        error: 'Session expired. Please login again.'
-      });
+      setState({ ...initialState, initialized: true, error: 'Session expired. Please login again.' });
+      toast.error('Your session has expired. Please login again.');
       navigate('/');
     };
     
-    window.addEventListener('auth:expired', handleAuthExpired);
-    return () => window.removeEventListener('auth:expired', handleAuthExpired);
-  }, [resetAuthState, navigate]);
-
-  // Listen for storage events (for multi-tab support)
-  useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === TOKEN_STORAGE_KEY && !event.newValue) {
-        console.log('Token removed in another tab');
         resetAuthState();
-        setState({
-          ...initialState,
-          initialized: true
-        });
+        setState({ ...initialState, initialized: true });
         navigate('/');
       }
     };
-    
+
+    window.addEventListener('auth:expired', handleAuthExpired);
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    
+    return () => {
+        window.removeEventListener('auth:expired', handleAuthExpired);
+        window.removeEventListener('storage', handleStorageChange);
+    };
   }, [resetAuthState, navigate]);
 
-  // OPTIMIZED LOGIN FUNCTION
   const login = async (email: string, password: string) => {
     setState(prevState => ({ ...prevState, loading: true, error: null }));
-    
     try {
-      console.log('Attempting login...');
-      
-      // Clear any existing userId BEFORE API call to prevent caching issues
-      localStorage.removeItem('userId');
-      
       const authResponse = await apiLogin({ email, password });
-      
       const { userId, name, email: userEmail, roles, token, requirePasswordChange } = authResponse;
-      
-      const user: User = {
-        id: userId,
-        name,
-        email: userEmail,
-        roles: roles as UserRole[]
-      };
-      
-      // OPTIMIZATION: Batch localStorage operations
-      const storageOperations = [
-        [AUTH_STORAGE_KEY, JSON.stringify(user)],
-        [TOKEN_STORAGE_KEY, token.accessToken],
-        [REFRESH_TOKEN_STORAGE_KEY, token.refreshToken],
-        [TOKEN_EXPIRY_STORAGE_KEY, token.expiresAt],
-        [CURRENT_ROLE_STORAGE_KEY, token.currentRole],
-        [REQUIRE_PASSWORD_CHANGE_KEY, requirePasswordChange.toString()],
-        ['userId', userId]
-      ];
-      
-      // Batch storage operations for better performance
-      storageOperations.forEach(([key, value]) => {
-        localStorage.setItem(key, value);
-      });
-      
-      console.log('Login successful, tokens stored');
-      
-      setState(prevState => ({
-        ...prevState,
-        user,
-        currentRole: token.currentRole as UserRole,
-        loading: false,
-        error: null,
-        requirePasswordChange
-      }));
+      const user: User = { id: userId, name, email: userEmail, roles: roles as UserRole[] };
 
-      // OPTIMIZATION: Defer non-critical operations
-      requestAnimationFrame(() => {
-        setupRefreshTimer();
-        sessionService.current.startSessionManager();
-      });
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      localStorage.setItem(TOKEN_STORAGE_KEY, token.accessToken);
+      localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, token.refreshToken);
+      localStorage.setItem(TOKEN_EXPIRY_STORAGE_KEY, token.expiresAt);
+      localStorage.setItem(CURRENT_ROLE_STORAGE_KEY, token.currentRole);
+      localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, requirePasswordChange.toString());
+      localStorage.setItem('userId', userId);
+
+      setState({ user, currentRole: token.currentRole as UserRole, loading: false, error: null, requirePasswordChange, initialized: true });
+      
+      sessionService.current.startSessionManager();
       
       toast.success('Login successful!');
-      
       if (requirePasswordChange) {
         setShowPasswordChangeModal(true);
       } else {
-        // OPTIMIZATION: Simplified role navigation
-        console.log(`User has ${roles.length} role(s):`, roles);
-        
         if (roles.length === 1) {
-          const singleRole = roles[0] as UserRole;
-          console.log(`User has single role: ${singleRole}, bypassing role selection`);
-          navigateByRole(singleRole);
-        } else if (roles.length > 1) {
-          console.log('User has multiple roles, navigating to role selection');
-          navigate('/role-selection');
+          navigateByRole(roles[0] as UserRole);
         } else {
-          console.error('User has no roles assigned');
-          toast.error('No roles assigned to your account. Please contact administrator.');
+          navigate('/role-selection');
         }
       }
     } catch (error) {
-      console.error('Login error:', error);
-      setState(prevState => ({
-        ...prevState,
-        loading: false,
-        error: 'Invalid email or password'
-      }));
+      setState(prevState => ({ ...prevState, loading: false, error: 'Invalid email or password' }));
       toast.error('Invalid email or password');
     }
   };
 
   const logout = async () => {
     setState(prevState => ({ ...prevState, loading: true }));
-    
     try {
-      console.log('Logging out...');
       await apiLogout();
-      
-      sessionService.current.stopSessionManager();
+    } catch (error) {
+      console.error('Logout API call failed, proceeding with client-side logout:', error);
+    } finally {
       resetAuthState();
-      
-      setState({
-        ...initialState,
-        initialized: true
-      });
-      
+      setState({ ...initialState, initialized: true });
       navigate('/');
       toast.success('Logged out successfully');
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast.error('Error logging out');
-      
-      resetAuthState();
-      setState({
-        ...initialState,
-        initialized: true
-      });
-      
-      navigate('/');
     }
   };
 
   const selectRole = async (role: UserRole) => {
     setState(prevState => ({ ...prevState, loading: true, error: null }));
-    
     try {
-      console.log(`Selecting role: ${role}`);
-      if (!stateRef.current.user) {
-        throw new Error('User not authenticated');
-      }
+      const { user } = state;
+      if (!user) throw new Error('User not authenticated');
       
-      const accessToken = localStorage.getItem(TOKEN_STORAGE_KEY);
-      if (!accessToken) {
-        throw new Error('No access token available');
-      }
-      
-      const userId = stateRef.current.user.id;
       const tokenData = await apiSelectRole(role);
       
       localStorage.setItem(TOKEN_STORAGE_KEY, tokenData.accessToken);
@@ -465,11 +208,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem(TOKEN_EXPIRY_STORAGE_KEY, tokenData.expiresAt);
       localStorage.setItem(CURRENT_ROLE_STORAGE_KEY, tokenData.currentRole);
       localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, tokenData.requirePasswordChange.toString());
-      
-      if (userId) {
-        localStorage.setItem('userId', userId);
-      }
-      
+
       setState(prevState => ({
         ...prevState,
         currentRole: tokenData.currentRole as UserRole,
@@ -478,12 +217,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         requirePasswordChange: tokenData.requirePasswordChange
       }));
       
-      console.log('Role selection successful, tokens updated');
-      
-      setTimeout(() => {
-        setupRefreshTimer();
-      }, 0);
-      
       if (tokenData.requirePasswordChange) {
         setShowPasswordChangeModal(true);
       } else {
@@ -491,29 +224,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         navigateByRole(role);
       }
     } catch (error) {
-      console.error('Role selection error:', error);
-      setState(prevState => ({
-        ...prevState,
-        loading: false,
-        error: 'Failed to select role'
-      }));
+      setState(prevState => ({ ...prevState, loading: false, error: 'Failed to select role' }));
       toast.error('Failed to select role');
     }
   };
 
   const resetPassword = async (email: string) => {
     setState(prevState => ({ ...prevState, loading: true, error: null }));
-    
     try {
       await apiResetPassword(email);
       setState(prevState => ({ ...prevState, loading: false }));
     } catch (error) {
       console.error('Password reset error:', error);
-      setState(prevState => ({
-        ...prevState,
-        loading: false,
-        error: 'Failed to send password reset email'
-      }));
+      setState(prevState => ({ ...prevState, loading: false, error: 'Failed to send password reset email' }));
       toast.error('Failed to send password reset email');
       throw error;
     }
@@ -521,35 +244,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   const changePassword = async (currentPassword: string, newPassword: string) => {
     setIsChangingPassword(true);
-    
     try {
       const userId = localStorage.getItem('userId');
-      if (!userId) {
-        throw new Error('User ID not found');
-      }
+      if (!userId) throw new Error('User ID not found');
       
-      await apiChangePassword({
-        userId,
-        currentPassword,
-        newPassword
-      });
+      await apiChangePassword({ userId, currentPassword, newPassword });
       
       localStorage.setItem(REQUIRE_PASSWORD_CHANGE_KEY, 'false');
       
-      setState(prevState => ({
-        ...prevState,
-        requirePasswordChange: false
-      }));
+      setState(prevState => ({ ...prevState, requirePasswordChange: false }));
       
       setShowPasswordChangeModal(false);
       setIsChangingPassword(false);
       
       toast.success('Password changed successfully');
       
-      const user = stateRef.current.user;
-      if (user && user.roles && user.roles.length === 1) {
-        const singleRole = user.roles[0];
-        navigateByRole(singleRole);
+      const { user } = state;
+      if (user && user.roles.length === 1) {
+        navigateByRole(user.roles[0]);
       } else {
         navigateToRoleSelection();
       }
@@ -574,14 +286,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }}
     >
       {children}
-      
       <PasswordChangeModal
         isOpen={showPasswordChangeModal}
-        onClose={() => {
-          if (!state.requirePasswordChange) {
-            setShowPasswordChangeModal(false);
-          }
-        }}
+        onClose={() => !state.requirePasswordChange && setShowPasswordChangeModal(false)}
         onSubmit={changePassword}
         isSubmitting={isChangingPassword}
       />

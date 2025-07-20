@@ -1,3 +1,4 @@
+// src/features/Learner/TakeQuiz/TakeQuiz.tsx
 // // src/features/Learner/TakeQuiz/TakeQuiz.tsx
 // import React, { useState, useEffect, useCallback } from 'react';
 // import { useNavigate, useParams, useLocation } from 'react-router-dom';
@@ -422,15 +423,15 @@ import toast from 'react-hot-toast';
 
 import {
   ActiveQuizState,
-  LearnerQuizQuestionDto
+  LearnerQuizQuestionDto,
+  QuizAttemptDto
 } from '../../../types/quiz.types';
 
 import {
   getQuestionsForLearner,
   startQuizAttempt,
   submitQuizAnswer,
-  completeQuizAttempt,
-  getQuizDetails
+  completeQuizAttempt
 } from '../../../api/services/Course/quizService';
 
 const TakeQuiz: React.FC = () => {
@@ -444,11 +445,11 @@ const TakeQuiz: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [quizAttempt, setQuizAttempt] = useState<ActiveQuizState | null>(null);
+  const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [isTimeUp, setIsTimeUp] = useState<boolean>(false);
 
-  // Initial data loading effect
+  // Initialize quiz attempt
   useEffect(() => {
     const initializeQuiz = async () => {
       if (!quizId) {
@@ -460,6 +461,8 @@ const TakeQuiz: React.FC = () => {
 
       try {
         setIsLoading(true);
+        const attemptResponse = await startQuizAttempt(quizId);
+        
         const [attemptResponse, quizDetails] = await Promise.all([
           startQuizAttempt(quizId),
           getQuizDetails(quizId)
@@ -470,6 +473,7 @@ const TakeQuiz: React.FC = () => {
           navigate(`/learner/quiz-results/${attemptResponse.quizAttemptId}`, {
             state: { courseId }
           });
+          return;
           return; 
         }
         
@@ -481,25 +485,21 @@ const TakeQuiz: React.FC = () => {
           return;
         }
         
-        const timeLimit = quizDetails.timeLimitMinutes;
-        const startTime = new Date(); 
-        const actualRemainingSeconds = timeLimit * 60;
-
         const newQuizAttempt: ActiveQuizState = {
           quizId: quizId,
-          quizTitle: quizDetails.quizTitle,
-          timeLimitMinutes: timeLimit,
+          quizTitle: attemptResponse.quizTitle || "Quiz",
+          timeLimitMinutes: 15,
           attemptId: attemptResponse.quizAttemptId,
           questions: questions,
           currentQuestionIndex: 0,
-          selectedAnswers: attemptResponse.selectedAnswers || {},
-          startTime: startTime,
-          timeRemaining: actualRemainingSeconds,
+          selectedAnswers: {},
+          startTime: new Date(),
+          timeRemaining: 15 * 60,
           isCompleted: false
         };
         
         setQuizAttempt(newQuizAttempt);
-        
+        startTimer(15 * 60);
       } catch (error) {
         console.error('Error initializing quiz:', error);
         setError("Failed to load quiz. Please try again.");
@@ -510,76 +510,47 @@ const TakeQuiz: React.FC = () => {
     };
 
     initializeQuiz();
+
+    // Improved cleanup
+    return () => {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        setTimerInterval(null);
+      }
+    };
   }, [quizId, navigate, courseId]);
 
-  // Robust timer effect
-  useEffect(() => {
-    if (!quizAttempt || quizAttempt.isCompleted || isSubmitting || isTimeUp) {
-      return;
+  const startTimer = useCallback((initialSeconds: number) => {
+    // Clear any existing timer first
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      setTimerInterval(null);
     }
 
-    const totalDurationInSeconds = quizAttempt.timeLimitMinutes * 60;
-    const startTimeMs = quizAttempt.startTime.getTime();
+    const newInterval = setInterval(() => {
+      setQuizAttempt(prev => {
+        if (!prev) return null;
 
-    const timer = setInterval(() => {
-      const elapsedSeconds = Math.floor((Date.now() - startTimeMs) / 1000);
-      const newTimeRemaining = totalDurationInSeconds - elapsedSeconds;
-
-      if (newTimeRemaining <= 0) {
-        setQuizAttempt(prev => prev ? { ...prev, timeRemaining: 0 } : null);
-        setIsTimeUp(true);
-        clearInterval(timer);
-      } else {
-        setQuizAttempt(prev => prev ? { ...prev, timeRemaining: newTimeRemaining } : null);
-      }
+        const newTimeRemaining = prev.timeRemaining - 1;
+        
+        if (newTimeRemaining <= 0) {
+          clearInterval(newInterval);
+          // We need to clear the timer state to avoid memory leaks
+          setTimerInterval(null);
+          handleCompleteQuiz();
+          return { ...prev, timeRemaining: 0 };
+        }
+        
+        return { ...prev, timeRemaining: newTimeRemaining };
+      });
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [quizAttempt, isSubmitting, isTimeUp]);
-
-  // Submission handler function
-  const handleCompleteQuiz = useCallback(async (isAutoSubmit: boolean = false) => {
-    if (!quizAttempt || isSubmitting) return;
-
-    const unansweredCount = quizAttempt.questions.filter(q => 
-      q && q.quizBankQuestionId && !quizAttempt.selectedAnswers[q.quizBankQuestionId]
-    ).length;
-
-    if (!isAutoSubmit && unansweredCount > 0) {
-      toast.error(`You have ${unansweredCount} unanswered questions. Please answer all questions before submitting.`);
-      return;
-    }
-    
-    if (isAutoSubmit) {
-        toast.error("Time's up! Submitting your quiz automatically.", { icon: '⏰' });
-    }
-
-    setIsSubmitting(true);
-    
-    try {
-      await completeQuizAttempt(quizAttempt.attemptId);
-      navigate(`/learner/quiz-results/${quizAttempt.attemptId}`, {
-        state: { courseId }
-      });
-    } catch (error) {
-      console.error('Error completing quiz:', error);
-      toast.error('Failed to submit quiz. Please try again.');
-      setIsSubmitting(false);
-    }
-  }, [quizAttempt, isSubmitting, navigate, courseId]);
-
-  // Effect to handle auto-submission on time up
-  useEffect(() => {
-    if (isTimeUp) {
-      handleCompleteQuiz(true);
-    }
-  }, [isTimeUp, handleCompleteQuiz]);
-
+    setTimerInterval(newInterval);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatTimeRemaining = (seconds: number): string => {
-    const safeSeconds = Math.max(0, seconds); 
-    const minutes = Math.floor(safeSeconds / 60);
-    const remainingSeconds = safeSeconds % 60;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
@@ -588,6 +559,7 @@ const TakeQuiz: React.FC = () => {
 
     setSelectedOption(optionId);
     
+    // Add a small delay for visual feedback
     setTimeout(() => {
       setQuizAttempt(prev => {
         if (!prev) return null;
@@ -611,15 +583,64 @@ const TakeQuiz: React.FC = () => {
   };
 
   const handlePrevQuestion = () => {
-    setQuizAttempt(prev => prev ? { ...prev, currentQuestionIndex: Math.max(0, prev.currentQuestionIndex - 1) } : null);
+    setQuizAttempt(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        currentQuestionIndex: Math.max(0, prev.currentQuestionIndex - 1)
+      };
+    });
   };
 
   const handleNextQuestion = () => {
-    setQuizAttempt(prev => prev ? { ...prev, currentQuestionIndex: Math.min(prev.questions.length - 1, prev.currentQuestionIndex + 1) } : null);
+    setQuizAttempt(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        currentQuestionIndex: Math.min(prev.questions.length - 1, prev.currentQuestionIndex + 1)
+      };
+    });
   };
 
   const handleJumpToQuestion = (index: number) => {
-    setQuizAttempt(prev => prev ? { ...prev, currentQuestionIndex: index } : null);
+    setQuizAttempt(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        currentQuestionIndex: index
+      };
+    });
+  };
+
+  const handleCompleteQuiz = async () => {
+    if (!quizAttempt || isSubmitting) return;
+
+    const unansweredCount = quizAttempt.questions.filter(q => 
+      q && q.quizBankQuestionId && !quizAttempt.selectedAnswers[q.quizBankQuestionId]
+    ).length;
+
+    if (unansweredCount > 0 && !window.confirm(`You have ${unansweredCount} unanswered questions. Are you sure you want to submit?`)) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      // Clear the timer interval before navigating away
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        setTimerInterval(null);
+      }
+      
+      await completeQuizAttempt(quizAttempt.attemptId);
+      navigate(`/learner/quiz-results/${quizAttempt.attemptId}`, {
+        state: { courseId }
+      });
+    } catch (error) {
+      console.error('Error completing quiz:', error);
+      toast.error('Failed to submit quiz. Please try again.');
+      setIsSubmitting(false);
+    }
   };
 
   // --- FIX START: Corrected the navigate call to resolve TypeScript error ---
@@ -634,9 +655,19 @@ const TakeQuiz: React.FC = () => {
 
     if (quizAttempt && !quizAttempt.isCompleted) {
       if (window.confirm('Your progress will be saved. You can resume this quiz later. Are you sure you want to exit?')) {
+        if (courseId) {
+          navigate(`/learner/course-view/${courseId}`);
+        } else {
+          navigate(-1);
+        }
         performExit();
       }
     } else {
+      if (courseId) {
+        navigate(`/learner/course-view/${courseId}`);
+      } else {
+        navigate(-1);
+      }
       performExit();
     }
   };
@@ -663,7 +694,10 @@ const TakeQuiz: React.FC = () => {
           <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <h2 className="text-white text-xl font-bold mb-2">Quiz Error</h2>
           <p className="text-white/80 mb-6">{error}</p>
-          <button onClick={() => navigate(-1)} className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-6 py-3 rounded-lg font-medium">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-6 py-3 rounded-lg font-medium"
+          >
             Go Back
           </button>
         </div>
@@ -688,23 +722,35 @@ const TakeQuiz: React.FC = () => {
     );
   }
   
-  const selectedOptionId = currentQuestion.quizBankQuestionId ? quizAttempt.selectedAnswers[currentQuestion.quizBankQuestionId] : undefined;
+  const selectedOptionId = currentQuestion.quizBankQuestionId ? 
+    quizAttempt.selectedAnswers[currentQuestion.quizBankQuestionId] : undefined;
+  
   const answeredCount = Object.keys(quizAttempt.selectedAnswers).length;
   const totalQuestions = quizAttempt.questions.length;
-  const progressPercent = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
-  const allQuestionsAnswered = answeredCount === totalQuestions;
+  const progressPercent = (answeredCount / totalQuestions) * 100;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
-          <button onClick={handleExit} className="flex items-center text-[#D68BF9] hover:text-white transition-colors text-sm">
+          <button
+            onClick={handleExit}
+            className="flex items-center text-[#D68BF9] hover:text-white transition-colors text-sm"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Exit Quiz
           </button>
+          
           <h1 className="text-white text-xl font-bold">{quizAttempt.quizTitle}</h1>
-          <div className={`flex items-center px-4 py-2 rounded-lg ${quizAttempt.timeRemaining < 60 ? 'bg-red-500/30 text-red-400' : 'bg-[#1B0A3F]/60 text-[#D68BF9]'}`}>
+          
+          <div className={`flex items-center px-4 py-2 rounded-lg ${
+            quizAttempt.timeRemaining < 60 
+              ? 'bg-red-500/30 text-red-300' 
+              : quizAttempt.timeRemaining < 300
+              ? 'bg-yellow-500/20 text-yellow-300'
+              : 'bg-[#1B0A3F]/60 text-[#D68BF9]'
+          }`}>
             <Clock size={16} className="mr-2" />
             <span className="font-mono font-bold">{formatTimeRemaining(quizAttempt.timeRemaining)}</span>
           </div>
@@ -719,6 +765,7 @@ const TakeQuiz: React.FC = () => {
             </div>
             <span className="text-white">{Math.round(progressPercent)}%</span>
           </div>
+          
           <div className="w-full bg-[#34137C] rounded-full h-4">
             <div 
               className="h-4 rounded-full bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9]"
@@ -739,7 +786,7 @@ const TakeQuiz: React.FC = () => {
                 <button
                   key={index}
                   onClick={() => handleJumpToQuestion(index)}
-                  className={`relative w-10 h-10 rounded-lg flex items-center justify-center text-sm font-medium transition-colors ${
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-medium transition-colors ${
                     isCurrent 
                       ? 'bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] text-white' 
                       : isAnswered
@@ -749,7 +796,7 @@ const TakeQuiz: React.FC = () => {
                 >
                   {index + 1}
                   {isAnswered && !isCurrent && (
-                    <CheckCircle className="w-3 h-3 absolute -top-1 -right-1 text-green-400 bg-[#1B0A3F] rounded-full" />
+                    <CheckCircle className="w-3 h-3 absolute -top-1 -right-1" />
                   )}
                 </button>
               );
@@ -778,17 +825,35 @@ const TakeQuiz: React.FC = () => {
               return (
                 <button
                   key={option.mcqOptionId}
-                  onClick={() => currentQuestion.quizBankQuestionId && handleSelectAnswer(currentQuestion.quizBankQuestionId, option.mcqOptionId)}
-                  className={`w-full text-left p-4 rounded-lg border transition-colors ${isSelected ? 'bg-[#BF4BF6]/20 border-[#BF4BF6]' : 'bg-[#34137C]/30 border-[#34137C]/30 hover:border-[#BF4BF6]/50'} ${isAnimating ? 'opacity-70' : ''}`}
+                  onClick={() => {
+                    if (currentQuestion.quizBankQuestionId) {
+                      handleSelectAnswer(currentQuestion.quizBankQuestionId, option.mcqOptionId);
+                    }
+                  }}
+                  className={`w-full text-left p-4 rounded-lg border transition-colors ${
+                    isSelected
+                      ? 'bg-[#BF4BF6]/20 border-[#BF4BF6]'
+                      : 'bg-[#34137C]/30 border-[#34137C]/30 hover:border-[#BF4BF6]/50'
+                  } ${
+                    isAnimating ? 'opacity-70' : ''
+                  }`}
                 >
                   <div className="flex items-center">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-medium mr-3 ${isSelected ? 'bg-[#BF4BF6] text-white' : 'bg-[#34137C] text-white/90'}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-medium mr-3 ${
+                      isSelected
+                        ? 'bg-[#BF4BF6] text-white'
+                        : 'bg-[#34137C] text-white/90'
+                    }`}>
                       {optionLabels[index]}
                     </div>
-                    <span className={`flex-1 ${isSelected ? 'text-white' : 'text-white/90'}`}>
+                    <span className={`flex-1 ${
+                      isSelected ? 'text-white' : 'text-white/90'
+                    }`}>
                       {option.optionText}
                     </span>
-                    {isSelected && <CheckCircle className="w-5 h-5 text-[#BF4BF6]" />}
+                    {isSelected && (
+                      <CheckCircle className="w-5 h-5 text-[#BF4BF6]" />
+                    )}
                   </div>
                 </button>
               );
@@ -801,7 +866,11 @@ const TakeQuiz: React.FC = () => {
           <button
             onClick={handlePrevQuestion}
             disabled={quizAttempt.currentQuestionIndex === 0}
-            className={`px-6 py-3 rounded-lg flex items-center ${quizAttempt.currentQuestionIndex === 0 ? 'bg-[#34137C]/30 text-white/50 cursor-not-allowed' : 'bg-[#34137C] text-[#D68BF9] hover:bg-[#34137C]/80'}`}
+            className={`px-6 py-3 rounded-lg flex items-center ${
+              quizAttempt.currentQuestionIndex === 0
+                ? 'bg-[#34137C]/30 text-white/50 cursor-not-allowed'
+                : 'bg-[#34137C] text-[#D68BF9] hover:bg-[#34137C]/80'
+            }`}
           >
             <ArrowLeft size={16} className="mr-2" />
             Previous
@@ -817,11 +886,24 @@ const TakeQuiz: React.FC = () => {
             </button>
           ) : (
             <button
-              onClick={() => handleCompleteQuiz(false)}
-              disabled={isSubmitting || !allQuestionsAnswered}
-              className="px-6 py-3 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] text-white rounded-lg hover:from-[#A845E8] hover:to-[#BF4BF6] disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              onClick={handleCompleteQuiz}
+              disabled={isSubmitting}
+              className="px-6 py-3 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] text-white rounded-lg hover:from-[#A845E8] hover:to-[#BF4BF6] disabled:opacity-50 flex items-center"
             >
-              {isSubmitting ? "Submitting..." : <><Trophy size={16} className="mr-2" /> Complete Quiz</>}
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Trophy size={16} className="mr-2" />
+                  Complete Quiz
+                </>
+              )}
             </button>
           )}
         </div>
