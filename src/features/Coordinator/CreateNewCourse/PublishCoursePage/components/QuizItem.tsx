@@ -17,7 +17,6 @@ interface QuizItemProps {
 const QuizItem: React.FC<QuizItemProps> = ({ 
   lessonId, 
   quiz, 
-  handleViewQuiz, 
   isEditMode = false,
   onEditQuiz,
   onRemoveQuiz,

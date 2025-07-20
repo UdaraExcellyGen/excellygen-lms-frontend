@@ -1,7 +1,7 @@
 // features/Coordinator/CreateNewCourse/PublishCoursePage/components/MaterialItem.tsx
 import React from 'react';
 // Import refined types
-import { ExistingMaterialFile, SubtopicFE } from '../../../../../types/course.types'; // Adjust path
+import { ExistingMaterialFile } from '../../../../../types/course.types'; // Adjust path
 import { FileText, X } from 'lucide-react';
 
 interface MaterialItemProps {

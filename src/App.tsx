@@ -58,18 +58,18 @@ const CourseCoordinatorDashboard = lazy(() => import('./features/Coordinator/Coo
 const CourseCoordinatorAnalytics = lazy(() => import('./features/Coordinator/Analytics/CourseCoordinatorAnalytics'));
 const CCNotifications = lazy(() => import('./features/Coordinator/CoordinatorNotification/CCNotifications'));
 const LearnerListPage = lazy(() => import('./features/Coordinator/LearnerListPage/LearnerListPage'));
-const LearnerQuizPage = lazy(() => import('./features/Coordinator/learnerQuizPage/learnerQuizPage'));
-const QuizCreator = lazy(() => import('./features/Coordinator/QuizCreator/QuizCreator'));
+// const LearnerQuizPage = lazy(() => import('./features/Coordinator/learnerQuizPage/learnerQuizPage'));
+// const QuizCreator = lazy(() => import('./features/Coordinator/QuizCreator/QuizCreator'));
 const UploadMaterials = lazy(() => import('./features/Coordinator/CreateNewCourse/UploadMaterials/UploadMaterials'));
 const PublishCoursePage = lazy(() => import('./features/Coordinator/CreateNewCourse/PublishCoursePage/PublishCoursePage'));
 const CoursesDisplayPage = lazy(() => import('./features/Coordinator/CoursesDisplayPage/CoursesDisplayPage'));
 const CourseDetails = lazy(() => import('./features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails'));
 const CoordinatorCourseOverview = lazy(() => import('./features/Coordinator/coordinatorCourseView/CoordinatorCourseOverview/CoordinatorCourseOverview'));
-const AssignLearners = lazy(() => import('./features/Coordinator/coordinatorCourseView/AssignLearners/AssignLearners'));
-const CreateQuiz = lazy(() => import('./features/Coordinator/QuizManagement/CreateQuiz'));
+// const AssignLearners = lazy(() => import('./features/Coordinator/coordinatorCourseView/AssignLearners/AssignLearners'));
+const CreateQuiz = lazy(() => import('./features/Coordinator/QuizManagement/CreateQuiz/CreateQuiz'));
 const EditQuiz = lazy(() => import('./features/Coordinator/QuizManagement/EditQuiz'));
-const QuizList = lazy(() => import('./features/Coordinator/LessonQuizzes/QuizList'));
-const QuizResultsCoordinator = lazy(() => import('./features/Coordinator/LessonQuizzes/QuizResultsCoordinator'));
+// const QuizList = lazy(() => import('./features/Coordinator/LessonQuizzes/QuizList'));
+// const QuizResultsCoordinator = lazy(() => import('./features/Coordinator/LessonQuizzes/QuizResultsCoordinator'));
 
 // Project Manager Components
 const ProjectManagerDashboard = lazy(() => import('./features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard'));
@@ -165,10 +165,10 @@ function App() {
     </Suspense>
   );
 
-  const CourseAssignLearners = () => {
-    const { courseData } = useCourseContext();
-    return <AssignLearners courseName={courseData.basicDetails.title} />;
-  };
+  // const CourseAssignLearners = () => {
+  //   const { courseData } = useCourseContext();
+  //   return <AssignLearners courseName={courseData.basicDetails.title} />;
+  // };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -235,18 +235,18 @@ function App() {
           <Route path="analytics" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(CourseCoordinatorAnalytics)}</ProtectedRoute>} />
           <Route path="notifications" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(CCNotifications)}</ProtectedRoute>} />
           <Route path="learner-list" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(LearnerListPage)}</ProtectedRoute>} />
-          <Route path="quiz-learner-view" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(LearnerQuizPage)}</ProtectedRoute>} />
-          <Route path="quiz-creator" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{withCourseContext(QuizCreator)}</ProtectedRoute>} />
+          {/* <Route path="quiz-learner-view" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(LearnerQuizPage)}</ProtectedRoute>} /> */}
+          {/* <Route path="quiz-creator" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{withCourseContext(QuizCreator)}</ProtectedRoute>} /> */}
           <Route path="upload-materials/:courseId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{withCourseContext(UploadMaterials)}</ProtectedRoute>} />
           <Route path="publish-Course/:courseId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{withCourseContext(PublishCoursePage)}</ProtectedRoute>} />
           <Route path="course-display-page" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{withCourseContext(CoursesDisplayPage)}</ProtectedRoute>} />
           <Route path="course-details/:courseId?" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{withCourseContext(CourseDetails)}</ProtectedRoute>} />
           <Route path="course-view/:courseId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(CoordinatorCourseOverview)}</ProtectedRoute>} />
-          <Route path="assign-learners" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{withCourseContext(CourseAssignLearners)}</ProtectedRoute>} />
+          {/* <Route path="assign-learners" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{withCourseContext(CourseAssignLearners)}</ProtectedRoute>} /> */}
           <Route path="create-quiz/:lessonId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(CreateQuiz)}</ProtectedRoute>} />
           <Route path="edit-quiz/:quizId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(EditQuiz)}</ProtectedRoute>} />
-          <Route path="quiz-list/:lessonId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(QuizList)}</ProtectedRoute>} />
-          <Route path="quiz-results/:quizId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(QuizResultsCoordinator)}</ProtectedRoute>} />
+          {/* <Route path="quiz-list/:lessonId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(QuizList)}</ProtectedRoute>} />
+          <Route path="quiz-results/:quizId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(QuizResultsCoordinator)}</ProtectedRoute>} /> */}
         </Route>
         
         {/* PROJECT MANAGER ROUTES */}

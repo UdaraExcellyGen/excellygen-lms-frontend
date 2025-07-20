@@ -370,50 +370,49 @@ const EditQuiz: React.FC = () => {
     }
 
     if (isViewOnly) {
-        return ( 
-        <div className = "min-h-screen bg-gradient-to-b from-[#1B0A3F] to-[#52007C] p-6 font-nunito text-white" >
-            <div className = "max-w-4xl mx-auto" >
-            <div className = "flex justify-between items-center mb-6" >
-            <div className = "flex items-center gap-3" >
-            <ArrowLeft size = { 20}
-            className = "cursor-pointer"
-            onClick = { handleCancel}/> 
-            <h1 className = "text-xl font-bold" > View Quiz </h1> 
-            </div> 
+        return (  
+        <div className = "min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-6" >
+    <div className = "max-w-7xl mx-auto" >
+    <div className = "bg-white/90 backdrop-blur-md rounded-xl p-6 mb-6 flex justify-between items-center shadow-lg border border-[#BF4BF6]/20" >
+    <div className = "flex items-center gap-4" >
+    <button onClick = { handleCancel}
+className = "p-2 rounded-lg transition-colors h-10 w-10 flex items-center justify-center text-[#1B0A3F]" > < ArrowLeft size = { 20}/> </button> 
+<h1 className = "text-xl font-semibold text-[#1B0A3F] flex items-center gap-5" > < span > View Quiz </span><span className="text-sm bg-[#34137C] text-white px-4 py-1 rounded-lg">{quizState.quizTitle}</span > </h1> 
+</div> 
             <button onClick = { handleCancel}
-            className = "px-4 py-2 rounded-lg bg-gray-600/50 hover:bg-gray-500/50 transition-colors" >
+            className = "px-4 py-2 bg-gray-400 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-1" >
             Back 
             </button> 
             </div> 
             <div className = "flex items-center mb-1" >
             <button onClick = {() => setStep('details')
             }
-            className = { `px-6 py-3 rounded-t-lg font-medium transition-colors ${step === 'details' ? 'bg-[#34137C]/60' : 'bg-[#1B0A3F]/50 text-gray-400 hover:bg-[#34137C]/40'}`
+            className = { `px-4 py-2 rounded-tl-lg rounded-tr-lg  ${step === 'details' ? 'bg-white/90 text-[#1B0A3F]' : 'bg-[#34137C] text-white/90'}`
         } >
         Quiz Details 
         </button> 
         <button onClick = { handleContinueToQuestions}
-        className = { `px-6 py-3 rounded-t-lg font-medium transition-colors ${step === 'questions' ? 'bg-[#34137C]/60' : 'bg-[#1B0A3F]/50 text-gray-400 hover:bg-[#34137C]/40'}`
+        className = { `px-4 py-2 rounded-tl-lg rounded-tr-lg ${step === 'questions' ? 'bg-white/90 text-[#1B0A3F]' : 'bg-[#34137C] text-white/90'}`
     } >
     Questions({ quizState.questions.length } / { quizState.quizBankSize }) 
     </button> 
     </div> 
-    <div className = "bg-[#34137C]/60 rounded-b-lg rounded-r-lg p-6" > {
+    <div className = "bg-white/90 rounded-b-lg rounded-r-lg p-6" > {
         step === 'details' ? ( 
         <div className = "space-y-6" >
-            <div > < label className = "block text-gray-300 mb-1" > Quiz Title </label><input type="text" value={quizState.quizTitle} readOnly className="w-full p-2.5 rounded-lg bg-[#1B0A3F]/80 border border-transparent"/ > </div> 
+            <div > < label className = "block text-[#1B0A3F] mb-1" > Quiz Title </label><input type="text" value={quizState.quizTitle} readOnly className="w-full p-2.5 rounded-lg border border-[#52007C]"/ > </div> 
             <div className = "grid grid-cols-3 gap-6" >
-            <div > < label className = "block text-gray-300 mb-1" > Time Limit(minutes) </label><input type="number" value={quizState.timeLimitMinutes} readOnly className="w-full p-2.5 rounded-lg bg-[#1B0A3F]/80 border border-transparent"/ > </div> 
-            <div > < label className = "block text-gray-300 mb-1" > Quiz Size(questions shown) </label><input type="number" value={quizState.quizSize} readOnly className="w-full p-2.5 rounded-lg bg-[#1B0A3F]/80 border border-transparent"/ > </div> 
-            <div > < label className = "block text-gray-300 mb-1" > Question Bank Size </label><input type="number" value={quizState.quizBankSize} readOnly className="w-full p-2.5 rounded-lg bg-[#1B0A3F]/80 border border-transparent"/ > </div> 
+            <div > < label className = "block text-[#1B0A3F] mb-1" > Time Limit(minutes) </label><input type="number" value={quizState.timeLimitMinutes} readOnly className="w-full p-2.5 rounded-lg border border-[#52007C]"/ > </div> 
+            <div > < label className = "block text-[#1B0A3F] mb-1" > Quiz Size(questions shown) </label><input type="number" value={quizState.quizSize} readOnly className="w-full p-2.5 rounded-lg border border-[#52007C]"/ > </div> 
+            <div > < label className = "block text-[#1B0A3F] mb-1" > Question Bank Size </label><input type="number" value={quizState.quizBankSize} readOnly className="w-full p-2.5 rounded-lg border border-[#52007C]"/ > </div> 
             </div> 
-            <div className = "bg-[#1B0A3F]/70 p-4 rounded-lg" >
+            <div className = "bg-[#1B0A3F]/80 p-4 rounded-lg" >
             <h3 className = "font-semibold text-gray-200" > About Quiz Banks </h3> 
             <p className = "text-sm text-gray-400 mt-1" > The quiz bank lets you create a larger set of questions, from which a random subset will be chosen each time a learner takes the quiz. </p> 
             <p className = "text-sm text-yellow-400 mt-2" > Note: This quiz is in view - only mode.You cannot edit details or add / remove questions. </p> 
             </div> 
             <div className = "flex justify-end pt-4" > < button onClick = { handleContinueToQuestions}
-            className = "px-5 py-2 rounded-lg bg-[#BF4BF6] hover:bg-[#a845e8] transition-colors" > View Questions </button></div >
+            className = "px-5 py-2.5 border border-[#52007C] text-[#1B0A3F] rounded-lg hover:bg-[#BF4BF6]/10 rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" > View Questions </button></div >
             </div>
         ) : ( 
         <div className = "space-y-6" >
@@ -422,15 +421,15 @@ const EditQuiz: React.FC = () => {
                     onClick = {
                         () => handleNavigateToQuestion(index)
                     }
-                    className = { `w-9 h-9 rounded-md flex items-center justify-center font-bold transition-colors ${quizState.currentQuestionIndex === index ? 'bg-[#BF4BF6]' : 'bg-[#1B0A3F]/80 hover:bg-[#1B0A3F]'}`
+                    className = { `w-9 h-9 rounded-md flex items-center justify-center font-bold transition-colors ${quizState.currentQuestionIndex === index ? 'bg-[#34137C] text-white' : 'bg-[#34137C]/50 text-white'}`
                 } > { index + 1 } </button>))} 
                 </div> {
                 quizState.questions.length > 0 && ( 
-                <div className = "bg-[#1B0A3F]/60 p-5 rounded-lg space-y-4" >
+                <div className = " p-5 rounded-lg space-y-4" >
                 <h3 className = "font-semibold text-lg" > Question { quizState.currentQuestionIndex + 1 } </h3> 
-                <div > < label className = "block text-gray-300 mb-1" > Question Content </label><textarea value={quizState.questions[quizState.currentQuestionIndex]?.questionContent || ''} readOnly rows={3} className="w-full p-2.5 rounded-lg bg-[#1B0A3F]/80 border border-transparent"/ > </div> 
+                <div > < label className = "block text-[#1B0A3F] mb-2 font-medium" > Question Content </label><textarea value={quizState.questions[quizState.currentQuestionIndex]?.questionContent || ''} readOnly rows={3} className="w-full p-2.5 rounded-lg border border-transparent"/ > </div> 
                 <div >
-                <label className = "block text-gray-300 mb-2" > Answer Options </label> 
+                <label className = "block text-[#1B0A3F] mb-2 font-medium" > Answer Options </label> 
                 <div className = "space-y-3" > {
                     quizState.questions[quizState.currentQuestionIndex]?.options.map((option, optionIndex) => ( 
                 <div key = { optionIndex}
@@ -439,7 +438,7 @@ const EditQuiz: React.FC = () => {
             } > { option.isCorrect && < CheckCircle size = { 14}/>}</div> 
             <input type = "text"
             value = { option.optionText}
-            readOnly className = "w-full p-2.5 rounded-lg bg-[#1B0A3F]/80 border border-transparent" />
+            readOnly className = "w-full p-2.5 rounded-lg border border-transparent" />
                 </div>
             ))
         } 
@@ -449,7 +448,7 @@ const EditQuiz: React.FC = () => {
     )
 } 
 <div className = "flex justify-between items-center pt-4" > < button onClick = { handleBackToDetails}
-className = "px-5 py-2 rounded-lg bg-gray-600/50 hover:bg-gray-500/50 transition-colors" > Back to Details </button></div >
+className = "px-5 py-2.5 border border-[#52007C] text-[#1B0A3F] rounded-lg hover:bg-[#BF4BF6]/10 rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" > Back to Details </button></div >
     </div>
 )
 } 
@@ -461,18 +460,18 @@ className = "px-5 py-2 rounded-lg bg-gray-600/50 hover:bg-gray-500/50 transition
 return ( 
 <div className = "min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-6" >
     <div className = "max-w-7xl mx-auto" >
-    <div className = "bg-[#1B0A3F]/60 backdrop-blur-md rounded-xl p-6 mb-6 flex justify-between items-center shadow-lg border border-[#BF4BF6]/20" >
+    <div className = "bg-white/90 backdrop-blur-md rounded-xl p-6 mb-6 flex justify-between items-center shadow-lg border border-[#BF4BF6]/20" >
     <div className = "flex items-center gap-4" >
     <button onClick = { handleCancel}
-className = "bg-[#34137C]/60 hover:bg-[#34137C] p-2 rounded-lg transition-colors h-10 w-10 flex items-center justify-center text-[#D68BF9]" > < ArrowLeft size = { 20}/> </button> 
-<h1 className = "text-xl font-semibold text-white flex items-center gap-2" > < span > Edit Quiz </span><span className="text-sm bg-[#34137C] text-[#D68BF9] px-3 py-1 rounded-full">{quizState.quizTitle}</span > </h1> 
+className = "p-2 rounded-lg transition-colors h-10 w-10 flex items-center justify-center text-[#1B0A3F]" > < ArrowLeft size = { 20}/> </button> 
+<h1 className = "text-xl font-semibold text-[#1B0A3F] flex items-center gap-5" > < span > Edit Quiz </span><span className="text-sm bg-[#34137C] text-white px-4 py-1 rounded-lg">{quizState.quizTitle}</span > </h1> 
 </div> 
 <div className = "flex gap-3" >
 <button onClick = { handleCancel}
-className = "px-4 py-2 bg-[#34137C]/60 text-white rounded-lg hover:bg-[#34137C] transition-colors flex items-center gap-1"
+className = "px-4 py-2 bg-gray-400 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-1"
 disabled = { isSaving } > Cancel </button> 
 <button onClick = { handleSaveQuiz}
-className = "px-5 py-2 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+className = "px-5 py-2 bg-[#52007C] hover:bg-[#D68BF9] text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
 disabled = { isSaving } > {
     isSaving ? 'Saving...' : < > < Save size = { 16}/> Save Changes</>
 } 
@@ -480,19 +479,17 @@ disabled = { isSaving } > {
 </div> 
 </div> 
 <div className = "flex mb-4" >
-<button className = { `px-5 py-3 rounded-t-lg flex items-center gap-1.5 font-medium transition-colors ${step === 'details' ? 'bg-[#1B0A3F]/60 text-white border-t border-l border-r border-[#BF4BF6]/30' : 'bg-[#34137C]/30 text-[#D68BF9] hover:bg-[#34137C]/50'}`
+<button className = { `px-4 py-2 rounded-tl-lg rounded-tr-lg ${step === 'details' ? 'bg-white/90 text-[#1B0A3F]' : 'bg-[#34137C] text-white/90'}`
 }
 onClick = {
     () => setStep('details')
 } >
-<span className = { `w-5 h-5 rounded-full flex items-center justify-center text-xs ${step === 'details' ? 'bg-[#BF4BF6] text-white' : 'bg-[#34137C] text-[#D68BF9]'}`
-} > 1 </span>Quiz Details 
+Quiz Details 
 </button> 
-<button className = { `px-5 py-3 rounded-t-lg flex items-center gap-1.5 font-medium transition-colors ${step === 'questions' ? 'bg-[#1B0A3F]/60 text-white border-t border-l border-r border-[#BF4BF6]/30' : 'bg-[#34137C]/30 text-[#D68BF9] hover:bg-[#34137C]/50'}`
+<button className = { `px-4 py-2 rounded-tl-lg rounded-tr-lg ${step === 'questions' ? 'bg-white/90 text-[#1B0A3F]' : 'bg-[#34137C] text-white/90'}`
 }
 onClick = { handleContinueToQuestions} >
-<span className = { `w-5 h-5 rounded-full flex items-center justify-center text-xs ${step === 'questions' ? 'bg-[#BF4BF6] text-white' : 'bg-[#34137C] text-[#D68BF9]'}`
-} > 2 </span>Questions ({quizState.questions.length}) 
+Questions ({quizState.questions.length}) 
 </button> 
 </div> {
 quizState.quizBankSize !== quizState.questions.length && ( 
@@ -501,48 +498,48 @@ size = { 20}/> <p className="text-yellow-200 text-sm"><span className="font-bold
 questions, but your bank size is { quizState.quizBankSize }. </p></div > </div>
 )
 } 
-<div className = "bg-[#1B0A3F]/60 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 p-6 shadow-lg" > {
+<div className = "bg-white/90 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 p-6 shadow-lg" > {
 step === 'details' ? ( 
 <div className = "space-y-6" >
-<div > < label className = "block text-white mb-2 font-medium" > Quiz Title </label><input type="text" name="quizTitle" value={quizState.quizTitle} onChange={handleInputChange} className={`w-full p-3 rounded-lg bg-[#34137C]/60 text-white border ${errors.quizTitle ? 'border-red-500' : 'border-[#BF4BF6]/30'} focus:outline-none focus:border-[#BF4BF6]`} placeholder="Enter quiz title"/ > {
+<div > < label className = "block text-[#1B0A3F] mb-2 font-medium" > Quiz Title </label><input type="text" name="quizTitle" value={quizState.quizTitle} onChange={handleInputChange} className={`w-full p-3 rounded-lg text-[#1B0A3F] border ${errors.quizTitle ? 'border-red-500' : 'border-[#52007C]'} focus:outline-none focus:border-[#BF4BF6]`} placeholder="Enter quiz title"/ > {
     errors.quizTitle && < p className = "text-red-400 mt-1 text-sm" > { errors.quizTitle } </p>}</div> 
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div > < label className = "block text-white mb-2 font-medium" > Time Limit(minutes) </label><input type="number" name="timeLimitMinutes" value={quizState.timeLimitMinutes} onChange={handleInputChange} className={`w-full p-3 rounded-lg bg-[#34137C]/60 text-white border ${errors.timeLimitMinutes ? 'border-red-500' : 'border-[#BF4BF6]/30'} focus:outline-none focus:border-[#BF4BF6]`} min="1" max="180"/ > {
+    <div > < label className = "block text-[#1B0A3F] mb-2 font-medium" > Time Limit(minutes) </label><input type="number" name="timeLimitMinutes" value={quizState.timeLimitMinutes} onChange={handleInputChange} className={`w-full p-3 rounded-lg text-[#1B0A3F] border ${errors.timeLimitMinutes ? 'border-red-500' : 'border-[#52007C]'} focus:outline-none focus:border-[#BF4BF6]`} min="1" max="180"/ > {
         errors.timeLimitMinutes && < p className = "text-red-400 mt-1 text-sm" > { errors.timeLimitMinutes } </p>}</div> 
-        <div > < label className = "block text-white mb-2 font-medium" > Quiz Size(questions shown) </label><input type="number" name="quizSize" value={quizState.quizSize} onChange={handleInputChange} className={`w-full p-3 rounded-lg bg-[#34137C]/60 text-white border ${errors.quizSize ? 'border-red-500' : 'border-[#BF4BF6]/30'} focus:outline-none focus:border-[#BF4BF6]`} min="1" max="100"/ > {
+        <div > < label className = "block text-[#1B0A3F] mb-2 font-medium" > Quiz Size(questions shown) </label><input type="number" name="quizSize" value={quizState.quizSize} onChange={handleInputChange} className={`w-full p-3 rounded-lg text[#1B0A3F] border ${errors.quizSize ? 'border-red-500' : 'border-[#52007C]'} focus:outline-none focus:border-[#BF4BF6]`} min="1" max="100"/ > {
             errors.quizSize && < p className = "text-red-400 mt-1 text-sm" > { errors.quizSize } </p>}</div> 
-            <div > < label className = "block text-white mb-2 font-medium" > Question Bank Size </label><input type="number" name="quizBankSize" value={quizState.quizBankSize} onChange={handleInputChange} className={`w-full p-3 rounded-lg bg-[#34137C]/60 text-white border ${errors.quizBankSize ? 'border-red-500' : 'border-[#BF4BF6]/30'} focus:outline-none focus:border-[#BF4BF6]`} min={quizState.quizSize}/ > {
+            <div > < label className = "block text-[#1B0A3F] mb-2 font-medium" > Question Bank Size </label><input type="number" name="quizBankSize" value={quizState.quizBankSize} onChange={handleInputChange} className={`w-full p-3 rounded-lg text-[#1B0A3F] border ${errors.quizBankSize ? 'border-red-500' : 'border-[#52007C]'} focus:outline-none focus:border-[#BF4BF6]`} min={quizState.quizSize}/ > {
                 errors.quizBankSize && < p className = "text-red-400 mt-1 text-sm" > { errors.quizBankSize } </p>}</div> 
                 </div> 
-                <div className = "bg-[#34137C]/50 rounded-lg p-4 border border-[#BF4BF6]/30 text-white" > < h3 className = "text-[#D68BF9] font-semibold mb-2" > About Quiz Banks </h3><p className="text-sm">The quiz bank lets you create a larger set of questions, from which a random subset will be chosen each time a learner takes the quiz. This helps prevent memorization and encourages deeper understanding of the material.</p > </div> 
+                <div className = "bg-[#34137C]/70 rounded-lg p-4 border border-[#BF4BF6]/30 text-white" > < h3 className = "text-[#D68BF9] font-semibold mb-2" > About Quiz Banks </h3><p className="text-sm">The quiz bank lets you create a larger set of questions, from which a random subset will be chosen each time a learner takes the quiz. This helps prevent memorization and encourages deeper understanding of the material.</p > </div> 
                 <div className = "flex justify-end mt-4" > < button onClick = { handleContinueToQuestions}
-                className = "px-5 py-2.5 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" > Continue to Questions < ArrowLeft className = "transform rotate-180 w-4 h-4"/> </button></div >
+                className = "px-5 py-2.5 border border-[#52007C] text-[#1B0A3F] rounded-lg hover:bg-[#BF4BF6]/10 rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" > Continue to Questions < ArrowLeft className = "transform rotate-180 w-4 h-4"/> </button></div >
                 </div>
             ) : ( 
             <div >
-                <div className = "mb-6 border-b border-[#BF4BF6]/20 pb-4" > < h3 className = "text-white font-medium mb-3" > Question Navigator </h3><div className="flex flex-wrap gap-2">{quizState.questions.map((_, index) => (<button key={index} onClick={() => handleNavigateToQuestion(index)} className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${quizState.currentQuestionIndex === index ? 'bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] text-white shadow-md transform scale-105' : 'bg-[#34137C]/60 text-[#D68BF9] hover:bg-[#34137C] hover:text-white'}`}>{index + 1}</button >))
+                <div className = "mb-6 border-b border-[#BF4BF6]/20 pb-4" > < h3 className = "text-[#1B0A3F] font-medium mb-3" > Question Navigator </h3><div className="flex flex-wrap gap-2">{quizState.questions.map((_, index) => (<button key={index} onClick={() => handleNavigateToQuestion(index)} className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${quizState.currentQuestionIndex === index ? 'bg-[#34137C]/80 text-white shadow-md transform scale-105' : 'bg-[#34137C] text-white/90 hover:bg-[#34137C]/60 hover:text-white'}`}>{index + 1}</button >))
             } < button onClick = { handleAddQuestion}
-            className = "w-10 h-10 rounded-lg bg-[#34137C]/60 text-[#D68BF9] flex items-center justify-center hover:bg-[#34137C] transition-colors"
+            className = "w-10 h-10 rounded-lg bg-[#34137C] text-white/90 flex items-center justify-center hover:bg-[#34137C] transition-colors"
             title = "Add new question" > < Plus size = { 18}/> </button></div > </div> {
                 quizState.questions.length > 0 && ( 
-            <div className = "bg-[#34137C]/40 rounded-lg p-6 mb-6 border border-[#BF4BF6]/20" >
-                <div className = "flex justify-between items-center mb-4 pb-3 border-b border-[#BF4BF6]/20" > < h3 className = "text-white font-semibold flex items-center" > < span className = "bg-[#BF4BF6] text-white w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2" > { quizState.currentQuestionIndex + 1 } </span>Question {quizState.currentQuestionIndex + 1} of {quizState.questions.length}</h3 > < button onClick = { handleRemoveQuestion}
-            className = "text-red-400 hover:text-red-300 bg-[#34137C]/60 hover:bg-[#34137C] p-2 rounded-lg transition-colors"
+            <div className = " rounded-lg p-6 mb-6 border border-[#34137C]" >
+                <div className = "flex justify-between items-center mb-4 pb-3 border-b border-[#BF4BF6]/20" > < h3 className = "text-[#1B0A3F] font-semibold flex items-center" > Question {quizState.currentQuestionIndex + 1} of {quizState.questions.length}</h3 > < button onClick = { handleRemoveQuestion}
+            className = "text-red-500 hover:text-red-400 p-2 rounded-lg transition-colors"
             disabled = { quizState.questions.length <= 1 }
             title = "Delete this question" > < Trash2 size = { 16}/> </button></div >
-            <div className = "mb-6" > < label className = "block text-white mb-2 font-medium" > Question Content </label><textarea value={quizState.questions[quizState.currentQuestionIndex]?.questionContent || ''} onChange={(e) => handleQuestionContentChange(e.target.value)} className="w-full p-3 rounded-lg bg-[#1B0A3F]/60 text-white border border-[#BF4BF6]/30 focus:outline-none focus:border-[#BF4BF6]" rows={3} placeholder="Enter your question here"/ > </div> 
-            <div className = "space-y-4" > < label className = "block text-white mb-2 font-medium" > Answer Options(select the correct one) </label>{quizState.questions[quizState.currentQuestionIndex]?.options.map((option, optionIndex) => (<div key={optionIndex} className="flex items-center gap-3 bg-[#1B0A3F]/40 p-3 rounded-lg border border-[#BF4BF6]/20 hover:border-[#BF4BF6]/40 transition-colors"><button type="button" onClick={() => handleCorrectAnswerChange(optionIndex)} className={`rounded-full w-6 h-6 flex-shrink-0 flex items-center justify-center border transition-all duration-200 ${option.isCorrect ? 'bg-[#BF4BF6] border-[#BF4BF6] text-white shadow-md transform scale-105' : 'border-[#BF4BF6]/50 bg-transparent hover:bg-[#34137C]'}`}>{option.isCorrect && <CheckCircle size={14}/>}</button > < input type = "text"
+            <div className = "mb-6" > < label className = "block text-[#1B0A3F] mb-2 font-medium" > Question Content </label><textarea value={quizState.questions[quizState.currentQuestionIndex]?.questionContent || ''} onChange={(e) => handleQuestionContentChange(e.target.value)} className="w-full p-3 rounded-lg text-[#1B0A3F] border border-[#BF4BF6]/30 focus:outline-none focus:border-[#BF4BF6]" rows={3} placeholder="Enter your question here"/ > </div> 
+            <div className = "space-y-4" > < label className = "block text-[#1B0A3F] mb-2 font-medium" > Answer Options(select the correct one) </label>{quizState.questions[quizState.currentQuestionIndex]?.options.map((option, optionIndex) => (<div key={optionIndex} className="flex items-center gap-3 p-3 rounded-lg  transition-colors"><button type="button" onClick={() => handleCorrectAnswerChange(optionIndex)} className={`rounded-full w-6 h-6 flex-shrink-0 flex items-center justify-center border transition-all duration-200 ${option.isCorrect ? 'bg-[#BF4BF6] border-[#BF4BF6] text-white shadow-md transform scale-105' : 'border-[#BF4BF6]/50 bg-transparent hover:bg-[#34137C]'}`}>{option.isCorrect && <CheckCircle size={14}/>}</button > < input type = "text"
             value = { option.optionText}
             onChange = {
                 (e) => handleOptionChange(optionIndex, e.target.value)
             }
-            className = "flex-1 p-2.5 rounded-lg bg-[#1B0A3F]/60 text-white border border-[#BF4BF6]/30 focus:outline-none focus:border-[#BF4BF6]"
+            className = "flex-1 p-2.5 rounded-lg text-[#1B0A3F] border border-[#BF4BF6]/30 focus:outline-none focus:border-[#BF4BF6]"
             placeholder = { `Option ${optionIndex + 1}`}/> </div >))} </div >
                 </div>
             )
         } 
         <div className = "flex justify-between mt-6" > < button onClick = { handleBackToDetails}
-        className = "px-5 py-2.5 border border-[#BF4BF6]/30 text-[#D68BF9] rounded-lg hover:bg-[#BF4BF6]/10 transition-colors flex items-center gap-2" > < ArrowLeft className = "w-4 h-4"/> Back to Quiz Details </button> <button onClick={handleSaveQuiz} className="px-5 py-2.5 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" disabled={isSaving}>{isSaving ? 'Saving...' : <><Save size={16}/> Save Quiz</>}</button > </div> 
+        className = "px-5 py-2.5 border border-[#52007C] text-[#1B0A3F] rounded-lg hover:bg-[#BF4BF6]/10 transition-colors flex items-center gap-2" > < ArrowLeft className = "w-4 h-4"/> Back to Quiz Details </button> <button onClick={handleSaveQuiz} className="px-5 py-2.5 bg-[#52007C] hover:bg-[#D68BF9] text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" disabled={isSaving}>{isSaving ? 'Saving...' : <><Save size={16}/> Save Quiz</>}</button > </div> 
         </div>
     )
 } 
