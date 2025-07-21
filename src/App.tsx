@@ -3,8 +3,8 @@
 import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { I18nextProvider } from 'react-i18next'; // ADDED
-import i18n from './i18n'; // ADDED
+import { I18nextProvider } from 'react-i18next';
+import i18n from './i18n';
 
 // Auth Provider
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -27,7 +27,7 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { UserRole } from './types/auth.types';
 
 // 🚀 LAZY LOADED COMPONENTS - Only load when needed
-const CvPage = lazy(() => import('./features/Learner/LearnerCv/Cv')); // <-- ADDED THIS IMPORT
+const CvPage = lazy(() => import('./features/Learner/LearnerCv/Cv'));
 
 // Learner Components
 const LearnerDashboard = lazy(() => import('./features/Learner/LearnerDashboard/LearnerDashboard'));
@@ -36,6 +36,7 @@ const BadgesAndRewards = lazy(() => import('./features/Learner/BadgesAndRewards/
 const LearnerProjects = lazy(() => import('./features/Learner/LearnerProjects/LearnerProjects'));
 const CertificatesPage = lazy(() => import('./features/Learner/Certificates/CertificatePage'));
 const DiscussionForum = lazy(() => import('./features/Learner/DiscussionForum/DiscussionForum'));
+const SingleThreadView = lazy(() => import('./features/Learner/DiscussionForum/SingleThreadView')); // <-- ADDED THIS IMPORT
 const LearnerNotifications = lazy(() => import('./features/Learner/LearnerNotifications/LearnerNotification'));
 const Leaderboard = lazy(() => import('./features/Learner/Leaderboard/Leaderboard'));
 const CourseCategories = lazy(() => import('./features/Learner/CourseCategories/CourseCategories'));
@@ -206,6 +207,7 @@ function App() {
           <Route path="projects" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(LearnerProjects)}</ProtectedRoute>} />
           <Route path="certificate" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(CertificatesPage)}</ProtectedRoute>} />
           <Route path="forum" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(DiscussionForum)}</ProtectedRoute>} />
+          <Route path="forum/threads/:threadId" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(SingleThreadView)}</ProtectedRoute>} /> {/* <-- ADDED THIS ROUTE */}
           <Route path="notifications" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(LearnerNotifications)}</ProtectedRoute>} />
           <Route path="leaderboard" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(Leaderboard)}</ProtectedRoute>} />
           <Route path="course-categories" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(CourseCategories)}</ProtectedRoute>} />
