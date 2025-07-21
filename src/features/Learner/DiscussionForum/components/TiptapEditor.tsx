@@ -1,4 +1,5 @@
-// src/pages/DiscussionForum/components/TiptapEditor.tsx
+// src/pages/DiscussionForum/components/TiptapEditor.tsx (FULL FILE)
+
 import React from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -9,6 +10,10 @@ interface TiptapEditorProps {
     content: string;
     onChange: (newContent: string) => void;
     disabled?: boolean;
+    // --- ADDED ---
+    minHeight?: string; // Optional prop for min-height, e.g., '100px'
+    maxHeight?: string; // Optional prop for max-height
+    // --- END ADDED ---
 }
 
 const MenuBar: React.FC<{ editor: any, disabled?: boolean }> = ({ editor, disabled }) => {
@@ -90,7 +95,8 @@ const MenuBar: React.FC<{ editor: any, disabled?: boolean }> = ({ editor, disabl
     );
 };
 
-const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, disabled }) => {
+// --- MODIFIED TiptapEditor component ---
+const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, disabled, minHeight = '150px', maxHeight = '400px' }) => {
     const editor = useEditor({
         extensions: [StarterKit.configure({
             bulletList: { keepMarks: true, keepAttributes: true },
@@ -108,7 +114,6 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, disabled
         editable: !disabled,
     });
     
-    // Update editor content if disabled prop changes
     React.useEffect(() => {
         if (editor) {
             editor.setEditable(!disabled);
@@ -118,7 +123,12 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, disabled
     return (
         <div>
             <MenuBar editor={editor} disabled={disabled} />
-            <EditorContent editor={editor} className="bg-purple-50/60 text-purple-900 rounded-b-lg"/>
+            <EditorContent 
+                editor={editor} 
+                className="bg-purple-50/60 text-purple-900 rounded-b-lg"
+                // --- ADDED INLINE STYLES FOR HEIGHT ---
+                style={{ minHeight, maxHeight, overflowY: 'auto' }} 
+            />
         </div>
     );
 };
