@@ -1,3 +1,5 @@
+// src/pages/DiscussionForum/DiscussionForum.tsx (FULL MODIFIED FILE)
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Select, { SingleValue, StylesConfig } from 'react-select';
@@ -22,9 +24,9 @@ import { formatDistanceToNow, parseISO } from 'date-fns';
 import { getAllCategories as fetchAllCourseCategoriesFromAdminApi } from '../../../features/Admin/ManageCourseCategory/data/api'; 
 import { Category as AdminCourseCategoryType } from '../../../features/Admin/ManageCourseCategory/types/category.types';
 import { useBadgeChecker } from '../../../hooks/useBadgeChecker';
-import ThreadCardSkeleton from './components/ThreadCardSkeleton'; // <-- ADDED
-import MarkdownRenderer from '../../../components/common/MarkdownRenderer'; // <-- ADDED
-import FsLightbox from 'fslightbox-react'; // <-- ADDED
+import ThreadCardSkeleton from './components/ThreadCardSkeleton';
+import MarkdownRenderer from '../../../components/common/MarkdownRenderer';
+// <-- REMOVED FsLightbox import
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -70,14 +72,7 @@ const DiscussionForum: React.FC = () => {
 
     const searchInputRef = useRef<HTMLInputElement>(null);
 
-    const [lightboxToggler, setLightboxToggler] = useState(false); // <-- ADDED
-    const [lightboxImageSource, setLightboxImageSource] = useState<string[]>([]); // <-- ADDED
-
-    const handleImageClick = (e: React.MouseEvent, imageUrl: string) => { // <-- ADDED
-        e.stopPropagation();
-        setLightboxImageSource([imageUrl]);
-        setLightboxToggler(!lightboxToggler);
-    };
+    // <-- REMOVED lightbox state and handler function
 
     useEffect(() => {
         const loadCategories = async () => { 
@@ -311,7 +306,6 @@ const DiscussionForum: React.FC = () => {
                         </div>
                     </div>
                     
-                    {/* --- MODIFIED LOADING/ERROR/EMPTY STATES --- */}
                     {isLoading && (
                         <div className="space-y-4">
                             {Array.from({ length: 5 }).map((_, index) => (
@@ -375,15 +369,14 @@ const DiscussionForum: React.FC = () => {
                                                             </div>
                                                         )}
                                                     </div>
-                                                    {/* --- MODIFIED CONTENT RENDERER --- */}
                                                     <MarkdownRenderer
                                                         content={thread.content.substring(0, 250) + (thread.content.length > 250 ? '...' : '')}
                                                         className="prose prose-sm max-w-none text-gray-700 mt-2 line-clamp-3"
                                                     />
-                                                    {/* --- MODIFIED IMAGE --- */}
                                                     {thread.imageUrl && (
                                                         <div className="mt-3 max-w-xs">
-                                                            <img src={thread.imageUrl} alt="Thread attachment" className="rounded-md max-h-48 object-contain border bg-gray-100 cursor-pointer" onClick={(e) => handleImageClick(e, thread.imageUrl!)} onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                                             {/* <-- MODIFIED: Removed onClick and cursor-pointer */}
+                                                            <img src={thread.imageUrl} alt="Thread attachment" className="rounded-md max-h-48 object-contain border bg-gray-100" onError={(e) => (e.currentTarget.style.display = 'none')} />
                                                         </div>
                                                     )}
                                                     <div className="mt-3 pt-3 flex items-center justify-between border-t border-purple-200/30">
@@ -416,11 +409,7 @@ const DiscussionForum: React.FC = () => {
                     )}
                 </div>
 
-                {/* --- ADDED LIGHTBOX --- */}
-                <FsLightbox
-                    toggler={lightboxToggler}
-                    sources={lightboxImageSource}
-                />
+                {/* <-- REMOVED FsLightbox component */}
 
                 <CreateThreadModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onSubmit={handleCreateThread} availableCategories={courseCategories.map(cat => cat.title)} />
                 {editModalInitialData && threadToEdit && (<EditThreadModal isOpen={isEditModalOpen} onClose={() => { setIsEditModalOpen(false); setThreadToEdit(null); }} onSubmit={handleUpdateThread} initialData={editModalInitialData} availableCategories={courseCategories.map(cat => cat.title)} />)}

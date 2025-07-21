@@ -1,3 +1,5 @@
+// src/pages/DiscussionForum/SingleThreadView.tsx
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Clock, MessageSquare, ArrowLeft, RefreshCw, AlertCircle, Bookmark, Edit2, Trash2 } from 'lucide-react';
@@ -14,8 +16,7 @@ import { toast } from 'react-hot-toast';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { getAllCategories as fetchAllCourseCategoriesFromAdminApi } from '../../../features/Admin/ManageCourseCategory/data/api';
 import { Category as AdminCourseCategoryType } from '../../../features/Admin/ManageCourseCategory/types/category.types';
-import MarkdownRenderer from '../../../components/common/MarkdownRenderer'; // <-- ADDED
-import FsLightbox from 'fslightbox-react'; // <-- ADDED
+import MarkdownRenderer from '../../../components/common/MarkdownRenderer';
 
 const getErrorMessage = (err: any, defaultMessage: string): string => {
     if (forumApi.isAxiosError(err)) {
@@ -51,8 +52,6 @@ const SingleThreadView: React.FC = () => {
     
     const [courseCategories, setCourseCategories] = useState<AdminCourseCategoryType[]>([]);
     const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-
-    const [lightboxToggler, setLightboxToggler] = useState(false); // <-- ADDED
 
     // Fetch categories for the Edit Modal
     useEffect(() => {
@@ -243,20 +242,18 @@ const SingleThreadView: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* --- MODIFIED CONTENT BODY --- */}
                     <MarkdownRenderer 
                         content={thread.content}
                         className="prose prose-purple max-w-none mt-6 text-gray-800 font-nunito text-base leading-relaxed break-words"
                     />
 
-                    {/* --- MODIFIED IMAGE --- */}
+                    {/* Image is now larger and centered */}
                     {thread.imageUrl && (
-                        <div className="mt-6">
+                        <div className="mt-8 flex justify-center">
                             <img 
                                 src={thread.imageUrl} 
                                 alt="Thread attachment" 
-                                className="rounded-lg max-h-[500px] w-auto object-contain border bg-gray-100 shadow-md cursor-pointer"
-                                onClick={() => setLightboxToggler(!lightboxToggler)}
+                                className="w-full max-w-xl max-h-[500px] rounded-lg object-contain border bg-gray-100 shadow-md"
                                 onError={(e) => (e.currentTarget.style.display = 'none')}
                             />
                         </div>
@@ -293,14 +290,6 @@ const SingleThreadView: React.FC = () => {
                     {renderContent()}
                 </div>
             </div>
-
-            {/* --- ADDED LIGHTBOX COMPONENT --- */}
-            {thread?.imageUrl && (
-                <FsLightbox
-                    toggler={lightboxToggler}
-                    sources={[thread.imageUrl]}
-                />
-            )}
 
             {/* Modals for Edit and Delete */}
             {editModalInitialData && thread && (
