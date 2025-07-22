@@ -103,7 +103,7 @@ const LearnerListPage: React.FC = () => {
         setFilteredCourses(coursesToFilter);
     }, [selectedCourseTitle, searchTerm, allCoursesWithLearners]);
 
-    const toggleCourseExpansion = (courseId: string) => { // Use courseId
+    const toggleCourseExpansion = (courseId: number) => { // Use courseId
         setExpandedCourses(prev => ({ ...prev, [courseId]: !prev[courseId] }));
     };
 
