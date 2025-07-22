@@ -1,10 +1,9 @@
-// features/Coordinator/CreateNewCourse/UploadMaterials/UploadMaterials.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 import { useCourseContext } from '../../contexts/CourseContext';
-import { SubtopicFE, ExistingMaterialFile, CourseDocumentDto, LessonDto, UpdateLessonPayload } from '../../../../types/course.types'; // Adjust path
+import { SubtopicFE, ExistingMaterialFile, UpdateLessonPayload, CreateLessonPayload } from '../../../../types/course.types';
 import { 
     getCourseById, 
     addLesson, 
@@ -12,7 +11,7 @@ import {
     deleteLesson, 
     uploadDocument, 
     deleteDocument 
-} from '../../../../api/services/Course/courseService'; // Adjust path
+} from '../../../../api/services/Course/courseService';
 
 import {
     getQuizzesByLessonId,
@@ -20,9 +19,10 @@ import {
 } from '../../../../api/services/Course/quizService';
 
 import Header from './components/Header';
-import ProgressBar from './components/ProgressBar';
+import ProgressBar from '../commonComponent/ProgressSteps';
 import SubtopicItem from './components/SubtopicItem';
 import BottomNavigation from './components/BottomNavigation';
+import { useConfirmationDialog } from '../../coordinatorCourseView/CoordinatorCourseOverview/components/ConfirmationDialog';
 
 const UploadMaterials: React.FC = () => {
     const navigate = useNavigate();
@@ -36,7 +36,7 @@ const UploadMaterials: React.FC = () => {
         removeLessonFromState,
         addDocumentToLessonState,
         removeDocumentFromLessonState,
-        setCreatedCourseId // Ensure this is destructured from useCourseContext
+        setCreatedCourseId
     } = useCourseContext();
 
     const [isLoadingPage, setIsLoadingPage] = useState(true);
@@ -46,6 +46,9 @@ const UploadMaterials: React.FC = () => {
     const [expandedSubtopics, setExpandedSubtopics] = useState<Record<number, boolean>>({});
     const [showUploadSections, setShowUploadSections] = useState<number | null>(null);
     const [isDraggingDocsPerLesson, setIsDraggingDocsPerLesson] = useState<Record<number, boolean>>({});
+    const { showConfirmation, ConfirmationDialog } = useConfirmationDialog();
+
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const courseId = courseIdParam ? parseInt(courseIdParam, 10) : null;
 
@@ -53,7 +56,7 @@ const UploadMaterials: React.FC = () => {
         let isMounted = true;
         if (courseId) {
             if (courseData.createdCourseId !== courseId) {
-                setCreatedCourseId(courseId); // Sync context with current URL's course ID
+                setCreatedCourseId(courseId);
             }
 
             // Load lessons if not loaded for *this* courseId, or if context just got synced to this ID
@@ -71,7 +74,8 @@ const UploadMaterials: React.FC = () => {
                                 documents: l.documents.map(d => ({
                                     id: d.id, name: d.name, fileUrl: d.fileUrl,
                                     documentType: d.documentType, fileSize: d.fileSize, lessonId: d.lessonId,
-                                    lastUpdatedDate: d.lastUpdatedDate
+                                    lastUpdatedDate: d.lastUpdatedDate,filePath: d.filePath,
+                                    uploadedAt: d.uploadedAt
                                 })),
                                 isEditing: false, originalName: l.lessonName, originalPoints: l.lessonPoints ?? 1
                             }));
@@ -117,41 +121,35 @@ const UploadMaterials: React.FC = () => {
         setExpandedSubtopics(prev => ({ ...prev, [lessonId]: !prev[lessonId] }));
     }, []);
 
-    // Modified handleAddNewSubtopic function in UploadMaterials.tsx
     const handleAddNewSubtopic = useCallback(async () => {
         if (!courseId) { toast.error("Course ID is missing to add a subtopic."); return; }
         setIsSubmittingAction(true);
         const loadingToast = toast.loading("Adding new subtopic...");
         try {
-            const payload = { courseId, lessonName: "New Subtopic", lessonPoints: 1 };
+            const payload: CreateLessonPayload = { courseId, lessonName: "New Subtopic", lessonPoints: 1 };
             const newLessonDto = await addLesson(payload);
             const newSubtopic: SubtopicFE = {
                 id: newLessonDto.id, lessonName: newLessonDto.lessonName, lessonPoints: newLessonDto.lessonPoints,
-                courseId: newLessonDto.courseId, documents: [], isEditing: true, // Set isEditing to true
+                courseId: newLessonDto.courseId, documents: [], isEditing: true,
                 originalName: newLessonDto.lessonName, originalPoints: newLessonDto.lessonPoints,
             };
             addLessonToState(newSubtopic);
-            setExpandedSubtopics(prev => ({ ...prev, [newLessonDto.id]: true })); // Expand new subtopic
-            setShowUploadSections(null); // Close any open upload sections
+            setExpandedSubtopics(prev => ({ ...prev, [newLessonDto.id]: true }));
+            setShowUploadSections(null);
             toast.dismiss(loadingToast);
             toast.success("Subtopic added successfully.");
         } catch (error) {
             console.error("Failed to add subtopic:", error);
             toast.dismiss(loadingToast);
-            // Error message likely handled by apiClient interceptor
         } finally {
             setIsSubmittingAction(false);
         }
     }, [courseId, addLessonToState]);
 
-    const handleSubtopicInputChangeInternal = useCallback((lessonId: number, field: 'lessonName' | 'lessonPoints', value: string) => {
+    const handleSubtopicInputChangeInternal = useCallback((lessonId: number, field: 'lessonName', value: string) => {
         setLessonsState(
             courseData.lessons.map(l => {
                 if (l.id === lessonId) {
-                    if (field === 'lessonPoints') {
-                        // Keep as string for input, parse to number on save/blur
-                        return { ...l, lessonPoints: value === '' ? 0 : Number(value) }; // Store as number or 0 if empty string
-                    }
                     return { ...l, [field]: value };
                 }
                 return l;
@@ -165,7 +163,7 @@ const UploadMaterials: React.FC = () => {
                 if (l.id === lessonId) {
                     if (startEditing) {
                         return { ...l, isEditing: true, originalName: l.lessonName, originalPoints: l.lessonPoints };
-                    } else { // Cancel edit
+                    } else { 
                         return { ...l, isEditing: false, lessonName: l.originalName ?? l.lessonName, lessonPoints: l.originalPoints ?? l.lessonPoints };
                     }
                 }
@@ -179,35 +177,23 @@ const UploadMaterials: React.FC = () => {
         if (!subtopicToSave || !subtopicToSave.isEditing) return;
 
         const lessonName = subtopicToSave.lessonName.trim();
-        // Ensure lessonPoints is treated as a number; if it was stored as string from input, parse it
-        let lessonPoints = Number(subtopicToSave.lessonPoints);
 
         if (!lessonName) {
             toast.error("Subtopic name cannot be empty.");
-            return;
-        }
-        if (isNaN(lessonPoints) || lessonPoints < 1 || lessonPoints > 100) {
-            toast.error("Points must be a whole number between 1 and 100.");
-            // Optionally revert UI points to original or a valid default
-            setLessonsState(
-                courseData.lessons.map(l =>
-                    l.id === lessonId ? { ...l, lessonPoints: l.originalPoints ?? 1 } : l
-                )
-            );
             return;
         }
 
         setIsSubmittingAction(true);
         const loadingToast = toast.loading(`Saving changes for "${lessonName}"...`);
         try {
-            const payload: UpdateLessonPayload = { lessonName, lessonPoints };
+            const payload: UpdateLessonPayload = { lessonName, lessonPoints: subtopicToSave.lessonPoints };
             const updatedLessonDto = await updateLesson(lessonId, payload);
-            updateLessonInState({ // updateLessonInState is from context
+            updateLessonInState({ 
                 ...subtopicToSave,
                 lessonName: updatedLessonDto.lessonName,
                 lessonPoints: updatedLessonDto.lessonPoints,
                 isEditing: false,
-                originalName: updatedLessonDto.lessonName, // Update original values
+                originalName: updatedLessonDto.lessonName,
                 originalPoints: updatedLessonDto.lessonPoints,
             });
             toast.dismiss(loadingToast);
@@ -215,14 +201,13 @@ const UploadMaterials: React.FC = () => {
         } catch (error) {
             console.error("Failed to save subtopic changes:", error);
             toast.dismiss(loadingToast);
-            // Revert UI changes on API error
             setLessonsState(
                 courseData.lessons.map(l =>
                     l.id === lessonId ? {
                         ...l,
-                        isEditing: false, // Exit editing mode
-                        lessonName: l.originalName!, // Revert to original
-                        lessonPoints: l.originalPoints! // Revert to original
+                        isEditing: false,
+                        lessonName: l.originalName!,
+                        lessonPoints: l.originalPoints!,
                     } : l
                 )
             );
@@ -232,21 +217,29 @@ const UploadMaterials: React.FC = () => {
     }, [courseData.lessons, updateLessonInState, setLessonsState]);
 
     const handleRemoveSubtopicConfirmInternal = useCallback(async (lessonId: number, lessonName: string) => {
-        if (!window.confirm(`Are you sure you want to delete the subtopic "${lessonName}" and all its materials? This action cannot be undone.`)) return;
-        setIsSubmittingAction(true);
-        const loadingToast = toast.loading(`Deleting "${lessonName}"...`);
-        try {
-            await deleteLesson(lessonId);
-            removeLessonFromState(lessonId); // Update context state
-            toast.dismiss(loadingToast);
-            toast.success(`Subtopic "${lessonName}" deleted successfully.`);
-        } catch (error) {
-            console.error(`Failed to delete subtopic ${lessonId}:`, error);
-            toast.dismiss(loadingToast);
-        } finally {
-            setIsSubmittingAction(false);
+    showConfirmation({
+        title: "Delete Subtopic",
+        message: `Are you sure you want to delete the subtopic "${lessonName}" and all its materials? This action cannot be undone.`,
+        confirmText: "Delete",
+        type: 'danger',
+        onConfirm: async () => {
+            setIsSubmittingAction(true);
+            const loadingToast = toast.loading(`Deleting "${lessonName}"...`);
+            try {
+                await deleteLesson(lessonId);
+                removeLessonFromState(lessonId);
+                toast.dismiss(loadingToast);
+                toast.success(`Subtopic "${lessonName}" deleted successfully.`);
+            } catch (error) {
+                console.error(`Failed to delete subtopic ${lessonId}:`, error);
+                toast.dismiss(loadingToast);
+                toast.error(`Failed to delete subtopic "${lessonName}".`);
+            } finally {
+                setIsSubmittingAction(false);
+            }
         }
-    }, [removeLessonFromState]);
+    });
+}, [removeLessonFromState, showConfirmation]);
 
     const handleToggleUploadSection = useCallback((lessonId: number) => {
         setShowUploadSections(prev => (prev === lessonId ? null : lessonId));
@@ -278,7 +271,7 @@ const UploadMaterials: React.FC = () => {
     const handleFileSelectInternal = useCallback((e: React.ChangeEvent<HTMLInputElement>, lessonId: number) => {
         if (e.target.files) {
             addFilesToPending(Array.from(e.target.files), lessonId);
-            e.target.value = ''; // Reset file input
+            e.target.value = '';
         }
     }, [addFilesToPending]);
 
@@ -308,14 +301,13 @@ const UploadMaterials: React.FC = () => {
                 errorCount++;
                 console.error(`Failed to upload ${file.name}:`, err);
                 toast.error(`Upload failed for ${file.name}.`);
-                // No need to re-throw if individual toasts are shown
             }
         }
         toast.dismiss(loadingToastId);
         if (successCount > 0) toast.success(`${successCount} document(s) uploaded successfully.`);
         if (errorCount === 0) {
             setPendingUploadFiles(prev => { const updated = { ...prev }; delete updated[lessonId]; return updated; });
-            setShowUploadSections(null); // Close upload section on full success
+            setShowUploadSections(null);
             setSubtopicErrorMessages(prev => ({ ...prev, [lessonId]: '' }));
         } else {
             setSubtopicErrorMessages(prev => ({ ...prev, [lessonId]: `${errorCount} upload(s) failed. Please review and retry.` }));
@@ -323,33 +315,56 @@ const UploadMaterials: React.FC = () => {
         setIsSubmittingAction(false);
     }, [pendingUploadFiles, addDocumentToLessonState]);
 
+    // const handleRemoveExistingDocumentInternal = useCallback(async (lessonId: number, documentId: number, documentName: string) => {
+    //     if (!window.confirm(`Are you sure you want to delete the document "${documentName}"?`)) return;
+    //     setIsSubmittingAction(true);
+    //     const loadingToastId = toast.loading(`Deleting "${documentName}"...`);
+    //     try {
+    //         await deleteDocument(documentId);
+    //         removeDocumentFromLessonState(lessonId, documentId);
+    //         toast.dismiss(loadingToastId);
+    //         toast.success(`Document "${documentName}" deleted successfully.`);
+    //     } catch (error) {
+    //         console.error(`Failed to delete document ${documentId}:`, error);
+    //         toast.dismiss(loadingToastId);
+    //     } finally {
+    //         setIsSubmittingAction(false);
+    //     }
+    // }, [removeDocumentFromLessonState]);
     const handleRemoveExistingDocumentInternal = useCallback(async (lessonId: number, documentId: number, documentName: string) => {
-        if (!window.confirm(`Are you sure you want to delete the document "${documentName}"?`)) return;
-        setIsSubmittingAction(true);
-        const loadingToastId = toast.loading(`Deleting "${documentName}"...`);
-        try {
-            await deleteDocument(documentId);
-            removeDocumentFromLessonState(lessonId, documentId);
-            toast.dismiss(loadingToastId);
-            toast.success(`Document "${documentName}" deleted successfully.`);
-        } catch (error) {
-            console.error(`Failed to delete document ${documentId}:`, error);
-            toast.dismiss(loadingToastId);
-        } finally {
-            setIsSubmittingAction(false);
+    showConfirmation({
+        title: "Delete Document",
+        message: `Are you sure you want to delete the document "${documentName}"? This action cannot be undone.`,
+        confirmText: "Delete",
+        type: 'danger',
+        onConfirm: async () => {
+            setIsSubmittingAction(true);
+            const loadingToastId = toast.loading(`Deleting "${documentName}"...`);
+            try {
+                await deleteDocument(documentId);
+                removeDocumentFromLessonState(lessonId, documentId);
+                toast.dismiss(loadingToastId);
+                toast.success(`Document "${documentName}" deleted successfully.`);
+            } catch (error) {
+                console.error(`Failed to delete document ${documentId}:`, error);
+                toast.dismiss(loadingToastId);
+                toast.error(`Failed to delete document "${documentName}".`);
+            } finally {
+                setIsSubmittingAction(false);
+            }
         }
-    }, [removeDocumentFromLessonState]);
+    });
+}, [removeDocumentFromLessonState, showConfirmation]);
 
     const handleBackNavigation = useCallback(() => {
         if (courseId) {
-            navigate(`/coordinator/course-details/${courseId}`); // Navigate to edit mode of basic details
+            navigate(`/coordinator/course-details/${courseId}`);
         } else {
-            navigate('/coordinator/course-details'); // Fallback to new course form
+            navigate('/coordinator/course-details');
         }
     }, [courseId, navigate]);
 
     const handleNextNavigation = useCallback(() => {
-        // Check for pending uploads across ALL subtopics
         const hasPendingUploads = Object.values(pendingUploadFiles).some(fileList => fileList && fileList.length > 0);
         if (hasPendingUploads) {
             toast.error("You have pending documents to upload or cancel for one or more subtopics.");
@@ -371,7 +386,6 @@ const UploadMaterials: React.FC = () => {
     }, [courseId, navigate, pendingUploadFiles, courseData.lessons]);
 
     const handleSaveDraftAction = useCallback(() => {
-         //toast.error("Save as Draft feature is not implemented yet."); 
         const hasPendingUploads = Object.values(pendingUploadFiles).some(fileList => fileList && fileList.length > 0);
         if (hasPendingUploads) {
             toast.error("You have pending documents that are not uploaded. Please upload or remove them before saving a draft.");
@@ -383,7 +397,6 @@ const UploadMaterials: React.FC = () => {
             return;
         }
         
-        // If all checks pass, it's safe to leave.
         toast.success('Your progress has been saved. You can continue later.');
         navigate('/coordinator/course-display-page');
 
@@ -403,7 +416,6 @@ const UploadMaterials: React.FC = () => {
             toast.error("Course ID is missing. Cannot edit quiz.");
             return;
         }
-        // First, find the quiz ID for this lesson
         getQuizzesByLessonId(lessonId)
             .then(quizzes => {
                 if (quizzes.length > 0) {
@@ -419,45 +431,81 @@ const UploadMaterials: React.FC = () => {
             });
     }, [navigate, courseId]);
 
-   // Update this function in UploadMaterials.tsx
-const handleRemoveQuizAction = useCallback((lessonId: number) => {
-    if (!courseId) {
-        toast.error("Course ID is missing. Cannot remove quiz.");
-        return;
-    }
+// const handleRemoveQuizAction = useCallback((lessonId: number) => {
+//     if (!courseId) {
+//         toast.error("Course ID is missing. Cannot remove quiz.");
+//         return;
+//     }
 
-    if (!window.confirm("Are you sure you want to delete this quiz? This action cannot be undone.")) {
-        return;
-    }
+//     if (!window.confirm("Are you sure you want to delete this quiz? This action cannot be undone.")) {
+//         return;
+//     }
 
-    setIsSubmittingAction(true);
+//     setIsSubmittingAction(true);
     
-    getQuizzesByLessonId(lessonId)
-        .then(quizzes => {
-            if (quizzes.length > 0) {
-                const quizId = quizzes[0].quizId;
-                return deleteQuiz(quizId)
-                    .then(() => {
-                        toast.success("Quiz deleted successfully.");
-                        // Force UI refresh
-                        const subtopicToRefresh = courseData.lessons.find(l => l.id === lessonId);
-                        if (subtopicToRefresh) {
-                            // Force expanded state update to trigger useEffect in SubtopicItem
-                            setExpandedSubtopics(prev => ({ ...prev }));
+//     getQuizzesByLessonId(lessonId)
+//         .then(quizzes => {
+//             if (quizzes.length > 0) {
+//                 const quizId = quizzes[0].quizId;
+//                 return deleteQuiz(quizId)
+//                     .then(() => {
+//                         toast.success("Quiz deleted successfully.");
+//                         // Force UI refresh
+//                         const subtopicToRefresh = courseData.lessons.find(l => l.id === lessonId);
+//                         if (subtopicToRefresh) {
+//                             // Force expanded state update to trigger useEffect in SubtopicItem
+//                             setExpandedSubtopics(prev => ({ ...prev }));
+//                         }
+//                     });
+//             } else {
+//                 toast.error("No quiz found for this lesson.");
+//             }
+//         })
+//         .catch(error => {
+//             console.error(`Failed to delete quiz for lesson ${lessonId}:`, error);
+//             toast.error("Failed to delete quiz. Please try again.");
+//         })
+//         .finally(() => {
+//             setIsSubmittingAction(false);
+//         });
+// }, [courseId, setIsSubmittingAction, courseData.lessons, setExpandedSubtopics]);
+const handleRemoveQuizAction = useCallback((lessonId: number) => {
+        if (!courseId) {
+            toast.error("Course ID is missing. Cannot remove quiz.");
+            return;
+        }
+    
+        showConfirmation({
+            title: "Delete Quiz",
+            message: "Are you sure you want to delete this quiz? This action cannot be undone.",
+            confirmText: "Delete",
+            type: 'danger',
+            onConfirm: () => {
+                setIsSubmittingAction(true);
+                const deleteToastId = toast.loading("Deleting quiz...");
+                getQuizzesByLessonId(lessonId)
+                    .then(quizzes => {
+                        if (quizzes.length > 0) {
+                            const quizId = quizzes[0].quizId;
+                            return deleteQuiz(quizId)
+                                .then(() => {
+                                    toast.success("Quiz deleted successfully.", { id: deleteToastId });
+                                    setRefreshTrigger(prev => prev + 1);
+                                });
+                        } else {
+                            toast.error("No quiz found for this lesson.", { id: deleteToastId });
                         }
+                    })
+                    .catch(error => {
+                        console.error(`Failed to delete quiz for lesson ${lessonId}:`, error);
+                        toast.error("Failed to delete quiz. Please try again.", { id: deleteToastId });
+                    })
+                    .finally(() => {
+                        setIsSubmittingAction(false);
                     });
-            } else {
-                toast.error("No quiz found for this lesson.");
             }
-        })
-        .catch(error => {
-            console.error(`Failed to delete quiz for lesson ${lessonId}:`, error);
-            toast.error("Failed to delete quiz. Please try again.");
-        })
-        .finally(() => {
-            setIsSubmittingAction(false);
         });
-}, [courseId, setIsSubmittingAction, courseData.lessons, setExpandedSubtopics]);
+    }, [courseId, showConfirmation, courseData.lessons]);
     
     const handleAddVideoAction = useCallback((lessonId: number) => { toast.error(`Video add for lesson ${lessonId} N/A.`); }, []);
 
@@ -471,6 +519,7 @@ const handleRemoveQuizAction = useCallback((lessonId: number) => {
 
     return (
         <div className="min-h-screen bg-[#52007C] p-6">
+            <ConfirmationDialog />
             <Header onSaveDraft={handleSaveDraftAction} navigateToCreateCourse={handleBackNavigation} isSubmitting={isSubmittingAction} />
             <ProgressBar stage={2} />
             <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
@@ -508,6 +557,7 @@ const handleRemoveQuizAction = useCallback((lessonId: number) => {
                                 handleCreateQuizClick={() => handleCreateQuizAction(subtopic.id)}
                                 handleEditQuiz={() => handleEditQuizAction(subtopic.id)}
                                 handleRemoveQuiz={() => handleRemoveQuizAction(subtopic.id)}
+                                refreshTrigger={refreshTrigger}
                             />
                         ))}
                     </div>

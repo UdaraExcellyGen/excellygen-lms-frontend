@@ -1,4 +1,4 @@
-// src/App.tsx - Simplified Enterprise Version
+// src/App.tsx - Optimized with Role-based NotificationProvider
 
 import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
@@ -67,7 +67,7 @@ const CoursesDisplayPage = lazy(() => import('./features/Coordinator/CoursesDisp
 const CourseDetails = lazy(() => import('./features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails'));
 const CoordinatorCourseOverview = lazy(() => import('./features/Coordinator/coordinatorCourseView/CoordinatorCourseOverview/CoordinatorCourseOverview'));
 const AssignLearners = lazy(() => import('./features/Coordinator/coordinatorCourseView/AssignLearners/AssignLearners'));
-const CreateQuiz = lazy(() => import('./features/Coordinator/QuizManagement/CreateQuiz'));
+const CreateQuiz = lazy(() => import('./features/Coordinator/QuizManagement/CreateQuiz/CreateQuiz'));
 const EditQuiz = lazy(() => import('./features/Coordinator/QuizManagement/EditQuiz'));
 const QuizList = lazy(() => import('./features/Coordinator/LessonQuizzes/QuizList'));
 const QuizResultsCoordinator = lazy(() => import('./features/Coordinator/LessonQuizzes/QuizResultsCoordinator'));
@@ -125,23 +125,40 @@ const AuthCleanup: React.FC = () => {
   return null;
 };
 
+// OPTIMIZATION: Role-based NotificationProvider wrapper
+const ConditionalNotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentRole } = useAuth();
+  
+  // Only wrap with NotificationProvider for Learners
+  if (currentRole === UserRole.Learner) {
+    return (
+      <NotificationProvider>
+        {children}
+      </NotificationProvider>
+    );
+  }
+  
+  // For all other roles, render children directly
+  return <>{children}</>;
+};
+
 function AppWrapper() {
   return (
     <I18nextProvider i18n={i18n}>
       <BrowserRouter>
         <LoadingProvider>
           <AuthProvider>
-          <NotificationProvider>
-            <SidebarProvider>
-              <SearchProvider>
-                <ApiLoadingInterceptor />
-                <AuthCleanup />
-                <BookLoader />
-                <App />
-                <Toaster position="top-right" />
-              </SearchProvider>
-            </SidebarProvider>
-          </NotificationProvider>
+            <ConditionalNotificationProvider>
+              <SidebarProvider>
+                <SearchProvider>
+                  <ApiLoadingInterceptor />
+                  <AuthCleanup />
+                  <BookLoader />
+                  <App />
+                  <Toaster position="top-right" />
+                </SearchProvider>
+              </SidebarProvider>
+            </ConditionalNotificationProvider>
           </AuthProvider>
         </LoadingProvider>
       </BrowserRouter>
@@ -257,6 +274,8 @@ function App() {
           <Route path="notifications" element={<ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>{suspenseWrapper(ProjectManagerNotification)}</ProtectedRoute>} />
           <Route path="employee-assign" element={<ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>{suspenseWrapper(EmployeeManagement)}</ProtectedRoute>} />
           <Route path="project-cruds" element={<ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>{suspenseWrapper(ProjectCruds)}</ProtectedRoute>} />
+          <Route path="project-cruds/technologies" element={<ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>{suspenseWrapper(ProjectCruds)}</ProtectedRoute>} />
+          <Route path="project-cruds/roles" element={<ProtectedRoute allowedRoles={[UserRole.ProjectManager]}>{suspenseWrapper(ProjectCruds)}</ProtectedRoute>} />
         </Route>
         
         {/* Legacy path for ProjectManager notifications */}
@@ -266,35 +285,4 @@ function App() {
   );
 }
 
-
-function Root() {
-  return (
-    <I18nextProvider i18n={i18n}>
-      <BrowserRouter>
-        <LoadingProvider>
-          <AuthProvider>
-            <NotificationProvider>
-                <SearchProvider>
-                  <ApiLoadingInterceptor />
-                  <AuthCleanup />
-                  <BookLoader />
-                  <AppWithSidebar />
-                  <Toaster position="top-right" />
-                </SearchProvider>
-            </NotificationProvider>
-          </AuthProvider>
-        </LoadingProvider>
-      </BrowserRouter>
-    </I18nextProvider>
-  )
-}
-
-function AppWithSidebar(){
-  return (
-    <SidebarProvider>
-      <App/>
-    </SidebarProvider>
-  )
-}
-
-export default Root;
+export default AppWrapper;

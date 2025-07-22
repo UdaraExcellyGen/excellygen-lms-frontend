@@ -39,9 +39,6 @@ const CourseMaterialsSection: React.FC<CourseMaterialsSectionProps> = ({
     isEditMode = false,
     onEditQuiz,
     onRemoveQuiz,
-    showQuizOverviewPage,
-    handleCloseQuizOverview,
-    handleSaveOverviewQuizDetails,
     courseId,
     isLearnerView = false,
 }) => {

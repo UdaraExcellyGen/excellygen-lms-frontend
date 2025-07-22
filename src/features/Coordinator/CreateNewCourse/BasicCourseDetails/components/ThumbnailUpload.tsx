@@ -20,7 +20,6 @@ const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({
     error,
     errorMessage,
     isDragging,
-    setIsDragging,
     onFileInputChange,
     onDrop,
     onDragOver,

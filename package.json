@@ -52,6 +52,7 @@
     "@types/dompurify": "^3.0.5",
     "@types/fslightbox-react": "^1.8.0",
     "@types/marked": "^5.0.2",
+    "@types/lodash": "^4.17.20",
     "@types/node": "^22.15.30",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

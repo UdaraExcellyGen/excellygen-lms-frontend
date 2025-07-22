@@ -47,7 +47,6 @@ const SubtopicSection: React.FC<SubtopicSectionProps> = ({
             >
                 <h4 className="font-semibold font-unbounded text-base">{subtopic.lessonName}</h4>
                 <div className="flex items-center gap-2">
-                    <span className="text-xs text-[#1B0A3F] text-bold border border-[#52007C] px-2 py-0.5 rounded-full">{subtopic.lessonPoints} Points</span>
                     {hasQuiz && (
                         <span className="text-xs text-[#1B0A3F] border border-[#52007C] px-2 py-0.5 rounded-full flex items-center gap-1">
                             <BookCheck size={12} />

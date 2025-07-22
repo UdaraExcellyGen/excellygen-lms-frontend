@@ -1,5 +1,7 @@
+// src/features/Coordinator/Courses/CoursesDisplayPage.tsx
+
 import React, { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, RotateCcw, Search, RefreshCw, Plus, Trash2, BookOpen, Clock, Award, AlertCircle } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Search, RefreshCw, Plus, Trash2, BookOpen, Clock, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -58,7 +60,7 @@ const CourseCard: React.FC<{
         <div className="mt-auto space-y-2">
           <div className="flex flex-wrap gap-2 text-xs text-gray-700">
             <div className="flex items-center"><Clock className="w-3.5 h-3.5 mr-1 text-[#BF4BF6]" />{course.estimatedTime} hours</div>
-            <div className="flex items-center"><Award className="w-3.5 h-3.5 mr-1 text-[#BF4BF6]" />{course.calculatedCoursePoints || 0} points</div>
+            {/* REMOVED: The div displaying the course points is now gone. */}
           </div>
           <div className="flex flex-wrap gap-1.5">
             <span className="bg-[#F6E6FF] text-[#52007C] px-2 py-0.5 rounded-full text-xs font-medium">{course.category.title}</span>
@@ -179,7 +181,9 @@ const CoursesDisplayPage: React.FC = () => {
                 category: displayCategory, creator: displayCreator, status: CourseStatus.Draft,
                 technologies: basicDetails.technologies.map(techId => ({ id: techId, name: availableTechnologies.find(t => t.id === techId)?.name || '...' })),
                 createdAt: new Date().toISOString(), lastUpdatedDate: new Date().toISOString(),
-                lessons: [], calculatedCoursePoints: 0, creatorId: user.id,
+                lessons: [], 
+                // REMOVED: The calculatedCoursePoints property is no longer set here.
+                creatorId: user.id,
                 categoryId: basicDetails.categoryId, 
                 thumbnailImagePath: undefined
             };
