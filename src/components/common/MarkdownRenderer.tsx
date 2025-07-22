@@ -1,10 +1,11 @@
 // src/components/common/MarkdownRenderer.tsx
-import React, { useEffect } from 'react';
+import React from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
+import parse, { domToReact, Element } from 'html-react-parser'; // <-- NEW IMPORTS
+import CodeBlock from './CodeBlock'; // <-- NEW IMPORT
 
-// Import a CSS theme for highlight.js. Choose one from the node_modules/highlight.js/styles/ folder.
 import 'highlight.js/styles/atom-one-dark.css';
 
 interface MarkdownRendererProps {
@@ -12,42 +13,40 @@ interface MarkdownRendererProps {
     className?: string;
 }
 
-// Configure marked to use highlight.js
+// Configure marked (this is still useful if the input is ever markdown)
 marked.setOptions({
     highlight: function(code, lang) {
         const language = hljs.getLanguage(lang) ? lang : 'plaintext';
         return hljs.highlight(code, { language }).value;
     },
-    langPrefix: 'hljs language-', // for CSS classes
-    breaks: true, // render <br> on single line breaks
+    langPrefix: 'hljs language-',
+    breaks: true,
 });
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className }) => {
-    // The content from Tiptap is HTML, not Markdown. `marked` is for markdown text.
-    // However, if we're saving HTML, we just need to sanitize it.
-    // If the content saved is Markdown text, then this setup is correct.
-    // Since Tiptap outputs HTML, we'll assume we're saving HTML.
-    
-    // The core function: sanitize the HTML content
+    // Since Tiptap outputs HTML, we first sanitize it.
     const sanitizedHtml = DOMPurify.sanitize(content);
-    
-    // Use an effect to highlight code blocks after the component has rendered the sanitized HTML
-    const containerRef = React.useRef<HTMLDivElement>(null);
-    useEffect(() => {
-        if (containerRef.current) {
-            containerRef.current.querySelectorAll('pre code').forEach((block) => {
-                hljs.highlightElement(block as HTMLElement);
-            });
-        }
-    }, [sanitizedHtml]);
 
+    // Options for html-react-parser
+    const options = {
+        replace: (domNode: any) => {
+            // Look for <pre> tags, which Tiptap uses for code blocks
+            if (domNode instanceof Element && domNode.tagName === 'pre') {
+                // The direct child of <pre> should be <code>
+                const codeChild = domNode.children[0];
+                
+                if (codeChild && codeChild.type === 'tag' && codeChild.name === 'code') {
+                    // Pass the content of the <code> tag to our custom CodeBlock component
+                    return <CodeBlock>{domToReact(codeChild.children)}</CodeBlock>;
+                }
+            }
+        },
+    };
 
     return (
-        <div
-            ref={containerRef}
-            className={className}
-            dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-        />
+        <div className={className}>
+            {parse(sanitizedHtml, options)}
+        </div>
     );
 };
 
