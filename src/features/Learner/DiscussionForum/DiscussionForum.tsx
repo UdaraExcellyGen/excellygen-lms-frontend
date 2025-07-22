@@ -1,4 +1,4 @@
-// src/pages/DiscussionForum/DiscussionForum.tsx (FULL MODIFIED FILE)
+// src/pages/DiscussionForum/DiscussionForum.tsx
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -48,7 +48,6 @@ const DiscussionForum: React.FC = () => {
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // --- NEW STATE FOR THE WORKAROUND ---
     const [currentUserAvatar, setCurrentUserAvatar] = useState<string | null>(null);
 
     const [courseCategories, setCourseCategories] = useState<AdminCourseCategoryType[]>([]);
@@ -125,15 +124,12 @@ const DiscussionForum: React.FC = () => {
             setCurrentPage(result.pageNumber); 
             setTotalThreads(result.totalCount);
 
-            // --- WORKAROUND LOGIC ---
-            // After fetching, find the user's avatar from their own posts if we don't have it yet.
             if (!currentUserAvatar) {
                 const userThread = fetchedThreads.find(t => t.isCurrentUserAuthor);
                 if (userThread && userThread.author?.avatar) {
                     setCurrentUserAvatar(userThread.author.avatar);
                 }
             }
-            // --- END WORKAROUND LOGIC ---
 
         } catch (err: any) { 
             const errorMessageText = getErrorMessage(err, 'Could not load threads.');
@@ -145,7 +141,6 @@ const DiscussionForum: React.FC = () => {
         } finally { 
             setIsLoading(false); 
         }
-    // We add currentUserAvatar to the dependency array to avoid stale closures
     }, [debouncedSearchQuery, selectedCategoryFilterOption?.value, showMyThreads, currentUserAvatar]); 
 
     useEffect(() => { 
@@ -272,42 +267,46 @@ const DiscussionForum: React.FC = () => {
         currentRelativePath: threadToEdit.imageUrl && threadToEdit.imageUrl.includes("/uploads/") ? threadToEdit.imageUrl.substring(threadToEdit.imageUrl.indexOf("/uploads/")) : undefined
     } : undefined;
 
-    // --- WORKAROUND: Create a complete user object for the action bar ---
     const userForActionBar = user ? {
         ...user,
-        avatar: user.avatar || currentUserAvatar, // Use the avatar from context, or fall back to the one we found
+        avatar: user.avatar || currentUserAvatar,
     } : null;
 
     return (
         <Layout>
-            <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C]">
-                <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div>
-                            <h1 className="text-3xl md:text-4xl font-bold font-unbounded bg-gradient-to-r from-white via-white to-[#D68BF9] bg-clip-text text-transparent">Discussion Forum</h1>
-                            <p className="text-[#D68BF9] text-lg font-nunito">Connect and learn with your peers</p>
+            <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] py-6">
+                <div className="w-full px-6 sm:px-8 lg:px-12 space-y-6 sm:space-y-8">
+                    {/* Grouped header, button, and action bar to control spacing */}
+                    <div>
+                        <div className="text-center mb-4">
+                            <h1 className="text-3xl md:text-4xl font-bold text-white">
+                                Discussion Forum
+                            </h1>
+                            <p className="text-base text-[#D68BF9] mt-2">
+                                Connect and learn with your peers
+                            </p>
                         </div>
-                        <div className="flex flex-shrink-0 gap-2 md:gap-4 self-start md:self-center">
-                            <MyThreadsButton 
-                                onClick={() => setShowMyThreads(prev => !prev)} 
-                                active={showMyThreads} 
+
+                        <div>
+                            <div className="flex justify-end mb-4">
+                                <MyThreadsButton 
+                                    onClick={() => setShowMyThreads(prev => !prev)} 
+                                    active={showMyThreads} 
+                                />
+                            </div>
+                            <ForumActionBar
+                                user={userForActionBar}
+                                onTriggerCreate={() => setIsCreateModalOpen(true)}
+                                searchTerm={searchInput}
+                                onSearchChange={setSearchInput}
+                                categoryOptions={filterCategoryOptions}
+                                selectedCategory={selectedCategoryFilterOption}
+                                onCategoryChange={handleCategoryFilterChange}
+                                isLoadingCategories={isLoadingCategories}
                             />
                         </div>
                     </div>
-
-                    {/* --- WORKAROUND: Pass the enhanced user object --- */}
-                    <ForumActionBar
-                        user={userForActionBar}
-                        onTriggerCreate={() => setIsCreateModalOpen(true)}
-                        searchTerm={searchInput}
-                        onSearchChange={setSearchInput}
-                        categoryOptions={filterCategoryOptions}
-                        selectedCategory={selectedCategoryFilterOption}
-                        onCategoryChange={handleCategoryFilterChange}
-                        isLoadingCategories={isLoadingCategories}
-                    />
                     
-                    {/* ... The rest of the component remains the same ... */}
                     {isLoading && (
                         <div className="space-y-4">
                             {Array.from({ length: 5 }).map((_, index) => (
@@ -350,18 +349,30 @@ const DiscussionForum: React.FC = () => {
                                     >
                                         <div className="p-4 sm:p-5">
                                             <div className="flex items-start gap-3 sm:gap-4">
-                                                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-lg shadow" title={thread.author?.name ?? 'User'}>
-                                                    {thread.author?.avatar ? (<img src={thread.author.avatar} alt={thread.author.name ?? ''} className="w-full h-full rounded-full object-cover" />) : (thread.author?.name?.charAt(0)?.toUpperCase() ?? 'A')}
-                                                </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-start justify-between gap-2 mb-1">
                                                         <div className="min-w-0">
-                                                            <h3 className="text-lg font-bold text-purple-900 hover:underline" title={thread.title}>{thread.title}</h3>
+                                                            <h3 className="text-lg font-bold text-purple-900 hover:underline" title={thread.title}>
+                                                                {thread.title}
+                                                            </h3>
                                                             <div className="flex items-center text-xs text-gray-500 mt-0.5">
-                                                                <span className="font-medium text-purple-700">{thread.author?.name ?? 'Anonymous'}</span>
+                                                                <div className="flex-shrink-0 w-5 h-5 rounded-full mr-2">
+                                                                    {thread.author?.avatar ? (<img src={thread.author.avatar} alt={thread.author.name ?? ''} className="w-full h-full rounded-full object-cover" />) : (
+                                                                        <div className="w-full h-full rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-xs shadow">
+                                                                            {thread.author?.name?.charAt(0)?.toUpperCase() ?? 'A'}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <span className="font-medium text-purple-700">
+                                                                    {thread.author?.name ?? 'Anonymous'}
+                                                                </span>
                                                                 <Clock className="h-3 w-3 mx-1.5 text-gray-400" />
                                                                 <span>{formatRelativeTime(thread.createdAt)}</span>
-                                                                {thread.updatedAt && new Date(parseISO(thread.updatedAt)).getTime() > new Date(parseISO(thread.createdAt)).getTime() + (60 * 1000) && (<span className="ml-2 italic text-gray-400 text-[10px] sm:text-xs">(edited {formatRelativeTime(thread.updatedAt)})</span>)}
+                                                                {thread.updatedAt && new Date(parseISO(thread.updatedAt)).getTime() > new Date(parseISO(thread.createdAt)).getTime() + (60 * 1000) && (
+                                                                    <span className="ml-2 italic text-gray-400 text-[10px] sm:text-xs">
+                                                                        (edited)
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                         {thread.isCurrentUserAuthor && (

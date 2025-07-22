@@ -53,7 +53,6 @@ const SingleThreadView: React.FC = () => {
     const [courseCategories, setCourseCategories] = useState<AdminCourseCategoryType[]>([]);
     const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
-    // Fetch categories for the Edit Modal
     useEffect(() => {
         const loadCategories = async () => { 
             setIsLoadingCategories(true);
@@ -221,24 +220,31 @@ const SingleThreadView: React.FC = () => {
                         <h1 className="text-2xl sm:text-3xl font-bold text-purple-900 mt-4 font-unbounded break-words">
                             {thread.title}
                         </h1>
-                        <div className="mt-3 flex items-center text-sm text-gray-600">
-                             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold shadow" title={thread.author?.name ?? 'User'}>
-                                {thread.author?.avatar ? (
-                                    <img src={thread.author.avatar} alt={thread.author.name ?? ''} className="w-full h-full rounded-full object-cover" />
-                                ) : (
-                                    thread.author?.name?.charAt(0)?.toUpperCase() ?? 'A'
+                        {/* --- THIS IS THE CORRECTED SECTION --- */}
+                        <div className="mt-3 flex items-center justify-between text-sm text-gray-600">
+                            {/* Left side: Author */}
+                            <div className="flex items-center">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold shadow" title={thread.author?.name ?? 'User'}>
+                                    {thread.author?.avatar ? (
+                                        <img src={thread.author.avatar} alt={thread.author.name ?? ''} className="w-full h-full rounded-full object-cover" />
+                                    ) : (
+                                        thread.author?.name?.charAt(0)?.toUpperCase() ?? 'A'
+                                    )}
+                                </div>
+                                <span className="font-semibold text-purple-800 ml-2">
+                                    {thread.author?.name ?? 'Anonymous'}
+                                </span>
+                            </div>
+                            {/* Right side: Timestamp */}
+                            <div className="flex items-center">
+                                <Clock className="h-4 w-4 mr-1.5 text-gray-400" />
+                                <span title={thread.createdAt}>{formatRelativeTime(thread.createdAt)}</span>
+                                {thread.updatedAt && new Date(parseISO(thread.updatedAt)).getTime() > new Date(parseISO(thread.createdAt)).getTime() + (60 * 1000) && (
+                                    <span className="ml-3 italic text-gray-500 text-xs sm:text-sm">
+                                        (edited)
+                                    </span>
                                 )}
                             </div>
-                            <span className="font-semibold text-purple-800 ml-2">
-                                {thread.author?.name ?? 'Anonymous'}
-                            </span>
-                            <Clock className="h-4 w-4 mx-2 text-gray-400" />
-                            <span title={thread.createdAt}>{formatRelativeTime(thread.createdAt)}</span>
-                             {thread.updatedAt && new Date(parseISO(thread.updatedAt)).getTime() > new Date(parseISO(thread.createdAt)).getTime() + (60 * 1000) && (
-                                <span className="ml-3 italic text-gray-500 text-xs sm:text-sm">
-                                    (edited {formatRelativeTime(thread.updatedAt)})
-                                </span>
-                            )}
                         </div>
                     </div>
 
@@ -247,7 +253,6 @@ const SingleThreadView: React.FC = () => {
                         className="prose prose-purple max-w-none mt-6 text-gray-800 font-nunito text-base leading-relaxed break-words"
                     />
 
-                    {/* Image is now larger and centered */}
                     {thread.imageUrl && (
                         <div className="mt-8 flex justify-center">
                             <img 
@@ -278,8 +283,8 @@ const SingleThreadView: React.FC = () => {
 
     return (
         <Layout>
-            <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C]">
-                <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
+            <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] py-6">
+                <div className="w-full px-6 sm:px-8 lg:px-12 space-y-6">
                     <Link 
                         to="/learner/forum" 
                         className="inline-flex items-center gap-2 text-white/90 hover:text-white font-semibold font-nunito transition-colors group"
