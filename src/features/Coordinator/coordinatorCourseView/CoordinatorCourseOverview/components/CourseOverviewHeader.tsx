@@ -42,7 +42,7 @@ const CourseOverviewHeader: React.FC<CourseOverviewHeaderProps> = ({
     const displayData = isEditMode ? editCourseDetails : courseData;
 
     return (
-        <div className="bg-[#1B0A3F]/40 backdrop-blur-md rounded-xl p-8 shadow-lg border border-[#BF4BF6]/20 transition-all duration-300">
+        <div className="bg-white/90 rounded-xl p-8 shadow-lg border border-[#BF4BF6]/20 transition-all duration-300">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div className="flex-1 min-w-0">
                     {/* Title */}

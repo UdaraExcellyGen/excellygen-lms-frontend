@@ -46,6 +46,16 @@ export interface TechnologyDto {
     status?: string;
 }
 
+export interface ExistingMaterialFile {
+    id: number;
+    lessonId: number;
+    name: string;
+    documentType: DocumentType | string;
+    fileUrl: string;
+    fileSize: number;
+    lastUpdatedDate: string;
+}
+
 export interface CourseDocumentDto {
     id: number;
     lessonId: number;
@@ -76,7 +86,7 @@ export interface CourseDto {
     title: string;
     description: string | null;
     estimatedTime: number; // In Hours
-    calculatedCoursePoints: number | null;
+    calculatedCoursePoints?: number;
     status: CourseStatus;
     isInactive: boolean;
     thumbnailUrl: string | null; // For frontend display
@@ -307,12 +317,12 @@ export interface UpdateCourseCoordinatorDtoFE {
 export interface CreateLessonPayload {
     courseId: number;
     lessonName: string;
-    lessonPoints: number;
+    lessonPoints?: number;
 }
 
 export interface UpdateLessonPayload {
     lessonName: string;
-    lessonPoints: number;
+    lessonPoints?: number;
 }
 
 export interface MarkLessonCompletedPayload {
@@ -405,7 +415,7 @@ export interface BasicCourseDetailsState {
 export interface SubtopicFE {
     id: number; // Corresponds to Lesson ID
     lessonName: string;
-    lessonPoints: number;
+    lessonPoints?: number;
     courseId: number;
     documents: CourseDocumentDto[];
     isEditing?: boolean;
