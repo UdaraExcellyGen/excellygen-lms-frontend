@@ -25,8 +25,9 @@ import FormSelect from './components/FormSelect';
 import FormTextArea from './components/FormTextArea';
 import ThumbnailUpload from './components/ThumbnailUpload';
 import TechnologyDropdown from './components/TechnologyDropdown';
-import ProgressSteps from './components/ProgressSteps';
-import ConfirmationDialog from './components/ConfirmationDialog';
+import ProgressSteps from '../commonComponent/ProgressSteps';
+// import ConfirmationDialog from './components/ConfirmationDialog';
+import { useConfirmationDialog } from '../../coordinatorCourseView/CoordinatorCourseOverview/components/ConfirmationDialog';
 
 const BasicCourseDetails: React.FC = () => {
     const navigate = useNavigate();
@@ -59,7 +60,8 @@ const BasicCourseDetails: React.FC = () => {
     const [isTechnologiesDropdownOpen, setIsTechnologiesDropdownOpen] = useState<boolean>(false);
     const technologiesDropdownRef = useRef<HTMLDivElement>(null);
 
-    const [isConfirmLeaveOpen, setIsConfirmLeaveOpen] = useState(false);
+    //const [isConfirmLeaveOpen, setIsConfirmLeaveOpen] = useState(false);
+    const { showConfirmation, ConfirmationDialog: LeaveConfirmationDialog } = useConfirmationDialog();
 
     // Fetch lookups (categories, technologies)
     useEffect(() => {
@@ -293,8 +295,19 @@ const BasicCourseDetails: React.FC = () => {
         const isDirty = details.title || details.description || details.categoryId || details.estimatedTime || details.technologies.length > 0 || details.thumbnail;
         
         if (isDirty) {
-            // If the form has changes, open the dialog instead of navigating
-            setIsConfirmLeaveOpen(true);
+            showConfirmation({
+            title: "Unsaved Changes",
+            message: "You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.",
+            confirmText: "Leave Page",
+            cancelText: "Stay on Page",
+            type: 'warning',
+            onConfirm: () => {
+                resetCourseContext();
+                setCurrentEditingCourseId(null);
+                setDetails(getInitialDetailsState());
+                navigate('/coordinator/dashboard');
+            }
+        });
         } else {
             // If the form is clean, navigate away immediately
             resetCourseContext();
@@ -302,21 +315,21 @@ const BasicCourseDetails: React.FC = () => {
             setDetails(getInitialDetailsState());
             navigate('/coordinator/dashboard');
         }
-    }, [details, navigate, resetCourseContext, getInitialDetailsState]);
+    }, [details, navigate, resetCourseContext, getInitialDetailsState, showConfirmation]);
 
-    const handleConfirmLeave = () => {
-        // This runs when the user clicks "Leave" in the dialog
-        setIsConfirmLeaveOpen(false); // Close the dialog
-        resetCourseContext();
-        setCurrentEditingCourseId(null);
-        setDetails(getInitialDetailsState());
-        navigate('/coordinator/dashboard'); // Now, we navigate
-    };
+    // const handleConfirmLeave = () => {
+    //     // This runs when the user clicks "Leave" in the dialog
+    //     setIsConfirmLeaveOpen(false); // Close the dialog
+    //     resetCourseContext();
+    //     setCurrentEditingCourseId(null);
+    //     setDetails(getInitialDetailsState());
+    //     navigate('/coordinator/dashboard'); // Now, we navigate
+    // };
 
-    const handleCancelLeave = () => {
-        // This runs when the user clicks "Stay" or closes the dialog
-        setIsConfirmLeaveOpen(false);
-    };
+    // const handleCancelLeave = () => {
+    //     // This runs when the user clicks "Stay" or closes the dialog
+    //     setIsConfirmLeaveOpen(false);
+    // };
 
     const displayIdForTitle = currentEditingCourseId || contextCourseData.createdCourseId;
 
@@ -327,6 +340,7 @@ const BasicCourseDetails: React.FC = () => {
 
     return (
         <div className="bg-[#52007C] p-6 relative min-h-screen">
+             <LeaveConfirmationDialog />
             <div className="fixed top-0 left-0 right-0 bottom-0 bg-[#52007C] -z-10"></div>
             <div className="bg-white rounded-2xl p-4 mb-6">
                 <div className="flex justify-between items-center">
@@ -419,7 +433,7 @@ const BasicCourseDetails: React.FC = () => {
                             dropdownRef={technologiesDropdownRef} 
                         />
 
-                        <ConfirmationDialog
+                        {/* <ConfirmationDialog
                             isOpen={isConfirmLeaveOpen}
                             onConfirm={handleConfirmLeave}
                             onCancel={handleCancelLeave}
@@ -427,7 +441,7 @@ const BasicCourseDetails: React.FC = () => {
                             message="You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost."
                             confirmText="Leave Page"
                             cancelText="Stay on Page"
-                        />
+                        /> */}
 
                     </div>
                 </div>

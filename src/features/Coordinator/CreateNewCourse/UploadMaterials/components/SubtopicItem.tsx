@@ -1,7 +1,6 @@
-// src/features/Coordinator/CreateNewCourse/UploadMaterials/components/SubtopicItem.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Edit, Trash, Download, Plus, Video, FileText, List, Edit3, Upload, X } from 'lucide-react';
-import { SubtopicFE, ExistingMaterialFile } from '../../../../../types/course.types';
+import { SubtopicFE} from '../../../../../types/course.types';
 import { QuizDto } from '../../../../../types/quiz.types';
 import { getQuizzesByLessonId } from '../../../../../api/services/Course/quizService';
 
@@ -14,7 +13,7 @@ interface SubtopicItemProps {
   isSubmitting: boolean;
   toggleSubtopic: () => void;
   handleRemoveSubtopic: () => void;
-  handleSubtopicInputChange: (field: 'lessonName' | 'lessonPoints', value: string) => void;
+  handleSubtopicInputChange: (field: 'lessonName', value: string) => void;
   handleToggleEdit: () => void;
   handleSaveChanges: () => void;
   handleCancelEdit: () => void;
@@ -30,6 +29,7 @@ interface SubtopicItemProps {
   handleCreateQuizClick: () => void;
   handleEditQuiz: () => void;
   handleRemoveQuiz: () => void;
+  refreshTrigger: number;
 }
 
 const SubtopicItem: React.FC<SubtopicItemProps> = ({
@@ -57,6 +57,7 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
   handleCreateQuizClick,
   handleEditQuiz,
   handleRemoveQuiz,
+  refreshTrigger,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [quizzes, setQuizzes] = useState<QuizDto[]>([]);
@@ -78,7 +79,7 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
           setLoadingQuizzes(false);
         });
     }
-  }, [expanded, subtopic?.id]);
+  }, [expanded, subtopic?.id, refreshTrigger]);
 
   // Guard clause
   if (!subtopic || typeof subtopic.id === 'undefined') {
@@ -138,22 +139,6 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <div className="border border-[#52007C] px-2 py-1 rounded text-[#1B0A3F] text-xs flex items-center">
-            <span className="mr-1">Points:</span>
-            {subtopic.isEditing ? (
-              <input
-                type="number"
-                min="1"
-                max="100"
-                value={subtopic.lessonPoints}
-                onChange={(e) => handleSubtopicInputChange('lessonPoints', e.target.value)}
-                className=" text-[#1B0A3F] w-12 px-1 rounded"
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <span>{subtopic.lessonPoints}</span>
-            )}
-          </div>
           {subtopic.isEditing ? (
             <div className="flex items-center space-x-1">
               <button 
@@ -346,18 +331,6 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
               </div>
             )}
           </div>
-
-          {/* Action Buttons */}
-          {/* <div className="flex flex-wrap gap-2 mb-4">
-            <button 
-              onClick={handleAddVideoClick} 
-              className="border-2 border border-[#34137C] hover:border-[#34137C]/60 text-[#BF4BF6] text-xs py-1 px-2 rounded flex items-center"
-              disabled={isSubmitting}
-            >
-              <Video className="w-3 h-3 mr-1" />
-              Add Video
-            </button>
-          </div> */}
 
           {/* Quizzes Section */}
           <div>

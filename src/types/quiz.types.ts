@@ -76,6 +76,7 @@ export interface QuizAttemptDto {
 
 export interface QuizAttemptDetailDto {
   quizAttemptId: number;
+  courseId?: number;
   quizId: number;
   quizTitle: string;
   startTime: string;

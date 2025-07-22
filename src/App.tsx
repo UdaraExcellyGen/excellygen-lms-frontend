@@ -66,7 +66,7 @@ const CoursesDisplayPage = lazy(() => import('./features/Coordinator/CoursesDisp
 const CourseDetails = lazy(() => import('./features/Coordinator/CreateNewCourse/BasicCourseDetails/BasicCourseDetails'));
 const CoordinatorCourseOverview = lazy(() => import('./features/Coordinator/coordinatorCourseView/CoordinatorCourseOverview/CoordinatorCourseOverview'));
 const AssignLearners = lazy(() => import('./features/Coordinator/coordinatorCourseView/AssignLearners/AssignLearners'));
-const CreateQuiz = lazy(() => import('./features/Coordinator/QuizManagement/CreateQuiz'));
+const CreateQuiz = lazy(() => import('./features/Coordinator/QuizManagement/CreateQuiz/CreateQuiz'));
 const EditQuiz = lazy(() => import('./features/Coordinator/QuizManagement/EditQuiz'));
 const QuizList = lazy(() => import('./features/Coordinator/LessonQuizzes/QuizList'));
 const QuizResultsCoordinator = lazy(() => import('./features/Coordinator/LessonQuizzes/QuizResultsCoordinator'));
