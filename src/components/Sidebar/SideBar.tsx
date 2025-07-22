@@ -223,16 +223,11 @@ const Sidebar = () => {
               )}
             </div>
             {!isCollapsed && (
-              <span className={`ml-3 text-sm font-medium transition-colors duration-300 flex items-center justify-between w-full
+              <span className={`ml-3 text-sm font-medium transition-colors duration-300
                 ${isActive
                   ? 'text-[#52007C]'
                   : 'text-gray-300 group-hover:text-[#D68BF9]'}`}>
                 {item.title}
-                {isNotificationItem && unreadCount > 0 && (
-                  <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 font-bold animate-pulse">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
               </span>
             )}
           </Link>

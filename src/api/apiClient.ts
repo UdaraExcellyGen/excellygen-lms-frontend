@@ -20,8 +20,6 @@ let failedQueue: {
 }[] = [];
 
 // OPTIMIZATION: Active request tracking with better management
-let activeRequests = 0;
-let loadingTimeout: NodeJS.Timeout | null = null;
 let requestQueue = new Set<string>(); // Track request URLs to prevent duplicates
 
 // Functions for loader management that will be injected
@@ -39,59 +37,65 @@ export const setupLoaderFunctions = (
 
 // OPTIMIZATION: Enhanced loading management with request deduplication
 const manageLoading = (increment: boolean, config?: any) => {
-  // OPTIMIZATION: More comprehensive endpoint exclusions
+  // FIXED: More comprehensive endpoint exclusions for background requests
   const excludedEndpoints = [
     '/learner/stats/overall',
     '/admin/dashboard/stats',
     '/admin/dashboard/notifications',
-    '/learner-notifications/summary',
-    '/heartbeat',
-    '/auth/refresh-token'
+    '/learner-notifications/summary',        // Notification summary polling
+    '/learner-notifications?',               // Any notification pagination requests
+    '/auth/heartbeat',                       // FIXED: Was missing 'auth/'
+    '/heartbeat',                           // Keep both for safety
+    '/auth/refresh-token',
+    // Add more background endpoints as needed
+    '/notifications/summary',
+    '/dashboard/stats',
+    '/stats/overall'
   ];
   
+  // Check if this request should show global loading
   const shouldShowGlobalLoading = !excludedEndpoints.some(endpoint => 
     config?.url?.includes(endpoint)
   );
   
   if (!shouldShowGlobalLoading) {
+    // Log excluded requests in development for debugging
+    if (import.meta.env.DEV) {
+      console.log(`🔇 Background request (no loading): ${config?.url}`);
+    }
     return;
   }
   
   // OPTIMIZATION: Prevent duplicate requests from affecting loading state
-  const requestKey = `${config?.method?.toUpperCase()}_${config?.url}`; // FIXED
+  const requestKey = `${config?.method?.toUpperCase()}_${config?.url}`;
   
   if (increment) {
+    // FIXED: Better duplicate request handling
     if (requestQueue.has(requestKey)) {
+      if (import.meta.env.DEV) {
+        console.log(`🔄 Duplicate request detected, skipping loading increment: ${requestKey}`);
+      }
       return; // Don't increment loading for duplicate requests
     }
-    requestQueue.add(requestKey);
-    activeRequests++;
     
-    // Start loading immediately for first request
-    if (activeRequests === 1) {
-      if (loadingTimeout) {
-        clearTimeout(loadingTimeout);
-        loadingTimeout = null;
-      }
-      startLoading();
+    requestQueue.add(requestKey);
+    
+    // FIXED: Let LoadingContext handle all the counting
+    startLoading();
+    
+    if (import.meta.env.DEV) {
+      console.log(`🔄 Loading started for: ${config?.url}`);
     }
   } else {
+    // FIXED: Always remove from queue
+    const wasInQueue = requestQueue.has(requestKey);
     requestQueue.delete(requestKey);
-    activeRequests = Math.max(0, activeRequests - 1);
     
-    // Debounce stopping the loader to prevent flickering
-    if (activeRequests === 0) {
-      if (loadingTimeout) {
-        clearTimeout(loadingTimeout);
-      }
-      
-      // OPTIMIZATION: Reduced delay for better UX
-      loadingTimeout = setTimeout(() => {
-        if (activeRequests === 0) {
-          stopLoading();
-        }
-        loadingTimeout = null;
-      }, 50); // Reduced from 100ms to 50ms
+    // FIXED: Let LoadingContext handle all the counting
+    stopLoading();
+    
+    if (import.meta.env.DEV) {
+      console.log(`✅ Loading stopped for: ${config?.url} (was in queue: ${wasInQueue})`);
     }
   }
 };
@@ -102,7 +106,7 @@ const processQueue = (error: any = null, token: string | null = null) => {
     if (error) {
       promise.reject(error);
     } else if (token) {
-      promise.config.headers['Authorization'] = `Bearer ${token}`; // FIXED
+      promise.config.headers['Authorization'] = `Bearer ${token}`;
       promise.resolve(axios(promise.config));
     }
   });
@@ -133,7 +137,7 @@ apiClient.interceptors.request.use(
     
     const token = localStorage.getItem('access_token');
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`; // FIXED
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
     
     // Add active role header
@@ -151,8 +155,8 @@ apiClient.interceptors.request.use(
       const normalizedRole = roleMap[currentRole] || currentRole;
       config.headers['X-Active-Role'] = normalizedRole;
       
-      // Add debug logging in development
-      if (import.meta.env.DEV) {
+      // Add debug logging in development (reduced noise)
+      if (import.meta.env.DEV && !config.url?.includes('/heartbeat') && !config.url?.includes('/notifications')) {
         console.log(`Request with role: ${normalizedRole} to ${config.url}`);
       }
     }
@@ -245,7 +249,7 @@ apiClient.interceptors.response.use(
         
         // Call refresh token endpoint
         const response = await axios.post(
-          `${apiClient.defaults.baseURL}/auth/refresh-token`, // FIXED
+          `${apiClient.defaults.baseURL}/auth/refresh-token`,
           {
             accessToken,
             refreshToken,
@@ -261,7 +265,7 @@ apiClient.interceptors.response.use(
           localStorage.setItem('current_role', response.data.currentRole);
           
           // Update the authorization header for the original request
-          originalRequest.headers['Authorization'] = `Bearer ${response.data.accessToken}`; // FIXED
+          originalRequest.headers['Authorization'] = `Bearer ${response.data.accessToken}`;
           
           // Also set the X-Active-Role header
           if (response.data.currentRole) {
@@ -309,9 +313,11 @@ apiClient.interceptors.response.use(
       const message = error.response.data?.message || error.message;
       const endpoint = error.config?.url || 'unknown';
       
-      // Don't log certain expected errors
+      // Don't log certain expected errors or background requests
       const expectedErrors = [401, 403, 404];
-      if (!expectedErrors.includes(status)) {
+      const isBackgroundRequest = endpoint.includes('/heartbeat') || endpoint.includes('/notifications');
+      
+      if (!expectedErrors.includes(status) && !isBackgroundRequest) {
         switch (status) {
           case 500:
             console.error(`Server error at ${endpoint}:`, message);
@@ -345,20 +351,12 @@ apiClient.interceptors.response.use(
 
 // OPTIMIZATION: Enhanced utilities for better performance monitoring
 export const clearActiveRequests = () => {
-  activeRequests = 0;
   requestQueue.clear();
   pendingRequests.clear();
-  if (loadingTimeout) {
-    clearTimeout(loadingTimeout);
-    loadingTimeout = null;
-  }
-  stopLoading();
+  console.log('🧹 Request queues cleared');
 };
 
-export const getActiveRequestsCount = () => activeRequests;
-
 export const getRequestQueueStatus = () => ({
-  activeRequests,
   queuedRequests: Array.from(requestQueue),
   pendingRequests: Array.from(pendingRequests.keys())
 });
