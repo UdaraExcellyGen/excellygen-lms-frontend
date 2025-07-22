@@ -1,8 +1,8 @@
 // src/pages/DiscussionForum/DiscussionForum.tsx
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Select, { SingleValue, StylesConfig } from 'react-select';
+import { SingleValue } from 'react-select';
 import { 
     MessageSquare, Clock, MessageCircle, Edit2, Trash2,
     RefreshCw, AlertCircle, ChevronLeft, ChevronRight 
@@ -52,7 +52,7 @@ const DiscussionForum: React.FC = () => {
 
     const [courseCategories, setCourseCategories] = useState<AdminCourseCategoryType[]>([]);
     const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-    const [errorCategories, setErrorCategories] = useState<string | null>(null);
+    const [_errorCategories, setErrorCategories] = useState<string | null>(null);
 
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -125,7 +125,7 @@ const DiscussionForum: React.FC = () => {
             setTotalThreads(result.totalCount);
 
             if (!currentUserAvatar) {
-                const userThread = fetchedThreads.find(t => t.isCurrentUserAuthor);
+                const userThread = fetchedThreads.find((t: ForumThreadDto) => t.isCurrentUserAuthor);
                 if (userThread && userThread.author?.avatar) {
                     setCurrentUserAvatar(userThread.author.avatar);
                 }
@@ -269,7 +269,9 @@ const DiscussionForum: React.FC = () => {
 
     const userForActionBar = user ? {
         ...user,
-        avatar: user.avatar || currentUserAvatar,
+        // --- THIS IS THE FIX ---
+        // This ensures that if currentUserAvatar is null, the result is `undefined`, matching the `User` type.
+        avatar: user.avatar || currentUserAvatar || undefined,
     } : null;
 
     return (

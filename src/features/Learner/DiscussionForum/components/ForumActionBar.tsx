@@ -1,12 +1,13 @@
 // src/pages/DiscussionForum/components/ForumActionBar.tsx
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Edit3, Search, X } from 'lucide-react';
 import Select, { SingleValue, StylesConfig } from 'react-select';
-import { AuthUser } from '../../../../types/auth.types';
+import { User } from '../../../../types/auth.types'; // FIXED: Changed AuthUser to User
 import { CategorySelectOption } from '../types/dto';
 
 interface ForumActionBarProps {
-    user: AuthUser | null;
+    user: User | null; // FIXED: Changed AuthUser to User
     onTriggerCreate: () => void;
     
     // Props for search
@@ -39,7 +40,6 @@ const ForumActionBar: React.FC<ForumActionBarProps> = ({
         }
     }, [isSearchVisible]);
 
-    // --- MODIFIED: Expanded this style object for the purple theme ---
     const selectFilterStyles: StylesConfig<CategorySelectOption, false> = {
         control: (provided, state) => ({ 
             ...provided, 
@@ -53,22 +53,22 @@ const ForumActionBar: React.FC<ForumActionBarProps> = ({
         option: (provided, state) => ({
             ...provided,
             backgroundColor: state.isSelected 
-                ? '#7A00B8' // Dark purple for selected item
+                ? '#7A00B8'
                 : state.isFocused 
-                ? 'rgba(191, 75, 246, 0.1)' // Light purple for hovered item
+                ? 'rgba(191, 75, 246, 0.1)'
                 : 'white',
             color: state.isSelected ? 'white' : '#1B0A3F',
             fontFamily: '"Nunito", sans-serif',
             cursor: 'pointer',
             '&:active': {
-                backgroundColor: '#5f0090' // Slightly darker purple on click
+                backgroundColor: '#5f0090'
             }
         }),
         menu: (provided) => ({
             ...provided,
             borderRadius: '0.75rem',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-            overflow: 'hidden', // Ensures border radius is applied to content
+            overflow: 'hidden',
         }),
         singleValue: (provided) => ({
             ...provided,
