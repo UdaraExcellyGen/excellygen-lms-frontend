@@ -11,7 +11,6 @@ import {
 } from '../api/authApi';
 import { User, UserRole, AuthState } from '../types/auth.types';
 import PasswordChangeModal from '../features/auth/PasswordChangeModal';
-import ActivityTracker from '../api/services/ActivityTracker';
 import SessionService from '../api/services/SessionService';
 
 type AuthContextType = AuthState & {
