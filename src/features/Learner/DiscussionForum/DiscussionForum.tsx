@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Select, { SingleValue, StylesConfig } from 'react-select';
 import { 
-    MessageSquare, Search, Plus, Clock, MessageCircle, Edit2, Trash2,
+    MessageSquare, Clock, MessageCircle, Edit2, Trash2,
     RefreshCw, AlertCircle, ChevronLeft, ChevronRight 
 } from 'lucide-react';
 import Layout from '../../../components/Sidebar/Layout';
@@ -26,7 +26,7 @@ import { Category as AdminCourseCategoryType } from '../../../features/Admin/Man
 import { useBadgeChecker } from '../../../hooks/useBadgeChecker';
 import ThreadCardSkeleton from './components/ThreadCardSkeleton';
 import MarkdownRenderer from '../../../components/common/MarkdownRenderer';
-// <-- REMOVED FsLightbox import
+import ForumActionBar from './components/ForumActionBar';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -47,6 +47,9 @@ const DiscussionForum: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // --- NEW STATE FOR THE WORKAROUND ---
+    const [currentUserAvatar, setCurrentUserAvatar] = useState<string | null>(null);
 
     const [courseCategories, setCourseCategories] = useState<AdminCourseCategoryType[]>([]);
     const [isLoadingCategories, setIsLoadingCategories] = useState(true);
@@ -69,10 +72,6 @@ const DiscussionForum: React.FC = () => {
 
     const [commentPostTrigger, setCommentPostTrigger] = useState(0);
     useBadgeChecker(commentPostTrigger);
-
-    const searchInputRef = useRef<HTMLInputElement>(null);
-
-    // <-- REMOVED lightbox state and handler function
 
     useEffect(() => {
         const loadCategories = async () => { 
@@ -120,10 +119,22 @@ const DiscussionForum: React.FC = () => {
                 MyThreads: showMyThreads || undefined,
             };
             const result = await forumApi.getThreads(params); 
-            setThreads(result.items.map((t: ForumThreadDto) => ({ ...t, showComments: t.showComments || false }))); 
+            const fetchedThreads = result.items.map((t: ForumThreadDto) => ({ ...t, showComments: t.showComments || false }));
+            setThreads(fetchedThreads); 
             setTotalPages(result.totalPages); 
             setCurrentPage(result.pageNumber); 
             setTotalThreads(result.totalCount);
+
+            // --- WORKAROUND LOGIC ---
+            // After fetching, find the user's avatar from their own posts if we don't have it yet.
+            if (!currentUserAvatar) {
+                const userThread = fetchedThreads.find(t => t.isCurrentUserAuthor);
+                if (userThread && userThread.author?.avatar) {
+                    setCurrentUserAvatar(userThread.author.avatar);
+                }
+            }
+            // --- END WORKAROUND LOGIC ---
+
         } catch (err: any) { 
             const errorMessageText = getErrorMessage(err, 'Could not load threads.');
             setError(errorMessageText); 
@@ -134,7 +145,8 @@ const DiscussionForum: React.FC = () => {
         } finally { 
             setIsLoading(false); 
         }
-    }, [debouncedSearchQuery, selectedCategoryFilterOption?.value, showMyThreads]); 
+    // We add currentUserAvatar to the dependency array to avoid stale closures
+    }, [debouncedSearchQuery, selectedCategoryFilterOption?.value, showMyThreads, currentUserAvatar]); 
 
     useEffect(() => { 
         fetchThreads(currentPage); 
@@ -260,20 +272,11 @@ const DiscussionForum: React.FC = () => {
         currentRelativePath: threadToEdit.imageUrl && threadToEdit.imageUrl.includes("/uploads/") ? threadToEdit.imageUrl.substring(threadToEdit.imageUrl.indexOf("/uploads/")) : undefined
     } : undefined;
 
-    const selectFilterStyles: StylesConfig<CategorySelectOption, false> = {
-        control: (provided, state) => ({ ...provided, backgroundColor: 'rgba(253, 246, 255, 0.7)', border: state.isFocused ? '2px solid #BF4BF6' : '1px solid rgba(208, 160, 230, 0.5)', boxShadow: state.isFocused ? '0 0 0 1px #BF4BF6' : 'none', borderRadius: '0.5rem', padding: '0.15rem 0.25rem', fontSize: '0.875rem', fontFamily: '"Nunito", sans-serif', transition: 'all 0.2s ease', '&:hover': { borderColor: '#BF4BF6' }, minHeight: '42px' }),
-        placeholder: (provided) => ({ ...provided, color: 'rgba(82, 0, 124, 0.7)', fontSize: '0.875rem' }),
-        option: (provided, state) => ({ ...provided, backgroundColor: state.isSelected ? '#7A00B8' : state.isFocused ? 'rgba(191, 75, 246, 0.1)' : 'white', color: state.isSelected ? 'white' : '#1B0A3F', fontSize: '0.875rem', fontFamily: '"Nunito", sans-serif', cursor: 'pointer', '&:active': { backgroundColor: '#7A00B8' } }),
-        menu: (provided) => ({ ...provided, backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)', zIndex: 50 }),
-        menuList: (provided) => ({ ...provided, padding: '0.25rem' }),
-        singleValue: (provided) => ({ ...provided, color: '#1B0A3F', fontSize: '0.875rem', fontFamily: '"Nunito", sans-serif' }),
-        dropdownIndicator: (provided, state) => ({ ...provided, color: state.isFocused ? '#7A00B8' : 'rgba(82, 0, 124, 0.7)', '&:hover': { color: '#7A00B8' }, padding: '0 8px' }),
-        indicatorSeparator: (provided) => ({ ...provided, backgroundColor: 'rgba(208, 160, 230, 0.5)' }),
-        clearIndicator: (provided, state) => ({ ...provided, color: state.isFocused ? '#7A00B8' : 'rgba(82, 0, 124, 0.7)', '&:hover': { color: '#7A00B8' } }),
-        valueContainer: (provided) => ({ ...provided, padding: '2px 8px' }),
-        input: (provided) => ({ ...provided, color: '#1B0A3F', fontFamily: '"Nunito", sans-serif' }),
-        noOptionsMessage: (provided) => ({ ...provided, color: 'rgba(82, 0, 124, 0.7)', fontFamily: '"Nunito", sans-serif', fontSize: '0.875rem' }),
-    };
+    // --- WORKAROUND: Create a complete user object for the action bar ---
+    const userForActionBar = user ? {
+        ...user,
+        avatar: user.avatar || currentUserAvatar, // Use the avatar from context, or fall back to the one we found
+    } : null;
 
     return (
         <Layout>
@@ -285,27 +288,26 @@ const DiscussionForum: React.FC = () => {
                             <p className="text-[#D68BF9] text-lg font-nunito">Connect and learn with your peers</p>
                         </div>
                         <div className="flex flex-shrink-0 gap-2 md:gap-4 self-start md:self-center">
-                            <MyThreadsButton onClick={() => setShowMyThreads(prev => !prev)} active={showMyThreads} />
-                            <button onClick={() => setIsCreateModalOpen(true)} disabled={isLoading || isActionLoading || isLoadingCategories} className="px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-[#BF4BF6] to-[#7A00B8] text-white rounded-xl hover:from-[#D68BF9] hover:to-[#BF4BF6] transition-all duration-300 flex items-center gap-2 font-nunito shadow-md disabled:opacity-70 disabled:cursor-not-allowed">
-                                <Plus className="h-5 w-5" />
-                                <span className="hidden sm:inline">Create Thread</span>
-                                <span className="sm:hidden">New</span>
-                            </button>
+                            <MyThreadsButton 
+                                onClick={() => setShowMyThreads(prev => !prev)} 
+                                active={showMyThreads} 
+                            />
                         </div>
                     </div>
 
-                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-purple-300/40 shadow-md">
-                        <div className="flex flex-col md:flex-row gap-4 items-center">
-                            <div className="relative flex-1 w-full">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-purple-700" />
-                                <input ref={searchInputRef} type="text" placeholder="Search threads..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} disabled={isLoading || isActionLoading || isLoadingCategories} className="w-full bg-purple-50/50 border border-purple-300/50 rounded-lg pl-12 pr-4 py-3 text-purple-900 placeholder-purple-500/70 focus:ring-2 focus:ring-purple-500 focus:border-transparent font-nunito text-sm" />
-                            </div>
-                            <div className="w-full md:w-auto md:min-w-[180px] lg:min-w-[220px]"> 
-                                <Select<CategorySelectOption, false> instanceId="main-category-filter-global" value={selectedCategoryFilterOption} onChange={handleCategoryFilterChange} options={filterCategoryOptions} isLoading={isLoadingCategories} isDisabled={isLoading || isActionLoading || isLoadingCategories || courseCategories.length === 0 && !errorCategories} placeholder="All Categories" isClearable={false} styles={selectFilterStyles} menuPortalTarget={typeof window !== 'undefined' ? document.body : null} menuPlacement="auto" menuPosition="fixed" classNamePrefix="react-select-filter" />
-                            </div>
-                        </div>
-                    </div>
+                    {/* --- WORKAROUND: Pass the enhanced user object --- */}
+                    <ForumActionBar
+                        user={userForActionBar}
+                        onTriggerCreate={() => setIsCreateModalOpen(true)}
+                        searchTerm={searchInput}
+                        onSearchChange={setSearchInput}
+                        categoryOptions={filterCategoryOptions}
+                        selectedCategory={selectedCategoryFilterOption}
+                        onCategoryChange={handleCategoryFilterChange}
+                        isLoadingCategories={isLoadingCategories}
+                    />
                     
+                    {/* ... The rest of the component remains the same ... */}
                     {isLoading && (
                         <div className="space-y-4">
                             {Array.from({ length: 5 }).map((_, index) => (
@@ -375,7 +377,6 @@ const DiscussionForum: React.FC = () => {
                                                     />
                                                     {thread.imageUrl && (
                                                         <div className="mt-3 max-w-xs">
-                                                             {/* <-- MODIFIED: Removed onClick and cursor-pointer */}
                                                             <img src={thread.imageUrl} alt="Thread attachment" className="rounded-md max-h-48 object-contain border bg-gray-100" onError={(e) => (e.currentTarget.style.display = 'none')} />
                                                         </div>
                                                     )}
@@ -408,8 +409,6 @@ const DiscussionForum: React.FC = () => {
                         </>
                     )}
                 </div>
-
-                {/* <-- REMOVED FsLightbox component */}
 
                 <CreateThreadModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onSubmit={handleCreateThread} availableCategories={courseCategories.map(cat => cat.title)} />
                 {editModalInitialData && threadToEdit && (<EditThreadModal isOpen={isEditModalOpen} onClose={() => { setIsEditModalOpen(false); setThreadToEdit(null); }} onSubmit={handleUpdateThread} initialData={editModalInitialData} availableCategories={courseCategories.map(cat => cat.title)} />)}
