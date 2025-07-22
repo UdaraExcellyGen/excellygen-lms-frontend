@@ -363,9 +363,19 @@ const DiscussionForum: React.FC = () => {
                                                                         </div>
                                                                     )}
                                                                 </div>
-                                                                <span className="font-medium text-purple-700">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (thread.author?.id) {
+                                                                            navigate(`/learner/profile/${thread.author.id}`);
+                                                                        }
+                                                                    }}
+                                                                    disabled={!thread.author?.id}
+                                                                    className="font-medium text-purple-700 hover:underline disabled:no-underline disabled:cursor-default"
+                                                                    title={thread.author?.id ? `View profile of ${thread.author.name}` : undefined}
+                                                                >
                                                                     {thread.author?.name ?? 'Anonymous'}
-                                                                </span>
+                                                                </button>
                                                                 <Clock className="h-3 w-3 mx-1.5 text-gray-400" />
                                                                 <span>{formatRelativeTime(thread.createdAt)}</span>
                                                                 {thread.updatedAt && new Date(parseISO(thread.updatedAt)).getTime() > new Date(parseISO(thread.createdAt)).getTime() + (60 * 1000) && (
