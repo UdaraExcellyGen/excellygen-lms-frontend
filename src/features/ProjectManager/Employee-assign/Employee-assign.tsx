@@ -705,14 +705,14 @@ const EmployeeManagement: React.FC = () => {
                             {isSkillMatchActive ? (
                                 <>
                                     <FaBullseye className="w-3 h-3 sm:w-4 sm:h-4" />
-                                    <span className="hidden sm:inline">Matched Skills</span>
-                                    <span className="sm:hidden">Match</span>
+                                    <span className="hidden sm:inline">{t('projectManager.employeeAssign.matchedSkills')}</span>
+                                    <span className="sm:hidden">{t('projectManager.employeeAssign.match')}</span>
                                 </>
                             ) : (
                                 <>
                                     <FaObjectGroup className="w-3 h-3 sm:w-4 sm:h-4" />
                                     <span className="hidden sm:inline">{t('projectManager.employeeAssign.matchTechnologies')}</span>
-                                    <span className="sm:hidden">Match</span>
+                                    <span className="sm:hidden">{t('projectManager.employeeAssign.match')}</span>
                                 </>
                             )}
                         </button>
@@ -894,7 +894,7 @@ const EmployeeManagement: React.FC = () => {
                                 >
                                     <FaUserSlash className="w-3 h-3 sm:w-4 sm:h-4" />
                                     <span className="hidden sm:inline">{t('projectManager.employeeAssign.freeBench')}</span>
-                                    <span className="sm:hidden">Free</span>
+                                    <span className="sm:hidden">{t('projectManager.employeeAssign.free')}</span>
                                 </button>
                             </div>
 
@@ -904,10 +904,10 @@ const EmployeeManagement: React.FC = () => {
                                     <p className="text-xs sm:text-sm flex flex-col sm:flex-row items-start sm:items-center gap-2">
                                         <span className="flex items-center gap-2">
                                             <FaBullseye className="w-3 h-3 sm:w-4 sm:h-4 text-[#BF4BF6] flex-shrink-0" />
-                                            <strong>Skill Matching Active:</strong>
+                                            <strong>{t('projectManager.employeeAssign.skillMatchingActive')}:</strong>
                                         </span>
                                         <span className="flex flex-wrap items-center gap-1">
-                                            Showing employees with skills: {' '}
+                                            {t('projectManager.employeeAssign.showingEmployeesWithSkills')}: {' '}
                                             <span className="font-mono text-xs bg-purple-100 px-2 py-1 rounded break-all">
                                                 {selectedProject.requiredSkills.map(s => s.name).join(', ')}
                                             </span>
@@ -917,7 +917,7 @@ const EmployeeManagement: React.FC = () => {
                                         <p className="text-xs mt-1 flex flex-col sm:flex-row items-start sm:items-center gap-1">
                                             <span className="flex items-center gap-1">
                                                 <FaThumbtack className="w-3 h-3 text-[#BF4BF6] flex-shrink-0" />
-                                                Further filtered by:
+                                                {t('projectManager.employeeAssign.furtherFilteredBy')}:
                                             </span>
                                             <strong className="break-all">{skillFilter.join(', ')}</strong>
                                         </p>
@@ -967,10 +967,10 @@ const EmployeeManagement: React.FC = () => {
                                             <div className="flex flex-col items-center gap-3">
                                                 <div>
                                                     <p className="text-lg font-medium text-[#52007C] dark:text-white mb-2">
-                                                        No matching employees found
+                                                        {t('projectManager.employeeAssign.noMatchingEmployeesFound')}
                                                     </p>
                                                     <p className="text-sm text-[#7A00B8] dark:text-[#D68BF9] max-w-md">
-                                                        No employees have skills matching: <strong>{selectedProject.requiredSkills.map(s => s.name).join(', ')}</strong>
+                                                        {t('projectManager.employeeAssign.noEmployeesHaveSkillsMatching')}: <strong>{selectedProject.requiredSkills.map(s => s.name).join(', ')}</strong>
                                                     </p>
                                                 </div>
                                             </div>

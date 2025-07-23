@@ -133,7 +133,12 @@
       "active": "Active",
       "completed": "Completed",
       "name": "Name",
-      "id": "ID"
+      "id": "ID",
+      "skillMatchingActive": "Skill Matching Active",
+      "showingEmployeesWithSkills": "Showing employees with skills",
+      "noMatchingEmployeesFound": "No matching employees found",
+      "noEmployeesHaveSkillsMatching": "No employees have skills matching",
+      "furtherFilteredBy": "Further filtered by"
     },
     "dialogs": {
       "confirmEmployeeAssignment": "Confirm Employee Assignment?",
