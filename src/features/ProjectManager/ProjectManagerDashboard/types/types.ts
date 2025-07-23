@@ -9,15 +9,18 @@ export interface Notification {
   isNew: boolean;
 }
 
-// PM Dashboard specific stats (matching Admin pattern)
+// Updated PM Dashboard specific stats to match new backend metrics
 export interface DashboardStats {
   projects: {
     total: number;
     active: number;
+    withEmployees: number;
   };
   employees: {
     total: number;
-    active: number;
+    onProjects: number;
+    available: number;
+    fullyUtilized: number;
   };
   technologies: {
     total: number;
@@ -53,4 +56,8 @@ export interface HeaderProps {
   adminName?: string;
   role?: string;
   avatar?: string | null;
+}
+
+export interface NotificationCardProps {
+  notifications: Notification[];
 }
