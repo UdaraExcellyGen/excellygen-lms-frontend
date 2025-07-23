@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import Layout from '../../../components/Sidebar/Layout';
 import { LearnerCourseDto } from '../../../types/course.types';
 import ConfirmationModal from './components/ConfirmationModal';
@@ -10,7 +10,7 @@ import CourseGrid from './components/CourseGrid';
 
 import { getCoursesForCategory, clearCourseCaches } from '../../../api/services/Course/learnerCourseService';
 import { createEnrollment, deleteEnrollment } from '../../../api/services/Course/enrollmentService';
-import { getCategories as getCourseCategoriesApi } from '../../../api/services/courseCategoryService';
+import { getCategoryById, clearCategoriesCache } from '../../../api/services/courseCategoryService';
 import { getOverallLmsStatsForLearner } from '../../../api/services/LearnerDashboard/learnerOverallStatsService';
 import { OverallLmsStatsDto as OverallLmsStatsBackendDto } from '../../../types/course.types';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -27,6 +27,7 @@ const CourseContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'courses' | 'learning'>('courses');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
   const [availableCourses, setAvailableCourses] = useState<LearnerCourseDto[]>([]);
   const [enrolledCourses, setEnrolledCourses] = useState<LearnerCourseDto[]>([]);
   const [isUnenrollModalOpen, setIsUnenrollModalOpen] = useState(false);
@@ -46,23 +47,16 @@ const CourseContent: React.FC = () => {
   }, []);
 
   const getCategoryName = useCallback(async (categoryId: string): Promise<string> => {
-    const cachedCategories = sessionStorage.getItem('course_categories_simple');
-    if (cachedCategories) {
-      try {
-        const categories = JSON.parse(cachedCategories);
-        const category = categories.find((cat: any) => cat.id === categoryId);
-        if (category) return category.title;
-      } catch (error) {
-        console.error('Error parsing cached categories:', error);
-      }
-    }
     try {
-      const allCategories = await getCourseCategoriesApi();
-      sessionStorage.setItem('course_categories_simple', JSON.stringify(allCategories));
-      const matchedCategory = allCategories.find(cat => cat.id === categoryId);
-      return matchedCategory ? matchedCategory.title : 'Unknown Category';
-    } catch (error) {
-      console.error('Error fetching categories:', error);
+      // Try to get the specific category to check if it's accessible
+      const category = await getCategoryById(categoryId);
+      return category.title;
+    } catch (error: any) {
+      console.error('Error fetching category:', error);
+      if (error.message.includes('not found') || error.message.includes('removed')) {
+        setCategoryError('This category is no longer available or has been removed.');
+        return 'Category Not Available';
+      }
       return 'Unknown Category';
     }
   }, []);
@@ -79,12 +73,22 @@ const CourseContent: React.FC = () => {
 
     setLoading(true);
     setError(null);
+    setCategoryError(null);
 
     try {
       console.log('Fetching course data optimized...');
-      getCategoryName(categoryIdParam).then(name => {
-        if (isMountedRef.current) setCategoryName(name);
-      });
+      
+      // First check if the category is accessible
+      const categoryName = await getCategoryName(categoryIdParam);
+      if (isMountedRef.current) {
+        setCategoryName(categoryName);
+      }
+
+      // If there's a category error, don't proceed with course fetching
+      if (categoryError) {
+        setLoading(false);
+        return;
+      }
 
       const [coursesResult, statsResult] = await Promise.allSettled([
         getCoursesForCategory(categoryIdParam),
@@ -103,10 +107,11 @@ const CourseContent: React.FC = () => {
         console.error('Failed to fetch courses:', coursesResult.reason);
         const reason = coursesResult.reason;
         if (reason?.response?.status === 404) {
-          setError("Course category not found.");
-          toast.error("Course category not found.");
-          navigate('/learner/course-categories', { replace: true });
-          return;
+          setCategoryError("This category is no longer available.");
+          toast.error("Category not found or has been removed.");
+        } else if (reason?.response?.status === 403) {
+          setCategoryError("Access denied to this category.");
+          toast.error("You don't have permission to access this category.");
         } else {
           setError("Failed to load courses. Please try again.");
           toast.error("Failed to load courses.");
@@ -128,8 +133,11 @@ const CourseContent: React.FC = () => {
         return;
       }
       if (err.response?.status === 403) {
-        setError("Access denied to course data. Please contact your administrator.");
-        toast.error("Access denied to course data.");
+        setCategoryError("Access denied to this category. It may have been deactivated.");
+        toast.error("Category access denied.");
+      } else if (err.response?.status === 404) {
+        setCategoryError("This category is no longer available.");
+        toast.error("Category not found.");
       } else {
         setError(err.response?.data?.message || "Failed to load courses. Please try again.");
         toast.error(err.response?.data?.message || "Failed to load courses.");
@@ -139,7 +147,7 @@ const CourseContent: React.FC = () => {
         setLoading(false);
       }
     }
-  }, [user?.id, categoryIdParam, navigate, getCategoryName]);
+  }, [user?.id, categoryIdParam, getCategoryName, categoryError]);
 
   useEffect(() => {
     fetchData();
@@ -223,10 +231,60 @@ const CourseContent: React.FC = () => {
 
   const handleRetry = useCallback(() => {
     clearCourseCaches();
+    clearCategoriesCache();
     fetchData();
   }, [fetchData]);
 
-  // The rest of the return statement remains the same...
+  // Show category error state
+  if (categoryError) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-3 sm:p-6">
+          <div className="max-w-7xl mx-auto px-3 sm:px-8 space-y-4 sm:space-y-8">
+            <button 
+              onClick={handleBack}
+              className="flex items-center text-[#D68BF9] hover:text-white transition-colors mb-3 sm:mb-6 font-nunito"
+            >
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
+              <span className="text-sm sm:text-base">Back to Course Categories</span>
+            </button>
+
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+              <div className="bg-white/10 backdrop-blur-sm rounded-full p-6 mb-6">
+                <AlertTriangle className="w-16 h-16 text-yellow-400" />
+              </div>
+              
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
+                Category Not Available
+              </h2>
+              
+              <p className="text-[#D68BF9] text-lg mb-8 max-w-md">
+                {categoryError}
+              </p>
+              
+              <div className="space-x-4">
+                <button 
+                  onClick={handleBack}
+                  className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg"
+                >
+                  Browse Other Categories
+                </button>
+                
+                <button 
+                  onClick={handleRetry}
+                  className="bg-white/10 backdrop-blur-sm text-white border border-white/30 px-6 py-3 rounded-lg font-semibold hover:bg-white/20 transition-all duration-300"
+                  disabled={loading}
+                >
+                  {loading ? 'Checking...' : 'Check Again'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-3 sm:p-6">
