@@ -8,6 +8,11 @@ export interface Category {
   isDeleted: boolean;
   deletedAt?: string;
   restoreAt?: string; // Expiration for the 30-day recovery period
+  createdAt: string;
+  updatedAt?: string;
+  createdAtFormatted: string;
+  updatedAtFormatted: string;
+  createdBy: string;
 }
 
 export interface CreateCategoryDto {

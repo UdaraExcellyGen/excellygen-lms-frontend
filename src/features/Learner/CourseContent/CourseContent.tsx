@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Pause, Info } from 'lucide-react';
 import Layout from '../../../components/Sidebar/Layout';
 import { LearnerCourseDto } from '../../../types/course.types';
 import ConfirmationModal from './components/ConfirmationModal';
@@ -15,6 +15,12 @@ import { getOverallLmsStatsForLearner } from '../../../api/services/LearnerDashb
 import { OverallLmsStatsDto as OverallLmsStatsBackendDto } from '../../../types/course.types';
 import { useAuth } from '../../../contexts/AuthContext';
 import toast from 'react-hot-toast';
+
+interface CategoryInfo {
+  name: string;
+  status: 'active' | 'inactive';
+  isAccessible: boolean;
+}
 
 const CourseContent: React.FC = () => {
   const { categoryId: categoryIdParam } = useParams<{ categoryId: string }>();
@@ -32,7 +38,11 @@ const CourseContent: React.FC = () => {
   const [enrolledCourses, setEnrolledCourses] = useState<LearnerCourseDto[]>([]);
   const [isUnenrollModalOpen, setIsUnenrollModalOpen] = useState(false);
   const [selectedCourseForUnenroll, setSelectedCourseForUnenroll] = useState<LearnerCourseDto | null>(null);
-  const [categoryName, setCategoryName] = useState<string>('Loading Category...');
+  const [categoryInfo, setCategoryInfo] = useState<CategoryInfo>({
+    name: 'Loading Category...',
+    status: 'active',
+    isAccessible: true
+  });
   const [overallLmsStats, setOverallLmsStats] = useState<OverallLmsStatsBackendDto | null>(null);
   const [totalCategoryDuration, setTotalCategoryDuration] = useState<string>('0 hours');
 
@@ -46,18 +56,51 @@ const CourseContent: React.FC = () => {
     };
   }, []);
 
-  const getCategoryName = useCallback(async (categoryId: string): Promise<string> => {
+  const getCategoryInfo = useCallback(async (categoryId: string): Promise<CategoryInfo> => {
     try {
-      // Try to get the specific category to check if it's accessible
       const category = await getCategoryById(categoryId);
-      return category.title;
+      return {
+        name: category.title,
+        status: category.status?.toLowerCase() === 'active' ? 'active' : 'inactive',
+        isAccessible: true
+      };
     } catch (error: any) {
       console.error('Error fetching category:', error);
+      
+      // Handle timeout errors gracefully
+      if (error.message?.includes('timeout') || error.code === 'ECONNABORTED') {
+        // Don't set category error for timeouts - let user retry
+        return {
+          name: 'Loading Category...',
+          status: 'inactive',
+          isAccessible: true // Allow access, will retry
+        };
+      }
+      
       if (error.message.includes('not found') || error.message.includes('removed')) {
         setCategoryError('This category is no longer available or has been removed.');
-        return 'Category Not Available';
+        return {
+          name: 'Category Not Available',
+          status: 'inactive',
+          isAccessible: false
+        };
       }
-      return 'Unknown Category';
+      
+      if (error.response?.status === 403) {
+        setCategoryError('Access denied to this category.');
+        return {
+          name: 'Access Denied',
+          status: 'inactive',
+          isAccessible: false
+        };
+      }
+      
+      // For other errors, allow retry
+      return {
+        name: 'Unknown Category',
+        status: 'inactive',
+        isAccessible: true
+      };
     }
   }, []);
 
@@ -79,13 +122,13 @@ const CourseContent: React.FC = () => {
       console.log('Fetching course data optimized...');
       
       // First check if the category is accessible
-      const categoryName = await getCategoryName(categoryIdParam);
+      const categoryInfo = await getCategoryInfo(categoryIdParam);
       if (isMountedRef.current) {
-        setCategoryName(categoryName);
+        setCategoryInfo(categoryInfo);
       }
 
       // If there's a category error, don't proceed with course fetching
-      if (categoryError) {
+      if (categoryError || !categoryInfo.isAccessible) {
         setLoading(false);
         return;
       }
@@ -147,25 +190,29 @@ const CourseContent: React.FC = () => {
         setLoading(false);
       }
     }
-  }, [user?.id, categoryIdParam, getCategoryName, categoryError]);
+  }, [user?.id, categoryIdParam, getCategoryInfo, categoryError]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // =================================================================
-  // OPTIMIZATION: Implement Optimistic UI Update for enrollment
-  // =================================================================
+  // Optimistic UI Update for enrollment (enhanced for inactive categories)
   const handleEnroll = useCallback(async (courseId: number) => {
     if (!user?.id) {
       toast.error("You must be logged in to enroll in courses.");
       return;
     }
 
+    // Block new enrollments in inactive categories
+    if (categoryInfo.status === 'inactive') {
+      toast.error("New enrollments are not allowed in paused categories.");
+      return;
+    }
+
     const courseToEnroll = availableCourses.find(c => c.id === courseId);
     if (!courseToEnroll) return;
 
-    // 1. Optimistically update the UI *before* the API call
+    // Optimistically update the UI *before* the API call
     setAvailableCourses(prev => prev.filter(c => c.id !== courseId));
     setEnrolledCourses(prev => [...prev, { ...courseToEnroll, isEnrolled: true }]);
     setActiveTab('learning');
@@ -173,22 +220,18 @@ const CourseContent: React.FC = () => {
     const enrollToast = toast.loading(`Enrolling in "${courseToEnroll.title}"...`);
 
     try {
-      // 2. Make the API call
       const newEnrollment = await createEnrollment(courseId);
-      
-      // 3. On success, update the enrolled course with the real enrollmentId and clear caches silently
       setEnrolledCourses(prev => prev.map(c => c.id === courseId ? { ...c, enrollmentId: newEnrollment.id } : c));
       toast.success(`Successfully enrolled!`, { id: enrollToast });
-      clearCourseCaches(); // Clear cache for the next full page load
+      clearCourseCaches();
 
     } catch (err: any) {
-      // 4. On failure, revert the UI back to its original state and show an error
       toast.error(`Failed to enroll: ${err.response?.data?.message || 'Please try again.'}`, { id: enrollToast });
       setAvailableCourses(prev => [...prev, courseToEnroll]);
       setEnrolledCourses(prev => prev.filter(c => c.id !== courseId));
       setActiveTab('courses');
     }
-  }, [user?.id, availableCourses]); // Dependency on availableCourses is important
+  }, [user?.id, availableCourses, categoryInfo.status]);
 
   const handleUnenrollConfirmation = useCallback((course: LearnerCourseDto) => {
     setSelectedCourseForUnenroll(course);
@@ -204,7 +247,6 @@ const CourseContent: React.FC = () => {
         await deleteEnrollment(selectedCourseForUnenroll.enrollmentId);
         toast.success(`Unenrolled from "${selectedCourseForUnenroll.title}" successfully!`, { id: unenrollToast });
         
-        // Instead of a full refetch, just update the state
         setEnrolledCourses(prev => prev.filter(c => c.id !== selectedCourseForUnenroll.id));
         setAvailableCourses(prev => [...prev, { ...selectedCourseForUnenroll, isEnrolled: false, enrollmentId: null }]);
         clearCourseCaches();
@@ -232,8 +274,10 @@ const CourseContent: React.FC = () => {
   const handleRetry = useCallback(() => {
     clearCourseCaches();
     clearCategoriesCache();
+    // Clear individual category cache
+    sessionStorage.removeItem(`category_${categoryIdParam}`);
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, categoryIdParam]);
 
   // Show category error state
   if (categoryError) {
@@ -299,12 +343,35 @@ const CourseContent: React.FC = () => {
           </button>
           
           <div className="text-center mb-6 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold font-unbounded mb-2 sm:mb-4 bg-gradient-to-r from-white via-white to-[#D68BF9] bg-clip-text text-transparent">
-              {categoryName}
-            </h2>
-            <p className="text-[#D68BF9] text-sm sm:text-lg max-w-2xl mx-auto leading-relaxed font-nunito">
-              Explore our curated courses and start your learning journey
-            </p>
+            <div className="flex items-center justify-center gap-3 mb-2 sm:mb-4">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold font-unbounded bg-gradient-to-r from-white via-white to-[#D68BF9] bg-clip-text text-transparent">
+                {categoryInfo.name}
+              </h2>
+              {categoryInfo.status === 'inactive' && (
+                <div className="flex items-center gap-2 bg-slate-500/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-slate-400/30">
+                  <Pause className="w-4 h-4 text-slate-300" />
+                  <span className="text-slate-300 text-sm font-medium">PAUSED</span>
+                </div>
+              )}
+            </div>
+            
+            {categoryInfo.status === 'inactive' ? (
+              <div className="bg-slate-600/20 backdrop-blur-sm border border-slate-400/30 rounded-xl p-4 mb-6 max-w-2xl mx-auto">
+                <div className="flex items-start gap-3">
+                  <Info className="w-5 h-5 text-slate-300 mt-0.5 flex-shrink-0" />
+                  <div className="text-left">
+                    <p className="text-slate-200 font-medium mb-1">Category Temporarily Paused</p>
+                    <p className="text-slate-300 text-sm">
+                      You can continue learning enrolled courses, but no new enrollments are allowed at this time.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-[#D68BF9] text-sm sm:text-lg max-w-2xl mx-auto leading-relaxed font-nunito">
+                Explore our curated courses and start your learning journey
+              </p>
+            )}
           </div>
 
           <StatsOverview 
@@ -347,6 +414,7 @@ const CourseContent: React.FC = () => {
               onEnroll={handleEnroll}
               onUnenroll={handleUnenrollConfirmation}
               onContinueLearning={handleContinueLearning}
+              categoryStatus={categoryInfo.status} // Pass category status to CourseGrid
             />
           )}
         </div>

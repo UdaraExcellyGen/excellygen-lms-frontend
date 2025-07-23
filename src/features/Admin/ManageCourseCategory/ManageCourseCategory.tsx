@@ -139,6 +139,24 @@ const VirtualizedCategoryCard: React.FC<{
             {category.totalCourses} {category.totalCourses === 1 ? 'Course' : 'Courses'}
           </div>
           
+          {/* NEW: Creator and Date Information */}
+          <div className="text-xs text-gray-500 space-y-1">
+            <div className="flex justify-between items-center">
+              <span>Created by:</span>
+              <span className="font-medium">{category.createdBy}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>Created:</span>
+              <span className="font-medium">{category.createdAtFormatted}</span>
+            </div>
+            {category.updatedAt && category.updatedAtFormatted !== 'Never' && (
+              <div className="flex justify-between items-center">
+                <span>Updated:</span>
+                <span className="font-medium">{category.updatedAtFormatted}</span>
+              </div>
+            )}
+          </div>
+          
           <div className="flex justify-between mt-3 pt-3 border-t border-gray-200">
             <button
               onClick={handleViewCourses}

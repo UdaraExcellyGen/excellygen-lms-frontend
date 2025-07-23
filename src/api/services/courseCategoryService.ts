@@ -13,6 +13,11 @@ export interface CourseCategoryDtoBackend {
   avgDuration: string;
   isDeleted?: boolean;
   deletedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdAtFormatted?: string;
+  updatedAtFormatted?: string;
+  createdBy?: string;
 }
 
 // Simple cache to prevent duplicate calls
@@ -96,17 +101,53 @@ export const getCategories = async (): Promise<CourseCategoryDtoBackend[]> => {
   }
 };
 
+// Cache for individual categories
+const individualCategoryCache = new Map<string, {
+  data: CourseCategoryDtoBackend;
+  timestamp: number;
+}>();
+
 /**
  * Get a specific category by ID - for admin use
  */
 export const getCategoryById = async (id: string): Promise<CourseCategoryDtoBackend> => {
+  const now = Date.now();
+  const cached = individualCategoryCache.get(id);
+  
+  // Return cached data if valid (1 minute cache)
+  if (cached && (now - cached.timestamp) < 60000) {
+    console.log(`📦 Returning cached category: ${id}`);
+    return cached.data;
+  }
+  
   try {
-    const response = await apiClient.get<CourseCategoryDtoBackend>(`/CourseCategories/${id}`);
+    console.log(`🔍 Fetching category by ID: ${id}`);
+    const response = await apiClient.get<CourseCategoryDtoBackend>(`/CourseCategories/${id}`, {
+      timeout: 10000 // 10 second timeout
+    });
+    
+    // Cache the result
+    individualCategoryCache.set(id, {
+      data: response.data,
+      timestamp: now
+    });
+    
     return response.data;
   } catch (error: any) {
     console.error('Error fetching category by ID:', error);
+    
+    // Return cached data on error if available
+    if (cached) {
+      console.log(`🔄 Returning expired cached category due to error: ${id}`);
+      return cached.data;
+    }
+    
     if (error.response?.status === 404) {
       throw new Error('Category not found or has been removed');
+    } else if (error.code === 'ECONNABORTED') {
+      throw new Error('Request timed out - please try again');
+    } else if (!error.response) {
+      throw new Error('Network error - please check your connection');
     }
     throw error;
   }
@@ -120,6 +161,7 @@ export const clearCategoriesCache = () => {
   categoryCache.data = null;
   categoryCache.timestamp = 0;
   categoryCache.isLoading = false;
+  individualCategoryCache.clear(); // Clear individual category cache too
   // Clear any session storage cache
   sessionStorage.removeItem('course_categories_simple');
 };
