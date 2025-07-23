@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Project, Employee } from '../types/types';
+import CustomRoleDropdown from './CustomRoleDropdown';
 
 interface ConfirmationDialogProps {
   isOpen: boolean;
@@ -30,6 +31,22 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   const [employeeAssignments, setEmployeeAssignments] = useState<Record<string, { role: string, workloadPercentage: number }>>({});
   const [isConfirmDisabled, setIsConfirmDisabled] = useState(true);
 
+  // ✅ NEW: Prevent background scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Store the original overflow value
+      const originalOverflow = document.body.style.overflow;
+      
+      // Disable body scroll
+      document.body.style.overflow = 'hidden';
+      
+      // Cleanup function to restore scroll when modal closes
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
   useEffect(() => {
       const initialAssignments = {} as Record<string, { role: string, workloadPercentage: number }>;
       selectedEmployees.forEach(empId => {
@@ -52,31 +69,35 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
       setIsConfirmDisabled(!allRolesSelected);
   }, [employeeAssignments, selectedEmployees]);
 
-  // ✅ Calculate role groupings
+  // Calculate role groupings and exclude fully allocated roles
   const getRoleGroupings = () => {
     if (!selectedProject) return { stillNeeded: [], otherRoles: projectRoles };
 
-    // Count currently assigned roles
     const assignedRoleCounts: Record<string, number> = {};
     selectedProject.employeeAssignments.forEach(assignment => {
       assignedRoleCounts[assignment.role] = (assignedRoleCounts[assignment.role] || 0) + 1;
     });
 
-    // Find roles that are still needed
     const stillNeededRoles: string[] = [];
+    const fullyAllocatedRoles: string[] = [];
+    
     selectedProject.requiredRoles.forEach(requiredRole => {
       const assigned = assignedRoleCounts[requiredRole.roleName] || 0;
       if (assigned < requiredRole.count) {
         stillNeededRoles.push(requiredRole.roleName);
+      } else if (assigned >= requiredRole.count) {
+        fullyAllocatedRoles.push(requiredRole.roleName);
       }
     });
 
-    // Get other roles (all roles minus the still needed ones)
-    const otherRoles = projectRoles.filter(role => !stillNeededRoles.includes(role));
+    const otherRoles = projectRoles.filter(role => 
+      !stillNeededRoles.includes(role) && !fullyAllocatedRoles.includes(role)
+    );
 
     return {
       stillNeeded: stillNeededRoles,
-      otherRoles: otherRoles
+      otherRoles: otherRoles,
+      fullyAllocated: fullyAllocatedRoles
     };
   };
 
@@ -109,17 +130,35 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
       if (isConfirmDisabled) {
           return;
       }
-      // Close dialog immediately to prevent blur interference with toast
       onClose();
-      // Small delay to ensure dialog closes before API call
       setTimeout(() => {
           onConfirm(employeeAssignments);
       }, 100);
   };
 
+  // ✅ NEW: Prevent scroll on backdrop but allow clicks to close
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  // ✅ NEW: Prevent wheel events on backdrop
+  const handleBackdropWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   return createPortal(
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[9999]">
-          <div className="bg-white p-6 rounded-xl shadow-lg border border-[#F6E6FF] dark:border-[#7A00B8] min-w-[700px]">
+      <div 
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[9999]"
+        onClick={handleBackdropClick}
+        onWheel={handleBackdropWheel}
+      >
+          <div 
+            className="bg-white p-6 rounded-xl shadow-lg border border-[#F6E6FF] dark:border-[#7A00B8] min-w-[700px] max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()} // Prevent modal from closing when clicking inside
+          >
               <h3 className="text-lg font-semibold text-[#52007C] dark:text-white mb-4">Confirm Employee Assignment?</h3>
               <p className="text-[#7A00B8] dark:text-white mb-4">Please confirm assigning the following employees to the project and select their roles:</p>
 
@@ -136,47 +175,32 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                           </tr>
                       </thead>
                       <tbody>
-                          {selectedEmployeeData.map(employee => (
+                          {selectedEmployeeData.map(employee => {
+                            const roleOptions = [
+                              ...stillNeeded.map(role => ({
+                                value: role,
+                                label: `${role} (NEEDED)`,
+                                isNeeded: true
+                              })),
+                              ...otherRoles.map(role => ({
+                                value: role,
+                                label: role,
+                                isNeeded: false
+                              }))
+                            ];
+
+                            return (
                               <tr key={employee.id} className="border-b border-[#F6E6FF] dark:border-[#7A00B8]">
                                   <td className="px-4 py-2 text-sm text-[#52007C] dark:text-white">{employee.name}</td>
                                   <td className="px-4 py-2 text-sm text-[#52007C] dark:text-white">{employee.id}</td>
                                   <td className="px-4 py-2">
-                                      <select
-                                          value={employeeAssignments[employee.id]?.role || ""}
-                                          onChange={(e) => handleRoleChange(employee.id, e.target.value)}
-                                          className="w-full px-2 py-1 rounded-lg border border-[#F6E6FF] dark:border-[#7A00B8] bg-white dark:bg-[#1B0A3F] text-[#52007C] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#BF4BF6] text-sm"
-                                          required
-                                      >
-                                          <option value="">Select Role</option>
-                                          
-                                          {/* ROLES STILL NEEDED Section */}
-                                          {stillNeeded.length > 0 && (
-                                            <>
-                                              <option disabled>
-                                                ─── ROLES STILL NEEDED ───
-                                              </option>
-                                              {stillNeeded.map(role => (
-                                                <option key={`needed-${role}`} value={role}>
-                                                  🔴 {role}
-                                                </option>
-                                              ))}
-                                            </>
-                                          )}
-                                          
-                                          {/* OTHER ROLES Section */}
-                                          {otherRoles.length > 0 && (
-                                            <>
-                                              <option disabled>
-                                                ─── OTHER ROLES ───
-                                              </option>
-                                              {otherRoles.map(role => (
-                                                <option key={`other-${role}`} value={role}>
-                                                  🟣 {role}
-                                                </option>
-                                              ))}
-                                            </>
-                                          )}
-                                      </select>
+                                      <CustomRoleDropdown
+                                        value={employeeAssignments[employee.id]?.role || ""}
+                                        onChange={(role) => handleRoleChange(employee.id, role)}
+                                        options={roleOptions}
+                                        placeholder="Select Role"
+                                        className="w-full role-dropdown"
+                                      />
                                   </td>
                                   <td className="px-4 py-2">
                                       <div className="flex items-center gap-2">
@@ -206,7 +230,8 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                                       </div>
                                   </td>
                               </tr>
-                          ))}
+                            );
+                          })}
                       </tbody>
                   </table>
               </div>
@@ -220,7 +245,6 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                           Project ID: <span className="font-medium text-[#52007C] dark:text-white">{selectedProject.id}</span>
                       </p>
                       
-                      {/* Show role requirements summary */}
                       {selectedProject.requiredRoles.length > 0 && (
                         <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                           <h5 className="text-sm font-semibold text-[#52007C] mb-2">Project Role Requirements:</h5>
