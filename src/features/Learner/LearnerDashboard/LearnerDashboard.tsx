@@ -181,8 +181,10 @@ const LearnerDashboard: React.FC = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
-        <div className="max-w-7xl mx-auto px-8 space-y-6">
+      {/* Outermost container for page background and overall padding - matching LearnerProjects */}
+      <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-4 sm:p-6 flex flex-col font-nunito">
+        {/* Inner container for content - matching LearnerProjects with w-full and consistent padding */}
+        <div className="w-full px-4 sm:px-6 lg:px-8 space-y-6 flex-grow">
           <div className="mb-2">
             <div className="p-2">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0 border-b border-white/10 pb-6 mb-6">
@@ -255,7 +257,7 @@ const LearnerDashboard: React.FC = () => {
             <RecentActivities activities={recentActivities} isLoading={isLoadingActivities} />
             <LearningActivityChart data={learningActivity} isLoading={isLoadingActivity} />
           </div>
-        </div>
+        </div> {/* End of w-full content wrapper */}
       </div>
     </Layout>
   );
