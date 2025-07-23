@@ -52,8 +52,38 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
       setIsConfirmDisabled(!allRolesSelected);
   }, [employeeAssignments, selectedEmployees]);
 
+  // ✅ Calculate role groupings
+  const getRoleGroupings = () => {
+    if (!selectedProject) return { stillNeeded: [], otherRoles: projectRoles };
+
+    // Count currently assigned roles
+    const assignedRoleCounts: Record<string, number> = {};
+    selectedProject.employeeAssignments.forEach(assignment => {
+      assignedRoleCounts[assignment.role] = (assignedRoleCounts[assignment.role] || 0) + 1;
+    });
+
+    // Find roles that are still needed
+    const stillNeededRoles: string[] = [];
+    selectedProject.requiredRoles.forEach(requiredRole => {
+      const assigned = assignedRoleCounts[requiredRole.roleName] || 0;
+      if (assigned < requiredRole.count) {
+        stillNeededRoles.push(requiredRole.roleName);
+      }
+    });
+
+    // Get other roles (all roles minus the still needed ones)
+    const otherRoles = projectRoles.filter(role => !stillNeededRoles.includes(role));
+
+    return {
+      stillNeeded: stillNeededRoles,
+      otherRoles: otherRoles
+    };
+  };
+
   // ✅ NOW conditional logic can happen AFTER all hooks
   if (!isOpen) return null;
+
+  const { stillNeeded, otherRoles } = getRoleGroupings();
 
   const handleRoleChange = (employeeId: string, role: string) => {
       setEmployeeAssignments(prev => ({
@@ -79,7 +109,12 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
       if (isConfirmDisabled) {
           return;
       }
-      onConfirm(employeeAssignments);
+      // Close dialog immediately to prevent blur interference with toast
+      onClose();
+      // Small delay to ensure dialog closes before API call
+      setTimeout(() => {
+          onConfirm(employeeAssignments);
+      }, 100);
   };
 
   return createPortal(
@@ -113,9 +148,34 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                                           required
                                       >
                                           <option value="">Select Role</option>
-                                          {projectRoles.map(role => (
-                                              <option key={role} value={role}>{role}</option>
-                                          ))}
+                                          
+                                          {/* ROLES STILL NEEDED Section */}
+                                          {stillNeeded.length > 0 && (
+                                            <>
+                                              <option disabled>
+                                                ─── ROLES STILL NEEDED ───
+                                              </option>
+                                              {stillNeeded.map(role => (
+                                                <option key={`needed-${role}`} value={role}>
+                                                  🔴 {role}
+                                                </option>
+                                              ))}
+                                            </>
+                                          )}
+                                          
+                                          {/* OTHER ROLES Section */}
+                                          {otherRoles.length > 0 && (
+                                            <>
+                                              <option disabled>
+                                                ─── OTHER ROLES ───
+                                              </option>
+                                              {otherRoles.map(role => (
+                                                <option key={`other-${role}`} value={role}>
+                                                  🟣 {role}
+                                                </option>
+                                              ))}
+                                            </>
+                                          )}
                                       </select>
                                   </td>
                                   <td className="px-4 py-2">
@@ -159,6 +219,30 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                           <br />
                           Project ID: <span className="font-medium text-[#52007C] dark:text-white">{selectedProject.id}</span>
                       </p>
+                      
+                      {/* Show role requirements summary */}
+                      {selectedProject.requiredRoles.length > 0 && (
+                        <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                          <h5 className="text-sm font-semibold text-[#52007C] mb-2">Project Role Requirements:</h5>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            {selectedProject.requiredRoles.map((roleReq, index) => {
+                              const assigned = selectedProject.employeeAssignments.filter(
+                                assignment => assignment.role === roleReq.roleName
+                              ).length;
+                              const needed = roleReq.count - assigned;
+                              
+                              return (
+                                <div key={index} className="flex justify-between items-center">
+                                  <span className="text-[#7A00B8]">{roleReq.roleName}:</span>
+                                  <span className={`font-medium ${needed > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                    {assigned}/{roleReq.count} {needed > 0 ? `(need ${needed} more)` : '✓'}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                   </div>
               )}
 

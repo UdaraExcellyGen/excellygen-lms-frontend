@@ -99,6 +99,7 @@
       "activeProjects": "Active Projects",
       "totalEmployees": "Total Employees", 
       "activeEmployees": "Active Employees",
+      "employeesOnProjects": "On Projects",
       "totalTechnologies": "Total Technologies",
       "activeTechnologies": "Active Technologies",
       "quickActions": "Quick Actions"

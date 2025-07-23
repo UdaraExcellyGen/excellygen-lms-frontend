@@ -98,7 +98,8 @@
       "totalProjects": "Totalt prosjekter",
       "activeProjects": "Aktive prosjekter",
       "totalEmployees": "Totalt ansatte",
-      "activeEmployees": "Aktive ansatte", 
+      "activeEmployees": "Aktive ansatte",
+      "employeesOnProjects": "På Prosjekter",
       "totalTechnologies": "Totalt teknologier",
       "activeTechnologies": "Aktive teknologier",
       "quickActions": "Hurtighandlinger"

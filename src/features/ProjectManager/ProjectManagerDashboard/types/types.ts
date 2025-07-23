@@ -9,8 +9,27 @@ export interface Notification {
   isNew: boolean;
 }
 
-// Updated PM Dashboard specific stats to match new backend metrics
+// Updated PM Dashboard specific stats to match backend DTO exactly
 export interface DashboardStats {
+  projects: {
+    total: number;
+    active: number;
+    withEmployees: number;  // Added this field from backend
+  };
+  employees: {
+    total: number;
+    onProjects: number;     // This should now show correct count from backend
+    available: number;
+    fullyUtilized: number;
+  };
+  technologies: {
+    total: number;
+    active: number;
+  };
+}
+
+// Backend DTO interface for type safety when calling API
+export interface ProjectManagerDashboardStatsDto {
   projects: {
     total: number;
     active: number;
