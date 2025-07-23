@@ -36,6 +36,7 @@ const BadgesAndRewards = lazy(() => import('./features/Learner/BadgesAndRewards/
 const LearnerProjects = lazy(() => import('./features/Learner/LearnerProjects/LearnerProjects'));
 const CertificatesPage = lazy(() => import('./features/Learner/Certificates/CertificatePage'));
 const DiscussionForum = lazy(() => import('./features/Learner/DiscussionForum/DiscussionForum'));
+const SingleThreadView = lazy(() => import('./features/Learner/DiscussionForum/SingleThreadView')); // <-- ADDED THIS IMPORT
 const LearnerNotifications = lazy(() => import('./features/Learner/LearnerNotifications/LearnerNotification'));
 const Leaderboard = lazy(() => import('./features/Learner/Leaderboard/Leaderboard'));
 const CourseCategories = lazy(() => import('./features/Learner/CourseCategories/CourseCategories'));
@@ -223,6 +224,7 @@ function App() {
           <Route path="projects" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(LearnerProjects)}</ProtectedRoute>} />
           <Route path="certificate" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(CertificatesPage)}</ProtectedRoute>} />
           <Route path="forum" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(DiscussionForum)}</ProtectedRoute>} />
+          <Route path="forum/threads/:threadId" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(SingleThreadView)}</ProtectedRoute>} /> {/* <-- ADDED THIS ROUTE */}
           <Route path="notifications" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(LearnerNotifications)}</ProtectedRoute>} />
           <Route path="leaderboard" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(Leaderboard)}</ProtectedRoute>} />
           <Route path="course-categories" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(CourseCategories)}</ProtectedRoute>} />

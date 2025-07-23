@@ -1,5 +1,6 @@
-// src/pages/DiscussionForum/components/EditThreadModal.tsx
-import React, { useState, useRef, useEffect, useCallback } from 'react'; // Removed FormEvent
+// src/pages/DiscussionForum/components/EditThreadModal.tsx (FULL FILE)
+
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import Select, { SingleValue, StylesConfig } from 'react-select';
 import { ThreadFormData, CategorySelectOption } from '../types/dto';
@@ -7,6 +8,7 @@ import { uploadForumImage, deleteUploadedFile, isAxiosError as isFileAxiosError 
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { refreshToken as attemptTokenRefresh } from '../../../../api/authApi';
+import TiptapEditor from './TiptapEditor';
 
 interface EditThreadModalProps {
     isOpen: boolean;
@@ -34,13 +36,13 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | undefined>(undefined);
     
-    // Tracks the image that IS CURRENTLY effectively set for the thread on the server / or will be if form is submitted
-    const [effectiveImageUrl, setEffectiveImageUrl] = useState<string | undefined>(undefined); // Full public URL
-    const [effectiveRelativePath, setEffectiveRelativePath] = useState<string | undefined>(undefined); // Server relative path
+    // Tracks the image that IS CURRENTLY effectively set for the thread on the server
+    const [effectiveImageUrl, setEffectiveImageUrl] = useState<string | undefined>(undefined);
+    const [effectiveRelativePath, setEffectiveRelativePath] = useState<string | undefined>(undefined);
 
     // Loading states
-    const [isProcessingImage, setIsProcessingImage] = useState(false); // True when uploading new or deleting old server image
-    const [isSubmittingForm, setIsSubmittingForm] = useState(false); // True during overall form submission
+    const [isProcessingImage, setIsProcessingImage] = useState(false);
+    const [isSubmittingForm, setIsSubmittingForm] = useState(false);
     
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -48,7 +50,6 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
         availableCategories.map(catTitle => ({ value: catTitle, label: catTitle })),
     [availableCategories]);
     
-    // API call wrapper for file operations that might need token refresh
     const callFileApiWithRetry = useCallback(async <T,>(
         apiCall: () => Promise<T>,
         markAsRetried: boolean = false
@@ -65,11 +66,10 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
                     return null;
                 }
             } 
-            throw err; // Re-throw to be handled by calling function
+            throw err;
         }
     }, [triggerAuthContextLogout]);
 
-    // Effect to initialize/reset form when modal opens or initialData changes
     useEffect(() => {
         if (isOpen && initialData) {
             setTitle(initialData.title);
@@ -77,44 +77,37 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
             setSelectedCategoryOption(initialCatOpt);
             setContent(initialData.content);
             
-            setImageFile(null); // Clear any previously selected local file
-            setImagePreview(initialData.imageUrl ?? undefined); // Display the current server image (if any)
-            setEffectiveImageUrl(initialData.imageUrl ?? undefined); // Track current server image URL
-            setEffectiveRelativePath(initialData.currentRelativePath ?? undefined); // Track its relative path for deletion
+            setImageFile(null);
+            setImagePreview(initialData.imageUrl ?? undefined);
+            setEffectiveImageUrl(initialData.imageUrl ?? undefined);
+            setEffectiveRelativePath(initialData.currentRelativePath ?? undefined);
             
             setIsProcessingImage(false);
             setIsSubmittingForm(false);
-            if (fileInputRef.current) fileInputRef.current.value = ''; // Reset file input
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     }, [initialData, isOpen, categoryOptionsForSelect]);
 
     const handleModalClose = () => {
-        // Parent DiscussionForum calls onClose, which sets its isEditModalOpen to false.
-        // The useEffect above will then handle resetting this modal's internal state
-        // when it's next opened with new initialData.
         onClose();
     };
 
     const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            setImageFile(file); // A new file is staged.
+            setImageFile(file);
             const reader = new FileReader();
-            reader.onloadend = () => setImagePreview(reader.result as string); // Show preview of this NEW file.
+            reader.onloadend = () => setImagePreview(reader.result as string);
             reader.readAsDataURL(file);
-            // The 'effectiveImageUrl' and 'effectiveRelativePath' will be updated upon form submission IF this new file is successfully uploaded.
-        } else { // User cancelled file selection
-            setImageFile(null); // Clear staged file
-            setImagePreview(effectiveImageUrl); // Revert preview to the currently "effective" image (could be initial image)
+        } else {
+            setImageFile(null);
+            setImagePreview(effectiveImageUrl);
         }
     };
 
     const handleRemoveImage = () => {
-        // This action means the user wants to remove any image currently displayed or selected.
-        setImageFile(null);       // Clear any locally staged new file.
-        setImagePreview(undefined); // Clear the preview entirely.
-        // The 'effectiveImageUrl' and 'effectiveRelativePath' will be set to undefined on submit,
-        // signaling to the submit handler to delete the image from the server if one was previously associated.
+        setImageFile(null);
+        setImagePreview(undefined);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -122,75 +115,65 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
         e.preventDefault();
         if (!selectedCategoryOption?.value) { toast.error("Please select a category."); return; }
         if (!initialData) { toast.error("Error: Initial thread data is missing for edit."); return; }
+        if (!content || content.replace(/<(.|\n)*?>/g, '').trim().length === 0) {
+            toast.error("Content cannot be empty.");
+            return;
+        }
         setIsSubmittingForm(true);
 
-        let finalImageUrlForParent = effectiveImageUrl; // Start with current values
+        let finalImageUrlForParent = effectiveImageUrl;
         let finalRelativePathForParent = effectiveRelativePath;
         
         try {
-            // Scenario 1: User selected a new file (imageFile is not null)
             if (imageFile) {
                 setIsProcessingImage(true);
-                // If there was an original image (from initialData), delete it from server
                 if (initialData.currentRelativePath) {
                     try {
-                        console.log("EditModal: New image selected, deleting old server image:", initialData.currentRelativePath);
-                        await callFileApiWithRetry(() => deleteUploadedFile(initialData.currentRelativePath!)); // Assert non-null based on check
+                        await callFileApiWithRetry(() => deleteUploadedFile(initialData.currentRelativePath!));
                     } catch (delErr) {
-                        console.warn("EditModal: Failed to delete old server image during replacement. A new one will be uploaded anyway.", delErr);
-                        // Not necessarily a fatal error for the edit, but log/warn.
+                        console.warn("EditModal: Failed to delete old server image during replacement.", delErr);
                     }
                 }
-                // Upload the new image
                 const uploadData = await callFileApiWithRetry<{imageUrl: string; relativePath: string | null;} | null>(
                     () => uploadForumImage(imageFile)
                 );
                 setIsProcessingImage(false);
-                if (!uploadData) { // Means token refresh failed during upload, or critical upload error
+                if (!uploadData) {
                     setIsSubmittingForm(false); 
-                    return; // Stop the submission
+                    return;
                 }
                 
-                console.log("EditModal: New image uploaded successfully:", uploadData);
                 finalImageUrlForParent = uploadData.imageUrl;
-                finalRelativePathForParent = uploadData.relativePath ?? uploadData.imageUrl; // Use ?? to ensure undefined if null
+                finalRelativePathForParent = uploadData.relativePath ?? uploadData.imageUrl;
             } 
-            // Scenario 2: No new file, but preview is cleared (imagePreview is undefined) AND there WAS an image originally (initialData.currentRelativePath)
-            // This means the user clicked 'X' to remove the existing image.
             else if (!imageFile && !imagePreview && initialData.currentRelativePath) { 
                 setIsProcessingImage(true);
-                console.log("EditModal: Image explicitly removed, deleting server image:", initialData.currentRelativePath);
-                await callFileApiWithRetry(() => deleteUploadedFile(initialData.currentRelativePath!)); // Assert non-null
+                await callFileApiWithRetry(() => deleteUploadedFile(initialData.currentRelativePath!));
                 setIsProcessingImage(false);
-                finalImageUrlForParent = undefined; // Mark for removal
+                finalImageUrlForParent = undefined;
                 finalRelativePathForParent = undefined;
             }
-            // Scenario 3: No new file, imagePreview still shows initialData.imageUrl.
-            // The `finalImageUrlForParent` and `finalRelativePathForParent` remain as `effectiveImageUrl` and `effectiveRelativePath` (i.e., from initialData).
 
             const formDataToSubmit: ThreadFormData = { 
                 title, 
                 content, 
                 category: selectedCategoryOption.value, 
-                image: null, // Not passing the file object itself to parent
+                image: null,
                 imageUrl: finalImageUrlForParent, 
                 currentRelativePath: finalRelativePathForParent 
             };
             
-            console.log("EditModal: Submitting thread with data:", formDataToSubmit);
-            await onSubmit(formDataToSubmit); // Parent component handles the API call to update the thread
+            await onSubmit(formDataToSubmit);
         } catch (err: any) {
-            // This catch block will primarily handle errors from the parent onSubmit,
-            // or from delete/upload calls if callFileApiWithRetry re-threw them (non-401 errors)
             console.error("EditThreadModal handleSubmit error:", err);
             toast.error(isFileAxiosError(err) ? ((err.response?.data as { message?: string })?.message || err.message) : err.message || "Failed to update thread.");
         } finally {
              setIsSubmittingForm(false); 
-             setIsProcessingImage(false); // Ensure all processing flags are reset
+             setIsProcessingImage(false);
         }
     };
 
-    if (!isOpen || !initialData) return null; // Important to check initialData before rendering
+    if (!isOpen || !initialData) return null;
     const isFormBusy = isProcessingImage || isSubmittingForm;
     
     const selectStyles: StylesConfig<CategorySelectOption, false> = {
@@ -208,32 +191,21 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
             fontFamily: 'Nunito, sans-serif', 
             zIndex: 1055 
         }),
-        menuPortal: base => ({ 
-            ...base, 
-            zIndex: 99999 
-        }),
-        singleValue: (base) => ({
-            ...base, 
-            color: '#1B0A3F'
-        }),
-        placeholder: (base) => ({
-            ...base, 
-            color: '#52007C99'
-        }),
+        menuPortal: base => ({ ...base, zIndex: 99999 }),
+        singleValue: (base) => ({ ...base, color: '#1B0A3F' }),
+        placeholder: (base) => ({ ...base, color: '#52007C99' }),
         option: (base, state) => ({
             ...base, 
             backgroundColor: state.isSelected ? '#BF4BF6' : state.isFocused ? '#F0D9FF' : 'white', 
             color: state.isSelected? 'white': '#1B0A3F', 
-            ':active': { 
-                backgroundColor: '#D0A0E6' 
-            }
+            ':active': { backgroundColor: '#D0A0E6' }
         })
     };
     
     return (
         <div className="fixed inset-0 bg-[#1B0A3F]/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white/95 w-full max-w-2xl rounded-xl border border-purple-300/50 p-6 shadow-xl relative">
-                {/* Loading Overlay */}
+            {/* --- MODIFIED: Added flex, flex-col, and max-h-[90vh] --- */}
+            <div className="bg-white/95 w-full max-w-2xl rounded-xl border border-purple-300/50 p-6 shadow-xl relative flex flex-col max-h-[90vh]">
                 {isFormBusy && (
                     <div className="absolute inset-0 bg-white/70 backdrop-blur-xs z-20 flex flex-col items-center justify-center rounded-xl">
                         <RefreshCw className="h-8 w-8 animate-spin text-purple-600" />
@@ -242,70 +214,81 @@ const EditThreadModal: React.FC<EditThreadModalProps> = ({
                         </p>
                     </div>
                 )}
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold text-purple-800">Edit Thread</h2>
-                    <button onClick={handleModalClose} disabled={isFormBusy} className="text-purple-600 hover:text-purple-800"><X className="h-6 w-6" /></button>
-                </div>
-                <form onSubmit={handleSubmit} className="space-y-5">
-                     <div>
-                        <label htmlFor="editThreadTitleModalInput" className="block text-sm font-medium text-purple-700 mb-1">Title</label>
-                        <input id="editThreadTitleModalInput" type="text" value={title} onChange={(e) => setTitle(e.target.value)} disabled={isFormBusy} className="w-full px-3 py-2.5 text-sm border-purple-300 rounded-lg shadow-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500 bg-purple-50/60 placeholder-purple-400 text-purple-900" required />
+                 {/* --- MODIFIED: This div is now a flex container for the form elements --- */}
+                <div className={`flex flex-col flex-1 min-h-0 transition-opacity duration-300 ${isFormBusy ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+                    {/* --- MODIFIED: Header is now a non-shrinking flex item --- */}
+                    <div className="flex-shrink-0 flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold text-purple-800">Edit Thread</h2>
+                        <button onClick={handleModalClose} disabled={isFormBusy} className="text-purple-600 hover:text-purple-800"><X className="h-6 w-6" /></button>
                     </div>
-                    <div>
-                        <label htmlFor="editThreadCategoryModalSelectInput" className="block text-sm font-medium text-purple-700 mb-1">Category</label>
-                        <Select<CategorySelectOption, false>
-                            instanceId="edit-modal-category-select-instance" 
-                            inputId="editThreadCategoryModalSelectInput"
-                            value={selectedCategoryOption} 
-                            onChange={(option) => setSelectedCategoryOption(option)}
-                            options={categoryOptionsForSelect}
-                            isDisabled={isFormBusy || availableCategories.length === 0}
-                            placeholder="Select or type to search..."
-                            isClearable={true} // Allow clearing to choose a new one if needed
-                            styles={selectStyles} 
-                            menuPlacement="auto"
-                            menuPortalTarget={document.body}
-                        />
-                        {availableCategories.length === 0 && !isFormBusy &&<p className="text-xs text-red-500 mt-1">No categories available.</p>}
-                    </div>
-                    <div>
-                        <label htmlFor="editThreadContentModalInput" className="block text-sm font-medium text-purple-700 mb-1">Content</label>
-                        <textarea id="editThreadContentModalInput" value={content} onChange={(e) => setContent(e.target.value)} disabled={isFormBusy} rows={5} className="w-full px-3 py-2.5 text-sm border-purple-300 rounded-lg shadow-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500 bg-purple-50/60 placeholder-purple-400 text-purple-900 min-h-[120px]" required />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-purple-700 mb-1">Image</label>
-                        <div className="mt-1 flex items-center gap-3">
-                            <label className={`cursor-pointer flex items-center gap-2 px-3 py-2 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200/70 transition-colors font-medium text-sm ${isFormBusy ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                <ImageIcon size={18} /> {imagePreview ? "Change Image" : "Add Image"}
-                                <input type="file" ref={fileInputRef} accept="image/*,.jpg,.jpeg,.png,.gif" onChange={handleImageFileChange} className="hidden" disabled={isFormBusy}/>
-                            </label>
-                            {imagePreview && !isProcessingImage && (
-                                <button type="button" onClick={handleRemoveImage} disabled={isFormBusy} className="p-1.5 text-red-500 hover:bg-red-100/50 rounded-md transition-colors" title="Remove current image"><X size={18} /></button>
-                            )}
-                            {isProcessingImage && <RefreshCw className="h-5 w-5 animate-spin text-purple-500" />}
+
+                    {/* --- MODIFIED: Form is now a scrollable, growing flex item --- */}
+                    <form id="edit-thread-form-id" onSubmit={handleSubmit} className="flex-1 overflow-y-auto pr-4 space-y-5 pb-4">
+                        <div>
+                            <label htmlFor="editThreadTitleModalInput" className="block text-sm font-medium text-purple-700 mb-1">Title</label>
+                            <input id="editThreadTitleModalInput" type="text" value={title} onChange={(e) => setTitle(e.target.value)} disabled={isFormBusy} className="w-full px-3 py-2.5 text-sm border-purple-300 rounded-lg shadow-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500 bg-purple-50/60 placeholder-purple-400 text-purple-900" required />
                         </div>
-                        {imagePreview && (
-                            <div className="mt-2.5">
-                                <img 
-                                    src={imagePreview} 
-                                    alt="Preview" 
-                                    className="max-h-32 rounded-md object-cover border border-purple-200" 
-                                    onError={(e) => {
-                                        console.error(`Failed to load image: ${imagePreview}`);
-                                        e.currentTarget.style.display = 'none';
-                                    }}
-                                />
+                        <div>
+                            <label htmlFor="editThreadCategoryModalSelectInput" className="block text-sm font-medium text-purple-700 mb-1">Category</label>
+                            <Select<CategorySelectOption, false>
+                                instanceId="edit-modal-category-select-instance" 
+                                inputId="editThreadCategoryModalSelectInput"
+                                value={selectedCategoryOption} 
+                                onChange={(option) => setSelectedCategoryOption(option)}
+                                options={categoryOptionsForSelect}
+                                isDisabled={isFormBusy || availableCategories.length === 0}
+                                placeholder="Select or type to search..."
+                                isClearable={true}
+                                styles={selectStyles} 
+                                menuPlacement="auto"
+                                menuPortalTarget={document.body}
+                            />
+                            {availableCategories.length === 0 && !isFormBusy &&<p className="text-xs text-red-500 mt-1">No categories available.</p>}
+                        </div>
+                        <div>
+                            <label htmlFor="editThreadContentModalInput" className="block text-sm font-medium text-purple-700 mb-1">Content</label>
+                            <TiptapEditor
+                                content={content}
+                                onChange={setContent}
+                                disabled={isFormBusy}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-purple-700 mb-1">Image</label>
+                            <div className="mt-1 flex items-center gap-3">
+                                <label className={`cursor-pointer flex items-center gap-2 px-3 py-2 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200/70 transition-colors font-medium text-sm ${isFormBusy ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                    <ImageIcon size={18} /> {imagePreview ? "Change Image" : "Add Image"}
+                                    <input type="file" ref={fileInputRef} accept="image/*,.jpg,.jpeg,.png,.gif" onChange={handleImageFileChange} className="hidden" disabled={isFormBusy}/>
+                                </label>
+                                {imagePreview && !isProcessingImage && (
+                                    <button type="button" onClick={handleRemoveImage} disabled={isFormBusy} className="p-1.5 text-red-500 hover:bg-red-100/50 rounded-md transition-colors" title="Remove current image"><X size={18} /></button>
+                                )}
+                                {isProcessingImage && <RefreshCw className="h-5 w-5 animate-spin text-purple-500" />}
                             </div>
-                        )}
-                        {!imagePreview && <p className="text-xs text-gray-500 mt-1 italic">No image will be set for this thread.</p>}
-                    </div>
-                    <div className="flex justify-end gap-3 pt-4 border-t border-purple-200/30 mt-6">
+                            {imagePreview && (
+                                <div className="mt-2.5">
+                                    <img 
+                                        src={imagePreview} 
+                                        alt="Preview" 
+                                        className="max-h-32 rounded-md object-cover border border-purple-200" 
+                                        onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                        }}
+                                    />
+                                </div>
+                            )}
+                            {!imagePreview && <p className="text-xs text-gray-500 mt-1 italic">No image will be set for this thread.</p>}
+                        </div>
+                    </form>
+
+                    {/* --- MODIFIED: Footer is now a non-shrinking flex item --- */}
+                    <div className="flex-shrink-0 flex justify-end gap-3 pt-4 border-t border-purple-200/30 mt-6">
                         <button type="button" onClick={handleModalClose} disabled={isFormBusy} className="px-4 py-2 text-sm bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium transition-colors">Cancel</button>
-                        <button type="submit" disabled={isFormBusy || !selectedCategoryOption?.value } className="px-6 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold disabled:opacity-60 min-w-[120px]"> 
+                        <button type="submit" form="edit-thread-form-id" disabled={isFormBusy || !selectedCategoryOption?.value } className="px-6 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold disabled:opacity-60 min-w-[120px]"> 
                              {isSubmittingForm ? <RefreshCw className="h-5 w-5 animate-spin inline"/> : 'Save Changes'}
                         </button>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     );
