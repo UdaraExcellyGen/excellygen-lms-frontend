@@ -1,0 +1,51 @@
+/* src/pages/DiscussionForum/components/TiptapEditor.css */
+
+/* Basic editor styles */
+.ProseMirror {
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  min-height: 150px;
+  max-height: 400px;
+  overflow-y: auto;
+  background-color: white;
+}
+
+.ProseMirror:focus {
+  outline: none;
+  border-color: #BF4BF6;
+  box-shadow: 0 0 0 1px #BF4BF6;
+}
+
+.ProseMirror p {
+  margin: 0;
+}
+
+.ProseMirror > * + * {
+  margin-top: 0.75em;
+}
+
+.ProseMirror code {
+  background-color: rgba(97, 97, 97, 0.1);
+  color: #616161;
+  font-family: 'JetBrainsMono', 'Courier New', Courier, monospace;
+  padding: 0.2rem 0.4rem;
+  border-radius: 5px;
+  font-size: 0.9rem;
+}
+
+.ProseMirror pre {
+  background: #0D0D0D;
+  color: #FFF;
+  font-family: 'JetBrainsMono', 'Courier New', Courier, monospace;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+.ProseMirror pre code {
+  color: inherit;
+  padding: 0;
+  background: none;
+  font-size: 0.8rem;
+}

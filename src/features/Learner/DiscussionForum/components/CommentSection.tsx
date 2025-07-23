@@ -1,12 +1,16 @@
+// src/pages/DiscussionForum/components/CommentSection.tsx (FULL FILE)
+
 import React, { useState, useEffect, useCallback, FormEvent } from 'react';
-import { RefreshCw, Send, MessageCircle, AlertCircle, Edit2, Trash2 } from 'lucide-react';
+import { RefreshCw, Send, MessageCircle, AlertCircle, Edit2, Trash2, Code2 } from 'lucide-react'; // ADDED Code2 icon
 import * as forumApi from '../../../../api/forumApi';
 import { ThreadCommentDto, ThreadReplyDto } from '../types/dto';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow, parseISO } from 'date-fns';
+import MarkdownRenderer from '../../../../components/common/MarkdownRenderer';
+import TiptapEditor from './TiptapEditor'; // ADDED
 
-// Helper Modal Components
+// Helper Modal Components (unchanged from previous response)
 interface EditItemModalProps {
     isOpen: boolean; 
     onClose: () => void; 
@@ -16,38 +20,25 @@ interface EditItemModalProps {
     isSubmitting?: boolean;
 }
 
-const EditItemModal: React.FC<EditItemModalProps> = ({ 
-    isOpen, 
-    onClose, 
-    initialContent, 
-    onSubmit, 
-    title,
-    isSubmitting: parentIsSubmitting = false
-}) => {
+const EditItemModal: React.FC<EditItemModalProps> = ({ isOpen, onClose, initialContent, onSubmit, title, isSubmitting: parentIsSubmitting = false }) => {
     const [content, setContent] = useState(initialContent);
     const [isProcessing, setIsProcessing] = useState(false);
 
     useEffect(() => {
-        if (isOpen) { 
-            setContent(initialContent); 
-            setIsProcessing(false); 
-        }
+        if (isOpen) { setContent(initialContent); setIsProcessing(false); }
     }, [initialContent, isOpen]);
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        if (!content.trim()) { 
+        // --- MODIFIED content check for HTML ---
+        if (!content.trim() || content.replace(/<(.|\n)*?>/g, '').trim().length === 0) { 
             toast.error("Content cannot be empty."); 
             return; 
         }
         setIsProcessing(true);
-        try { 
-            await onSubmit(content);
-        } catch (err) { 
-            console.error(`${title} submission error caught in modal:`, err);
-        } finally { 
-            setIsProcessing(false); 
-        }
+        try { await onSubmit(content); } 
+        catch (err) { console.error(`${title} submission error caught in modal:`, err); } 
+        finally { setIsProcessing(false); }
     };
 
     if (!isOpen) return null;
@@ -58,30 +49,17 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
             <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
                 <h3 className="text-lg font-semibold mb-4 text-[#1B0A3F]">{title}</h3>
                 <form onSubmit={handleSubmit}>
-                    <textarea 
-                        value={content} 
-                        onChange={(e) => setContent(e.target.value)}
-                        className="w-full p-2 border rounded min-h-[100px] text-sm font-nunito text-[#1B0A3F] border-[#BF4BF6]/50 focus:ring-1 focus:ring-[#BF4BF6]"
-                        required 
-                        disabled={actualIsSubmitting} 
-                        rows={5}
+                    {/* --- MODIFIED: Use TiptapEditor for modal editing --- */}
+                    <TiptapEditor
+                        content={content}
+                        onChange={setContent}
+                        disabled={actualIsSubmitting}
+                        minHeight="150px"
+                        maxHeight="300px"
                     />
                     <div className="mt-4 flex justify-end gap-2">
-                        <button 
-                            type="button" 
-                            onClick={onClose} 
-                            disabled={actualIsSubmitting} 
-                            className="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-nunito"
-                        >
-                            Cancel
-                        </button>
-                        <button 
-                            type="submit" 
-                            disabled={actualIsSubmitting || !content.trim()} 
-                            className="px-3 py-1.5 text-sm bg-[#7A00B8] text-white rounded hover:bg-[#5f0090] disabled:opacity-60 font-nunito"
-                        >
-                            {actualIsSubmitting ? <RefreshCw className="animate-spin h-4 w-4 inline"/> : 'Save Changes'}
-                        </button>
+                        <button type="button" onClick={onClose} disabled={actualIsSubmitting} className="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-nunito">Cancel</button>
+                        <button type="submit" disabled={actualIsSubmitting || !content.trim() || content.replace(/<(.|\n)*?>/g, '').trim().length === 0} className="px-3 py-1.5 text-sm bg-[#7A00B8] text-white rounded hover:bg-[#5f0090] disabled:opacity-60 font-nunito">{actualIsSubmitting ? <RefreshCw className="animate-spin h-4 w-4 inline"/> : 'Save Changes'}</button>
                     </div>
                 </form>
             </div>
@@ -90,33 +68,18 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
 };
 
 interface DeleteItemDialogProps {
-    isOpen: boolean; 
-    onClose: () => void; 
-    onConfirm: () => Promise<void>; 
-    itemName: string; 
-    itemContentPreview?: string; 
-    customMessage?: string;
+    isOpen: boolean; onClose: () => void; onConfirm: () => Promise<void>; 
+    itemName: string; itemContentPreview?: string; customMessage?: string;
 }
 
-const DeleteItemDialog: React.FC<DeleteItemDialogProps> = ({ 
-    isOpen, 
-    onClose, 
-    onConfirm, 
-    itemName, 
-    itemContentPreview, 
-    customMessage
-}) => {
+const DeleteItemDialog: React.FC<DeleteItemDialogProps> = ({ isOpen, onClose, onConfirm, itemName, itemContentPreview, customMessage }) => {
     const [isDeleting, setIsDeleting] = useState(false);
     
     const handleConfirmClick = async () => {
         setIsDeleting(true);
-        try { 
-            await onConfirm(); 
-        } catch (error) { 
-            console.error(`DeleteItemDialog: onConfirm failed for ${itemName}`, error); 
-        } finally { 
-            setIsDeleting(false); 
-        }
+        try { await onConfirm(); } 
+        catch (error) { console.error(`DeleteItemDialog: onConfirm failed for ${itemName}`, error); } 
+        finally { setIsDeleting(false); }
     };
 
     if(!isOpen) return null;
@@ -128,30 +91,12 @@ const DeleteItemDialog: React.FC<DeleteItemDialogProps> = ({
                     <AlertCircle className="h-6 w-6 text-red-500 mr-3 flex-shrink-0" />
                     <h3 className="text-xl font-unbounded text-red-700">Delete {itemName}</h3>
                 </div>
-                <p className="text-[#52007C] font-nunito text-sm mb-1">
-                    {customMessage || `Are you sure you want to permanently delete this ${itemName}?`}
-                </p>
-                {itemContentPreview && (
-                    <p className="text-xs text-gray-500 bg-gray-100 p-2 rounded border max-h-20 overflow-y-auto mb-4">
-                        "{itemContentPreview.substring(0, 100)}{itemContentPreview.length > 100 ? '...' : ''}"
-                    </p>
-                )}
+                <p className="text-[#52007C] font-nunito text-sm mb-1">{customMessage || `Are you sure you want to permanently delete this ${itemName}?`}</p>
+                {itemContentPreview && (<p className="text-xs text-gray-500 bg-gray-100 p-2 rounded border max-h-20 overflow-y-auto mb-4">"{itemContentPreview.substring(0, 100)}{itemContentPreview.length > 100 ? '...' : ''}"</p>)}
                 <p className="text-xs text-red-600 font-semibold mb-6">This action cannot be undone.</p>
                 <div className="flex justify-end gap-3">
-                    <button 
-                        onClick={onClose} 
-                        disabled={isDeleting} 
-                        className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-nunito"
-                    >
-                        Cancel
-                    </button>
-                    <button 
-                        onClick={handleConfirmClick} 
-                        disabled={isDeleting} 
-                        className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 font-nunito disabled:opacity-70"
-                    >
-                        {isDeleting ? <RefreshCw className="animate-spin h-5 w-5 inline" /> : `Yes, Delete ${itemName}`}
-                    </button>
+                    <button onClick={onClose} disabled={isDeleting} className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-nunito">Cancel</button>
+                    <button onClick={handleConfirmClick} disabled={isDeleting} className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 font-nunito disabled:opacity-70">{isDeleting ? <RefreshCw className="animate-spin h-5 w-5 inline" /> : `Yes, Delete ${itemName}`}</button>
                 </div>
             </div>
         </div>
@@ -159,17 +104,11 @@ const DeleteItemDialog: React.FC<DeleteItemDialogProps> = ({
 };
 
 interface CommentSectionProps {
-    threadId: number;
-    currentUserId: string | null;
-    onCommentPosted: () => void; // Badge checker trigger
+    threadId: number; currentUserId: string | null; onCommentPosted: () => void;
 }
 
 interface CommentUIState extends ThreadCommentDto {
-    showReplies: boolean; 
-    isLoadingReplies: boolean; 
-    isPostingReply: boolean; 
-    replyError: string | null;
-    replies: ThreadReplyDto[];
+    showReplies: boolean; isLoadingReplies: boolean; isPostingReply: boolean; replyError: string | null; replies: ThreadReplyDto[];
 }
 
 const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId, onCommentPosted }) => {
@@ -177,10 +116,17 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
     const [comments, setComments] = useState<CommentUIState[]>([]);
     const [isLoadingComments, setIsLoadingComments] = useState(false);
     const [errorComments, setErrorComments] = useState<string | null>(null);
-    const [newCommentText, setNewCommentText] = useState('');
-    const [isPostingComment, setIsPostingComment] = useState(false); 
+    
+    // --- ADDED STATES FOR EDITORS ---
+    const [newCommentContent, setNewCommentContent] = useState(''); // Holds HTML or plain text
+    const [isMainCommentRichEditor, setIsMainCommentRichEditor] = useState(false);
+
     const [replyingToCommentId, setReplyingToCommentId] = useState<number | null>(null);
-    const [newReplyText, setNewReplyText] = useState('');
+    const [replyContents, setReplyContents] = useState<Record<number, string>>({}); // { commentId: htmlContent }
+    const [isReplyRichEditor, setIsReplyRichEditor] = useState<Record<number, boolean>>({}); // { commentId: boolean }
+    // --- END ADDED STATES ---
+
+    const [isPostingComment, setIsPostingComment] = useState(false); 
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [editingComment, setEditingComment] = useState<CommentUIState | null>(null);
     const [deletingComment, setDeletingComment] = useState<ThreadCommentDto | null>(null);
@@ -190,36 +136,26 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
 
     const fetchComments = useCallback(async () => {
         if (!threadId) return;
-        setIsLoadingComments(true); 
-        setErrorComments(null);
+        setIsLoadingComments(true); setErrorComments(null);
         try {
             const fetchedData = await forumApi.getComments(threadId);
-            setComments(fetchedData.map(c => ({ 
-                ...c, 
-                showReplies: false, 
-                replies: [], 
-                isLoadingReplies: false, 
-                isPostingReply: false, 
-                replyError: null 
-            })));
+            setComments(fetchedData.map(c => ({ ...c, showReplies: false, replies: [], isLoadingReplies: false, isPostingReply: false, replyError: null })));
         } catch (err: any) { 
             const msg = forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message || "Could not load comments.";
-            setErrorComments(msg); 
-            toast.error(`Comments: ${msg}`); 
-        } finally { 
-            setIsLoadingComments(false); 
-        }
+            setErrorComments(msg); toast.error(`Comments: ${msg}`); 
+        } finally { setIsLoadingComments(false); }
     }, [threadId]);
 
-    useEffect(() => { 
-        fetchComments(); 
-    }, [fetchComments]);
+    useEffect(() => { fetchComments(); }, [fetchComments]);
 
+    // --- MODIFIED handlePostComment ---
     const handlePostComment = async () => { 
-        if (!newCommentText.trim()) return toast.error("Comment cannot be empty."); 
+        if (!newCommentContent.trim() || newCommentContent.replace(/<(.|\n)*?>/g, '').trim().length === 0) {
+            return toast.error("Comment cannot be empty."); 
+        }
         setIsPostingComment(true);
         try {
-            const newCommentData = await forumApi.createComment(threadId, { content: newCommentText });
+            const newCommentData = await forumApi.createComment(threadId, { content: newCommentContent });
             setComments(prev => [{ 
                 ...newCommentData, 
                 showReplies: false, 
@@ -228,9 +164,10 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                 isPostingReply: false, 
                 replyError: null 
             }, ...prev]);
-            setNewCommentText(''); 
+            setNewCommentContent(''); 
+            setIsMainCommentRichEditor(false); // Reset editor type
             toast.success("Comment posted!");
-            onCommentPosted(); // TRIGGER THE BADGE CHECK
+            onCommentPosted();
         } catch (err: any) { 
             toast.error(`Post comment failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`); 
         } finally { 
@@ -253,34 +190,33 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
         setComments(prev => prev.map(c => {
             if (c.id === commentId) {
                 const willShow = !c.showReplies;
-                if (willShow && c.repliesCount > 0 && c.replies.length === 0 && !c.isLoadingReplies) {
-                    fetchRepliesForComment(commentId);
-                }
-                return { 
-                    ...c, 
-                    showReplies: willShow, 
-                    isLoadingReplies: (willShow && c.repliesCount > 0 && c.replies.length === 0 && !c.isLoadingReplies) ? true : c.isLoadingReplies 
-                };
+                if (willShow && c.repliesCount > 0 && c.replies.length === 0 && !c.isLoadingReplies) { fetchRepliesForComment(commentId); }
+                return { ...c, showReplies: willShow, isLoadingReplies: (willShow && c.repliesCount > 0 && c.replies.length === 0 && !c.isLoadingReplies) ? true : c.isLoadingReplies };
             } 
             return c;
         }));
     };
 
+    // --- MODIFIED handlePostReply ---
     const handlePostReply = async (commentId: number) => { 
-        if (!newReplyText.trim()) return toast.error("Reply cannot be empty."); 
+        const replyContent = replyContents[commentId] || '';
+        if (!replyContent.trim() || replyContent.replace(/<(.|\n)*?>/g, '').trim().length === 0) { 
+            return toast.error("Reply cannot be empty."); 
+        }
         setComments(prev => prev.map(c => c.id === commentId ? { ...c, isPostingReply: true } : c));
         try {
-            const newReplyData = await forumApi.createReply(commentId, { content: newReplyText });
+            const newReplyData = await forumApi.createReply(commentId, { content: replyContent });
             setComments(prev => prev.map(c => c.id === commentId ? { 
                 ...c, 
                 replies: [...c.replies, newReplyData], 
                 isPostingReply: false, 
                 repliesCount: (c.repliesCount || 0) + 1 
             } : c));
-            setNewReplyText(''); 
+            setReplyContents(prev => { const newMap = { ...prev }; delete newMap[commentId]; return newMap; }); // Clear reply content
+            setIsReplyRichEditor(prev => { const newMap = { ...prev }; delete newMap[commentId]; return newMap; }); // Reset editor type
             setReplyingToCommentId(null); 
             toast.success("Reply posted!");
-            onCommentPosted(); // TRIGGER THE BADGE CHECK
+            onCommentPosted();
         } catch (err: any) { 
             toast.error(`Post reply failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`);
         } finally { 
@@ -299,13 +235,9 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                 replies: c.replies, 
                 showReplies: c.showReplies 
             } : c));
-            toast.success("Comment updated!"); 
-            setEditingComment(null);
-        } catch (err: any) { 
-            toast.error(`Update comment failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`); 
-        } finally { 
-            setIsActionLoading(false); 
-        }
+            toast.success("Comment updated!"); setEditingComment(null);
+        } catch (err: any) { toast.error(`Update comment failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`); } 
+        finally { setIsActionLoading(false); }
     };
     
     const handleDeleteCommentConfirm = async () => { 
@@ -314,13 +246,9 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
         try { 
             await forumApi.deleteComment(deletingComment.id);
             setComments(prev => prev.filter(c => c.id !== deletingComment.id));
-            toast.success("Comment deleted!"); 
-            setDeletingComment(null);
-        } catch (err: any) { 
-            toast.error(`Delete comment failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`); 
-        } finally { 
-            setIsActionLoading(false); 
-        }
+            toast.success("Comment deleted!"); setDeletingComment(null);
+        } catch (err: any) { toast.error(`Delete comment failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`); } 
+        finally { setIsActionLoading(false); }
     };
     
     const handleEditReplySubmit = async (newContent: string) => { 
@@ -332,14 +260,9 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                 ...c, 
                 replies: c.replies.map(r => r.id === updatedReplyData.id ? updatedReplyData : r) 
             } : c));
-            toast.success("Reply updated!"); 
-            setEditingReply(null); 
-            setParentCommentForReplyAction(null);
-        } catch (err: any) { 
-            toast.error(`Update reply failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`); 
-        } finally { 
-            setIsActionLoading(false); 
-        }
+            toast.success("Reply updated!"); setEditingReply(null); setParentCommentForReplyAction(null);
+        } catch (err: any) { toast.error(`Update reply failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`); } 
+        finally { setIsActionLoading(false); }
     };
 
     const handleDeleteReplyConfirm = async () => { 
@@ -352,45 +275,19 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                 replies: c.replies.filter(r => r.id !== deletingReply.id), 
                 repliesCount: Math.max(0, c.repliesCount - 1) 
             } : c));
-            toast.success("Reply deleted!"); 
-            setDeletingReply(null); 
-            setParentCommentForReplyAction(null);
-        } catch (err: any) { 
-            toast.error(`Delete reply failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`); 
-        } finally { 
-            setIsActionLoading(false); 
-        }
+            toast.success("Reply deleted!"); setDeletingReply(null); setParentCommentForReplyAction(null);
+        } catch (err: any) { toast.error(`Delete reply failed: ${forumApi.isAxiosError(err) ? (err.response?.data as { message?: string })?.message || err.message : err.message}`); } 
+        finally { setIsActionLoading(false); }
     };
 
     const formatRelativeTime = (dateStringISO?: string): string => { 
         if (!dateStringISO) return 'a moment ago';
-        try { 
-            return formatDistanceToNow(parseISO(dateStringISO), { addSuffix: true }); 
-        } catch { 
-            return "just now"; 
-        }
+        try { return formatDistanceToNow(parseISO(dateStringISO), { addSuffix: true }); } 
+        catch { return "just now"; }
     };
     
-    if (isLoadingComments) {
-        return (
-            <div className="flex justify-center items-center p-6 text-white/80">
-                <RefreshCw className="h-5 w-5 animate-spin mr-2" /> 
-                Loading comments...
-            </div>
-        );
-    }
-
-    if (errorComments) {
-        return (
-            <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-                <AlertCircle className="inline h-4 w-4 mr-1"/> 
-                {errorComments} 
-                <button onClick={fetchComments} className="ml-2 text-red-800 underline font-medium">
-                    Retry
-                </button>
-            </div>
-        );
-    }
+    if (isLoadingComments) return <div className="flex justify-center items-center p-6 text-white/80"><RefreshCw className="h-5 w-5 animate-spin mr-2" /> Loading comments...</div>;
+    if (errorComments) return <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm"><AlertCircle className="inline h-4 w-4 mr-1"/> {errorComments} <button onClick={fetchComments} className="ml-2 text-red-800 underline font-medium">Retry</button></div>;
     
     return (
         <div className="space-y-5">
@@ -405,16 +302,38 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                          )}
                     </div>
                     <div className="flex-1">
-                        <textarea 
-                            value={newCommentText} 
-                            onChange={(e) => setNewCommentText(e.target.value)} 
-                            placeholder="Add a comment..." 
-                            className="w-full bg-[#FDF6FF]/70 border border-[#D0A0E6]/50 rounded-lg px-3 py-2 text-[#1B0A3F] focus:ring-1 focus:ring-[#BF4BF6] focus:border-transparent font-nunito text-sm sm:text-base min-h-[70px]" 
-                            disabled={isPostingComment || isActionLoading} 
-                        />
+                        {/* --- CONDITIONAL RENDERING FOR MAIN COMMENT INPUT --- */}
+                        {!isMainCommentRichEditor ? (
+                            <div className="relative">
+                                <textarea 
+                                    value={newCommentContent} 
+                                    onChange={(e) => setNewCommentContent(e.target.value)} 
+                                    placeholder="Add a comment..." 
+                                    className="w-full bg-[#FDF6FF]/70 border border-[#D0A0E6]/50 rounded-lg px-3 py-2 text-[#1B0A3F] focus:ring-1 focus:ring-[#BF4BF6] focus:border-transparent font-nunito text-sm sm:text-base min-h-[70px] pr-10" // Added pr-10 for icon space
+                                    disabled={isPostingComment || isActionLoading} 
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setIsMainCommentRichEditor(true)}
+                                    disabled={isPostingComment || isActionLoading}
+                                    className="absolute right-2 top-2 p-1 text-purple-600 hover:text-purple-800 hover:bg-purple-100/50 rounded-md disabled:opacity-50"
+                                    title="Switch to rich text editor"
+                                >
+                                    <Code2 size={18} />
+                                </button>
+                            </div>
+                        ) : (
+                            <TiptapEditor
+                                content={newCommentContent}
+                                onChange={setNewCommentContent}
+                                disabled={isPostingComment || isActionLoading}
+                                minHeight="100px" // Smaller height for comments
+                                maxHeight="250px"
+                            />
+                        )}
                         <button 
                             onClick={handlePostComment} 
-                            disabled={isPostingComment || isActionLoading || !newCommentText.trim()} 
+                            disabled={isPostingComment || isActionLoading || (!newCommentContent.trim() && !isMainCommentRichEditor) || (isMainCommentRichEditor && newCommentContent.replace(/<(.|\n)*?>/g, '').trim().length === 0)} 
                             className="mt-2 px-4 py-1.5 text-sm bg-gradient-to-r from-[#BF4BF6] to-[#7A00B8] text-white rounded-lg hover:from-[#D68BF9] hover:to-[#BF4BF6] font-nunito disabled:opacity-60 flex items-center justify-center w-full sm:w-auto min-w-[150px]"
                         >
                             {isPostingComment ? (
@@ -494,15 +413,14 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                                     )}
                                 </div>
                                 
-                                <p className="mt-1 text-sm text-[#4a0c75] whitespace-pre-wrap break-words">
-                                    {comment.content}
-                                </p>
+                                <MarkdownRenderer content={comment.content} className="prose prose-sm max-w-none mt-1 text-[#4a0c75] break-words" />
                                 
                                 {currentUserId && (
                                     <button 
                                         onClick={() => { 
                                             setReplyingToCommentId(prev => prev === comment.id ? null : comment.id); 
-                                            setNewReplyText('');
+                                            setReplyContents(prev => ({ ...prev, [comment.id]: '' })); // Clear specific reply content
+                                            setIsReplyRichEditor(prev => ({ ...prev, [comment.id]: false })); // Reset editor type for this reply
                                         }} 
                                         className="mt-1.5 text-xs sm:text-sm text-[#9030b7] hover:text-[#6a009d] font-semibold disabled:opacity-50" 
                                         disabled={isActionLoading || comment.isPostingReply}
@@ -516,17 +434,39 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                         {/* Reply Form */}
                         {replyingToCommentId === comment.id && currentUserId && (
                             <div className="ml-10 sm:ml-12 mt-2 pt-2 pl-2 sm:pl-3 border-l-2 border-[#D0A0E6]/70">
-                                <textarea 
-                                    value={newReplyText} 
-                                    onChange={(e) => setNewReplyText(e.target.value)} 
-                                    placeholder="Write a reply..." 
-                                    className="w-full bg-white/70 border border-[#CBB0DB]/60 rounded-md px-2.5 py-1.5 text-[#1B0A3F] focus:ring-1 focus:ring-[#BF4BF6] text-xs sm:text-sm min-h-[50px]" 
-                                    disabled={comment.isPostingReply || isActionLoading} 
-                                />
+                                {/* --- CONDITIONAL RENDERING FOR REPLY INPUT --- */}
+                                {!isReplyRichEditor[comment.id] ? (
+                                    <div className="relative">
+                                        <textarea 
+                                            value={replyContents[comment.id] || ''} 
+                                            onChange={(e) => setReplyContents(prev => ({ ...prev, [comment.id]: e.target.value }))} 
+                                            placeholder="Write a reply..." 
+                                            className="w-full bg-white/70 border border-[#CBB0DB]/60 rounded-md px-2.5 py-1.5 text-[#1B0A3F] focus:ring-1 focus:ring-[#BF4BF6] text-xs sm:text-sm min-h-[50px] pr-10" // Added pr-10
+                                            disabled={comment.isPostingReply || isActionLoading} 
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsReplyRichEditor(prev => ({ ...prev, [comment.id]: true }))}
+                                            disabled={comment.isPostingReply || isActionLoading}
+                                            className="absolute right-2 top-1.5 p-1 text-purple-600 hover:text-purple-800 hover:bg-purple-100/50 rounded-md disabled:opacity-50"
+                                            title="Switch to rich text editor"
+                                        >
+                                            <Code2 size={16} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <TiptapEditor
+                                        content={replyContents[comment.id] || ''}
+                                        onChange={(newContent) => setReplyContents(prev => ({ ...prev, [comment.id]: newContent }))}
+                                        disabled={comment.isPostingReply || isActionLoading}
+                                        minHeight="80px" // Even smaller for replies
+                                        maxHeight="200px"
+                                    />
+                                )}
                                 <div className="mt-1.5 flex gap-2">
                                     <button 
                                         onClick={() => handlePostReply(comment.id)} 
-                                        disabled={comment.isPostingReply || isActionLoading || !newReplyText.trim()} 
+                                        disabled={comment.isPostingReply || isActionLoading || (!replyContents[comment.id]?.trim() && !isReplyRichEditor[comment.id]) || (isReplyRichEditor[comment.id] && (replyContents[comment.id] || '').replace(/<(.|\n)*?>/g, '').trim().length === 0)} 
                                         className="px-3 py-1 text-xs sm:text-sm bg-gradient-to-r from-[#BF4BF6]/80 to-[#7A00B8]/80 text-white rounded hover:from-[#D68BF9]/80 hover:to-[#BF4BF6]/80 font-nunito disabled:opacity-60 flex items-center justify-center min-w-[80px]"
                                     >
                                         {comment.isPostingReply ? (
@@ -539,7 +479,11 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                                         )}
                                     </button>
                                     <button 
-                                        onClick={() => setReplyingToCommentId(null)} 
+                                        onClick={() => {
+                                            setReplyingToCommentId(null);
+                                            setReplyContents(prev => { const newMap = { ...prev }; delete newMap[comment.id]; return newMap; });
+                                            setIsReplyRichEditor(prev => { const newMap = { ...prev }; delete newMap[comment.id]; return newMap; });
+                                        }} 
                                         disabled={comment.isPostingReply || isActionLoading} 
                                         className="px-3 py-1 text-xs sm:text-sm bg-gray-100 text-[#52007C] rounded hover:bg-gray-200 font-nunito"
                                     >
@@ -619,9 +563,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                                                     </div>
                                                 )}
                                             </div>
-                                            <p className="mt-0.5 text-xs sm:text-sm text-[#4a0c75]/90 whitespace-pre-wrap break-words">
-                                                {reply.content}
-                                            </p>
+                                            <MarkdownRenderer content={reply.content} className="prose prose-xs max-w-none mt-0.5 text-[#4a0c75]/90 break-words" />
                                         </div>
                                     </div>
                                 ))}
