@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, AlertTriangle, Pause, Info } from 'lucide-react';
 import Layout from '../../../components/Sidebar/Layout';
 import { LearnerCourseDto } from '../../../types/course.types';
-import ConfirmationModal from './components/ConfirmationModal';
 import StatsOverview from './components/StatsOverview';
 import CourseTabs from './components/CourseTabs';
 import CourseGrid from './components/CourseGrid';
@@ -36,8 +35,6 @@ const CourseContent: React.FC = () => {
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const [availableCourses, setAvailableCourses] = useState<LearnerCourseDto[]>([]);
   const [enrolledCourses, setEnrolledCourses] = useState<LearnerCourseDto[]>([]);
-  const [isUnenrollModalOpen, setIsUnenrollModalOpen] = useState(false);
-  const [selectedCourseForUnenroll, setSelectedCourseForUnenroll] = useState<LearnerCourseDto | null>(null);
   const [categoryInfo, setCategoryInfo] = useState<CategoryInfo>({
     name: 'Loading Category...',
     status: 'active',
@@ -233,22 +230,17 @@ const CourseContent: React.FC = () => {
     }
   }, [user?.id, availableCourses, categoryInfo.status]);
 
-  const handleUnenrollConfirmation = useCallback((course: LearnerCourseDto) => {
-    setSelectedCourseForUnenroll(course);
-    setIsUnenrollModalOpen(true);
-  }, []);
-
-  const handleUnenroll = useCallback(async () => {
-    if (!selectedCourseForUnenroll || !user?.id) return;
+  const handleUnenroll = useCallback(async (course: LearnerCourseDto) => {
+    if (!user?.id) return;
 
     const unenrollToast = toast.loading("Unenrolling...");
     try {
-      if (selectedCourseForUnenroll.isEnrolled && selectedCourseForUnenroll.enrollmentId) {
-        await deleteEnrollment(selectedCourseForUnenroll.enrollmentId);
-        toast.success(`Unenrolled from "${selectedCourseForUnenroll.title}" successfully!`, { id: unenrollToast });
+      if (course.isEnrolled && course.enrollmentId) {
+        await deleteEnrollment(course.enrollmentId);
+        toast.success(`Unenrolled from "${course.title}" successfully!`, { id: unenrollToast });
         
-        setEnrolledCourses(prev => prev.filter(c => c.id !== selectedCourseForUnenroll.id));
-        setAvailableCourses(prev => [...prev, { ...selectedCourseForUnenroll, isEnrolled: false, enrollmentId: null }]);
+        setEnrolledCourses(prev => prev.filter(c => c.id !== course.id));
+        setAvailableCourses(prev => [...prev, { ...course, isEnrolled: false, enrollmentId: null }]);
         clearCourseCaches();
 
       } else {
@@ -257,11 +249,8 @@ const CourseContent: React.FC = () => {
     } catch (err: any) {
       console.error("Failed to unenroll:", err);
       toast.error(err.response?.data?.message || "Failed to unenroll.", { id: unenrollToast });
-    } finally {
-        setIsUnenrollModalOpen(false);
-        setSelectedCourseForUnenroll(null);
     }
-  }, [selectedCourseForUnenroll, user?.id]);
+  }, [user?.id]);
 
   const handleContinueLearning = useCallback((courseId: number) => {
     navigate(`/learner/course-view/${courseId}`);
@@ -412,23 +401,12 @@ const CourseContent: React.FC = () => {
               enrolledCourses={enrolledCourses}
               loading={loading}
               onEnroll={handleEnroll}
-              onUnenroll={handleUnenrollConfirmation}
+              onUnenroll={handleUnenroll}
               onContinueLearning={handleContinueLearning}
-              categoryStatus={categoryInfo.status} // Pass category status to CourseGrid
+              categoryStatus={categoryInfo.status}
             />
           )}
         </div>
-
-        <ConfirmationModal
-          isOpen={isUnenrollModalOpen}
-          onClose={() => {
-            setIsUnenrollModalOpen(false);
-            setSelectedCourseForUnenroll(null);
-          }}
-          onConfirm={handleUnenroll}
-          title="Confirm Unenrollment"
-          courseName={selectedCourseForUnenroll?.title || ''}
-        />
       </div>
     </Layout>
   );

@@ -5,7 +5,6 @@ import AvailableCourseCard from './AvailableCourseCard';
 import EnrolledCourseCard from './EnrolledCourseCard';
 import { AlertTriangle, X } from 'lucide-react';
 
-// Props are unchanged
 interface CourseGridProps {
   activeTab: 'courses' | 'learning';
   availableCourses: LearnerCourseDto[];
@@ -29,7 +28,6 @@ const CourseGrid: React.FC<CourseGridProps> = ({
   onTabChange,
   categoryStatus = 'active',
 }) => {
-  // State and handlers are unchanged
   const [showUnenrollConfirm, setShowUnenrollConfirm] = useState<LearnerCourseDto | null>(null);
   const isInactiveCategory = categoryStatus === 'inactive';
 
@@ -93,7 +91,6 @@ const CourseGrid: React.FC<CourseGridProps> = ({
         )}
       </div>
 
-      {/* --- CORRECTED MODAL: The white and red design you requested --- */}
       {showUnenrollConfirm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4">

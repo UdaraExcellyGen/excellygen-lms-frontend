@@ -8,7 +8,7 @@ import { BookOpen as ThumbnailIcon } from 'lucide-react';
 interface EnrolledCourseCardProps {
   course: LearnerCourseDto;
   onContinueLearning: (courseId: number) => void;
-  onUnenrollClick: (course: LearnerCourseDto) => void;
+  onUnenrollClick: (course: LearnerCourseDto) => void; // The only unenroll prop it uses
   loading: boolean;
 }
 
@@ -21,9 +21,11 @@ const EnrolledCourseCard: React.FC<EnrolledCourseCardProps> = ({ course, onConti
     onContinueLearning(course.id);
   };
   
+  // CLEANED HANDLER: This now *only* calls the parent function. It has no internal logic.
+  // This will trigger the correct white-and-red modal from CourseGrid.
   const handleUnenroll = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onUnenrollClick(course);
+    onUnenrollClick(course); 
   };
   
   const handleCardClick = () => {
@@ -57,12 +59,11 @@ const EnrolledCourseCard: React.FC<EnrolledCourseCardProps> = ({ course, onConti
       </div>
       
       <div className="p-4 flex flex-col flex-grow">
-        {/* CORRECTED: Course title now has space for two lines */}
         <h3 className="text-gray-900 font-semibold text-lg mb-2 line-clamp-2 min-h-[3.5rem]">
           {course.title}
         </h3>
         
-        {/* CORRECTED: Technology tags now appear on enrolled cards */}
+        {/* UPDATED: Technology tags now match available courses display */}
         {course.technologies && course.technologies.length > 0 && (
           <div className="mb-3 flex flex-wrap gap-1">
             {course.technologies.slice(0, 3).map(tech => (
@@ -94,7 +95,7 @@ const EnrolledCourseCard: React.FC<EnrolledCourseCardProps> = ({ course, onConti
           
           {progressPercentage < 100 && (
             <button
-              onClick={handleUnenroll}
+              onClick={handleUnenroll} // This now correctly calls the parent handler
               disabled={loading}
               className="px-3 bg-white border-2 border-red-300 text-red-500 hover:bg-red-50 hover:border-red-400 rounded-lg transition-colors flex items-center justify-center disabled:opacity-50"
               title="Unenroll from course"
