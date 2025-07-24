@@ -1,16 +1,17 @@
-// src/pages/DiscussionForum/components/CommentSection.tsx (FULL FILE)
+// src/features/Learner/DiscussionForum/components/CommentSection.tsx
 
 import React, { useState, useEffect, useCallback, FormEvent } from 'react';
-import { RefreshCw, Send, MessageCircle, AlertCircle, Edit2, Trash2, Code2 } from 'lucide-react'; // ADDED Code2 icon
+import { useNavigate } from 'react-router-dom'; // <-- ADDED IMPORT
+import { RefreshCw, Send, MessageCircle, AlertCircle, Edit2, Trash2, Code2 } from 'lucide-react';
 import * as forumApi from '../../../../api/forumApi';
 import { ThreadCommentDto, ThreadReplyDto } from '../types/dto';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import MarkdownRenderer from '../../../../components/common/MarkdownRenderer';
-import TiptapEditor from './TiptapEditor'; // ADDED
+import TiptapEditor from './TiptapEditor';
 
-// Helper Modal Components (unchanged from previous response)
+// Helper Modal Components (unchanged)
 interface EditItemModalProps {
     isOpen: boolean; 
     onClose: () => void; 
@@ -30,7 +31,6 @@ const EditItemModal: React.FC<EditItemModalProps> = ({ isOpen, onClose, initialC
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        // --- MODIFIED content check for HTML ---
         if (!content.trim() || content.replace(/<(.|\n)*?>/g, '').trim().length === 0) { 
             toast.error("Content cannot be empty."); 
             return; 
@@ -49,7 +49,6 @@ const EditItemModal: React.FC<EditItemModalProps> = ({ isOpen, onClose, initialC
             <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
                 <h3 className="text-lg font-semibold mb-4 text-[#1B0A3F]">{title}</h3>
                 <form onSubmit={handleSubmit}>
-                    {/* --- MODIFIED: Use TiptapEditor for modal editing --- */}
                     <TiptapEditor
                         content={content}
                         onChange={setContent}
@@ -112,19 +111,18 @@ interface CommentUIState extends ThreadCommentDto {
 }
 
 const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId, onCommentPosted }) => {
+    const navigate = useNavigate(); // <-- ADDED HOOK
     const { user } = useAuth();
     const [comments, setComments] = useState<CommentUIState[]>([]);
     const [isLoadingComments, setIsLoadingComments] = useState(false);
     const [errorComments, setErrorComments] = useState<string | null>(null);
     
-    // --- ADDED STATES FOR EDITORS ---
-    const [newCommentContent, setNewCommentContent] = useState(''); // Holds HTML or plain text
+    const [newCommentContent, setNewCommentContent] = useState('');
     const [isMainCommentRichEditor, setIsMainCommentRichEditor] = useState(false);
 
     const [replyingToCommentId, setReplyingToCommentId] = useState<number | null>(null);
-    const [replyContents, setReplyContents] = useState<Record<number, string>>({}); // { commentId: htmlContent }
-    const [isReplyRichEditor, setIsReplyRichEditor] = useState<Record<number, boolean>>({}); // { commentId: boolean }
-    // --- END ADDED STATES ---
+    const [replyContents, setReplyContents] = useState<Record<number, string>>({});
+    const [isReplyRichEditor, setIsReplyRichEditor] = useState<Record<number, boolean>>({});
 
     const [isPostingComment, setIsPostingComment] = useState(false); 
     const [isActionLoading, setIsActionLoading] = useState(false);
@@ -148,7 +146,6 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
 
     useEffect(() => { fetchComments(); }, [fetchComments]);
 
-    // --- MODIFIED handlePostComment ---
     const handlePostComment = async () => { 
         if (!newCommentContent.trim() || newCommentContent.replace(/<(.|\n)*?>/g, '').trim().length === 0) {
             return toast.error("Comment cannot be empty."); 
@@ -165,7 +162,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                 replyError: null 
             }, ...prev]);
             setNewCommentContent(''); 
-            setIsMainCommentRichEditor(false); // Reset editor type
+            setIsMainCommentRichEditor(false);
             toast.success("Comment posted!");
             onCommentPosted();
         } catch (err: any) { 
@@ -197,7 +194,6 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
         }));
     };
 
-    // --- MODIFIED handlePostReply ---
     const handlePostReply = async (commentId: number) => { 
         const replyContent = replyContents[commentId] || '';
         if (!replyContent.trim() || replyContent.replace(/<(.|\n)*?>/g, '').trim().length === 0) { 
@@ -212,8 +208,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                 isPostingReply: false, 
                 repliesCount: (c.repliesCount || 0) + 1 
             } : c));
-            setReplyContents(prev => { const newMap = { ...prev }; delete newMap[commentId]; return newMap; }); // Clear reply content
-            setIsReplyRichEditor(prev => { const newMap = { ...prev }; delete newMap[commentId]; return newMap; }); // Reset editor type
+            setReplyContents(prev => { const newMap = { ...prev }; delete newMap[commentId]; return newMap; });
+            setIsReplyRichEditor(prev => { const newMap = { ...prev }; delete newMap[commentId]; return newMap; });
             setReplyingToCommentId(null); 
             toast.success("Reply posted!");
             onCommentPosted();
@@ -302,14 +298,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                          )}
                     </div>
                     <div className="flex-1">
-                        {/* --- CONDITIONAL RENDERING FOR MAIN COMMENT INPUT --- */}
                         {!isMainCommentRichEditor ? (
                             <div className="relative">
                                 <textarea 
                                     value={newCommentContent} 
                                     onChange={(e) => setNewCommentContent(e.target.value)} 
                                     placeholder="Add a comment..." 
-                                    className="w-full bg-[#FDF6FF]/70 border border-[#D0A0E6]/50 rounded-lg px-3 py-2 text-[#1B0A3F] focus:ring-1 focus:ring-[#BF4BF6] focus:border-transparent font-nunito text-sm sm:text-base min-h-[70px] pr-10" // Added pr-10 for icon space
+                                    className="w-full bg-[#FDF6FF]/70 border border-[#D0A0E6]/50 rounded-lg px-3 py-2 text-[#1B0A3F] focus:ring-1 focus:ring-[#BF4BF6] focus:border-transparent font-nunito text-sm sm:text-base min-h-[70px] pr-10"
                                     disabled={isPostingComment || isActionLoading} 
                                 />
                                 <button
@@ -327,7 +322,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                                 content={newCommentContent}
                                 onChange={setNewCommentContent}
                                 disabled={isPostingComment || isActionLoading}
-                                minHeight="100px" // Smaller height for comments
+                                minHeight="100px"
                                 maxHeight="250px"
                             />
                         )}
@@ -372,7 +367,6 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                         )}
                         
                         <div className="flex gap-3">
-                            {/* Comment Avatar & Content */}
                             <div className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-[#D68BF9] to-[#BF4BF6] flex items-center justify-center text-white font-semibold shadow text-xs sm:text-sm" title={comment.author?.name}>
                                 {comment.author?.avatar ? (
                                     <img src={comment.author.avatar} alt="" className="w-full h-full rounded-lg object-cover"/>
@@ -384,9 +378,19 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                             <div className="flex-1">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <span className="font-medium text-sm sm:text-base text-[#2c0b5f]">
+                                        {/* --- THIS IS THE FIX FOR COMMENTS --- */}
+                                        <button
+                                            onClick={() => {
+                                                if (comment.author?.id) {
+                                                    navigate(`/learner/profile/${comment.author.id}`);
+                                                }
+                                            }}
+                                            disabled={!comment.author?.id}
+                                            className="font-medium text-sm sm:text-base text-[#2c0b5f] hover:underline disabled:no-underline disabled:cursor-default"
+                                            title={comment.author?.id ? `View profile of ${comment.author.name}` : 'Anonymous user'}
+                                        >
                                             {comment.author?.name || 'Anonymous'}
-                                        </span>
+                                        </button>
                                         <span className="ml-2 text-[11px] sm:text-xs text-[#52007C]/80">
                                             {formatRelativeTime(comment.createdAt)}
                                         </span>
@@ -419,8 +423,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                                     <button 
                                         onClick={() => { 
                                             setReplyingToCommentId(prev => prev === comment.id ? null : comment.id); 
-                                            setReplyContents(prev => ({ ...prev, [comment.id]: '' })); // Clear specific reply content
-                                            setIsReplyRichEditor(prev => ({ ...prev, [comment.id]: false })); // Reset editor type for this reply
+                                            setReplyContents(prev => ({ ...prev, [comment.id]: '' }));
+                                            setIsReplyRichEditor(prev => ({ ...prev, [comment.id]: false }));
                                         }} 
                                         className="mt-1.5 text-xs sm:text-sm text-[#9030b7] hover:text-[#6a009d] font-semibold disabled:opacity-50" 
                                         disabled={isActionLoading || comment.isPostingReply}
@@ -434,14 +438,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                         {/* Reply Form */}
                         {replyingToCommentId === comment.id && currentUserId && (
                             <div className="ml-10 sm:ml-12 mt-2 pt-2 pl-2 sm:pl-3 border-l-2 border-[#D0A0E6]/70">
-                                {/* --- CONDITIONAL RENDERING FOR REPLY INPUT --- */}
                                 {!isReplyRichEditor[comment.id] ? (
                                     <div className="relative">
                                         <textarea 
                                             value={replyContents[comment.id] || ''} 
                                             onChange={(e) => setReplyContents(prev => ({ ...prev, [comment.id]: e.target.value }))} 
                                             placeholder="Write a reply..." 
-                                            className="w-full bg-white/70 border border-[#CBB0DB]/60 rounded-md px-2.5 py-1.5 text-[#1B0A3F] focus:ring-1 focus:ring-[#BF4BF6] text-xs sm:text-sm min-h-[50px] pr-10" // Added pr-10
+                                            className="w-full bg-white/70 border border-[#CBB0DB]/60 rounded-md px-2.5 py-1.5 text-[#1B0A3F] focus:ring-1 focus:ring-[#BF4BF6] text-xs sm:text-sm min-h-[50px] pr-10"
                                             disabled={comment.isPostingReply || isActionLoading} 
                                         />
                                         <button
@@ -459,7 +462,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                                         content={replyContents[comment.id] || ''}
                                         onChange={(newContent) => setReplyContents(prev => ({ ...prev, [comment.id]: newContent }))}
                                         disabled={comment.isPostingReply || isActionLoading}
-                                        minHeight="80px" // Even smaller for replies
+                                        minHeight="80px"
                                         maxHeight="200px"
                                     />
                                 )}
@@ -529,9 +532,19 @@ const CommentSection: React.FC<CommentSectionProps> = ({ threadId, currentUserId
                                         <div className="flex-1">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-1.5">
-                                                    <span className="font-medium text-xs sm:text-sm text-[#2c0b5f]">
+                                                    {/* --- THIS IS THE FIX FOR REPLIES --- */}
+                                                    <button
+                                                        onClick={() => {
+                                                            if (reply.author?.id) {
+                                                                navigate(`/learner/profile/${reply.author.id}`);
+                                                            }
+                                                        }}
+                                                        disabled={!reply.author?.id}
+                                                        className="font-medium text-xs sm:text-sm text-[#2c0b5f] hover:underline disabled:no-underline disabled:cursor-default"
+                                                        title={reply.author?.id ? `View profile of ${reply.author.name}` : 'Anonymous user'}
+                                                    >
                                                         {reply.author?.name || 'Anonymous'}
-                                                    </span>
+                                                    </button>
                                                     <span className="text-[10px] sm:text-xs text-[#52007C]/70">
                                                         {formatRelativeTime(reply.createdAt)}
                                                     </span>

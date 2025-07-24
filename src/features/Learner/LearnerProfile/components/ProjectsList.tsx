@@ -8,9 +8,8 @@ const ProjectsList: React.FC<{ projects: Project[] }> = ({ projects }) => {
       <h3 className="text-lg font-semibold text-gray-700 border-b border-gray-200 pb-3 mb-4">Project Experience</h3>
       <div className="space-y-6">
         {projects.length > 0 ? (
-          projects.map((project, index) => (
-            // THIS IS THE FIX: Using a combination of id and index for a guaranteed unique key.
-            <div key={`${project.id}-${index}`}>
+          projects.map((project) => ( // The outer index is not needed here, project.id is sufficient
+            <div key={project.id}> {/* Using project.id is cleaner if it's guaranteed unique */}
                 <div className="flex justify-between items-start mb-1">
                     <div>
                         <h4 className="font-bold text-gray-800">{project.name}</h4>
@@ -25,8 +24,9 @@ const ProjectsList: React.FC<{ projects: Project[] }> = ({ projects }) => {
                 </div>
                 <p className="text-sm text-gray-600 my-3">{project.description}</p>
                 <div className="flex flex-wrap gap-2">
-                    {project.technologies.map(tech => (
-                        <span key={tech} className="text-xs bg-gray-200 text-gray-700 font-medium px-2.5 py-1 rounded-md">{tech}</span>
+                    {/* THIS IS THE FIX: The key is now unique for each technology tag across all projects. */}
+                    {project.technologies.map((tech, techIndex) => (
+                        <span key={`${project.id}-${tech}-${techIndex}`} className="text-xs bg-gray-200 text-gray-700 font-medium px-2.5 py-1 rounded-md">{tech}</span>
                     ))}
                 </div>
             </div>

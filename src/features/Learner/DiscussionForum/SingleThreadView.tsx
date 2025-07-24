@@ -1,4 +1,4 @@
-// src/pages/DiscussionForum/SingleThreadView.tsx
+// src/features/Learner/DiscussionForum/SingleThreadView.tsx
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -220,7 +220,6 @@ const SingleThreadView: React.FC = () => {
                         <h1 className="text-2xl sm:text-3xl font-bold text-purple-900 mt-4 font-unbounded break-words">
                             {thread.title}
                         </h1>
-                        {/* --- THIS IS THE CORRECTED SECTION --- */}
                         <div className="mt-3 flex items-center justify-between text-sm text-gray-600">
                             {/* Left side: Author */}
                             <div className="flex items-center">
@@ -231,9 +230,19 @@ const SingleThreadView: React.FC = () => {
                                         thread.author?.name?.charAt(0)?.toUpperCase() ?? 'A'
                                     )}
                                 </div>
-                                <span className="font-semibold text-purple-800 ml-2">
+                                {/* --- THIS IS THE FIX --- */}
+                                <button
+                                    onClick={() => {
+                                        if (thread.author?.id) {
+                                            navigate(`/learner/profile/${thread.author.id}`);
+                                        }
+                                    }}
+                                    disabled={!thread.author?.id}
+                                    className="font-semibold text-purple-800 ml-2 hover:underline disabled:no-underline disabled:cursor-default"
+                                    title={thread.author?.id ? `View profile of ${thread.author.name}` : 'Anonymous user'}
+                                >
                                     {thread.author?.name ?? 'Anonymous'}
-                                </span>
+                                </button>
                             </div>
                             {/* Right side: Timestamp */}
                             <div className="flex items-center">
