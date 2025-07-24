@@ -1,7 +1,7 @@
 // src/features/Learner/CourseContent/LearnerCourseOverview.tsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, BookOpen, CheckCircle, List, Clock, FileText, Download, PlayCircle, AlertCircle, Award, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, BookOpen,User, CheckCircle, List, Clock, FileText, Download, PlayCircle, AlertCircle, Award, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { LearnerCourseDto, LearnerLessonDto } from '../../../types/course.types';
@@ -293,6 +293,10 @@ const LearnerCourseOverview: React.FC = () => {
               )}
             </div>
             <div className="md:col-span-2">
+              <div className="flex items-center text-gray-600 text-sm mb-4">
+                <User className="w-4 h-4 mr-2 text-[#52007C]" />
+                <span>Created by {courseData.creator.name}</span>
+              </div>
               <h1 className="text-2xl font-bold text-white mb-3">{courseData.title}</h1>
               <div className="flex flex-wrap gap-2 mb-4">
                 <span className="bg-[#34137C] text-[#D68BF9] px-3 py-1 rounded-full text-sm">{courseData.category.title || courseData.category.name}</span>

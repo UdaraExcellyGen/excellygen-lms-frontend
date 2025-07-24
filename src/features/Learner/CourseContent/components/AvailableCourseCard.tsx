@@ -1,7 +1,7 @@
 // src/features/Learner/CourseContent/components/AvailableCourseCard.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Tag, User, BookOpen } from 'lucide-react';
+import { Clock, User, BookOpen,User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { LearnerCourseDto } from '../../../../types/course.types';
 import { createEnrollment } from '../../../../api/services/Course/enrollmentService';
@@ -73,7 +73,11 @@ const AvailableCourseCard: React.FC<AvailableCourseCardProps> = ({
       </div>
       
       <div className="p-4">
-        <h3 className="text-white font-semibold text-lg mb-2 line-clamp-1">{course.title}</h3>
+        <h3 className="text-white font-semibold text-lg mb-1 line-clamp-1">{course.title}</h3>
+        <div className="flex items-center text-sm text-gray-400 mb-3">
+          <User className="w-3.5 h-3.5 mr-1.5" />
+          <span>By {course.creator.name}</span>
+        </div>
         
         <div className="mb-3 flex flex-wrap gap-1">
           {course.technologies.slice(0, 3).map(tech => (
