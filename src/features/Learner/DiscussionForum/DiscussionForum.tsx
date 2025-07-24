@@ -1,7 +1,7 @@
 // src/features/Learner/DiscussionForum/DiscussionForum.tsx
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom'; // Import useLocation
+import { useNavigate, useLocation } from 'react-router-dom';
 import { SingleValue } from 'react-select';
 import { 
     MessageSquare, Clock, MessageCircle, Edit2, Trash2,
@@ -42,7 +42,7 @@ const getErrorMessage = (err: any, defaultMessage: string): string => {
 
 const DiscussionForum: React.FC = () => {
     const navigate = useNavigate();
-    const location = useLocation(); // Get current location
+    const location = useLocation();
     const { user } = useAuth(); 
     const [threads, setThreads] = useState<ForumThreadDto[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -74,6 +74,39 @@ const DiscussionForum: React.FC = () => {
     useBadgeChecker(commentPostTrigger);
 
     // ... (rest of the functions are unchanged)
+    useEffect(() => {
+        const loadCategories = async () => { 
+            setIsLoadingCategories(true); 
+            setErrorCategories(null);
+            try { 
+                const categoriesData = await fetchAllCourseCategoriesFromAdminApi(); 
+                setCourseCategories(categoriesData.filter(cat => cat.status === 'active')); 
+            } catch (err: any) { 
+                const msg = getErrorMessage(err, "Could not load categories");
+                setErrorCategories(msg); 
+                toast.error(`Categories Error: ${msg}`); 
+            } finally { 
+                setIsLoadingCategories(false); 
+            }
+        };
+        loadCategories();
+    }, []);
+
+    useEffect(() => { 
+        const timerId = setTimeout(() => { 
+            setDebouncedSearchQuery(searchInput); 
+        }, 500); 
+        return () => clearTimeout(timerId);
+    }, [searchInput]);
+
+    const filterCategoryOptions: CategorySelectOption[] = [
+        { value: 'all', label: 'All Categories' }, 
+        ...courseCategories.map(cat => ({ value: cat.title, label: cat.title }))
+    ];
+
+    const handleCategoryFilterChange = (selectedOption: SingleValue<CategorySelectOption>) => { 
+        setSelectedCategoryFilterOption(selectedOption); 
+    };
     
     const fetchThreads = useCallback(async (page = 1) => { 
         setIsLoading(true); 
@@ -111,40 +144,6 @@ const DiscussionForum: React.FC = () => {
             setIsLoading(false); 
         }
     }, [debouncedSearchQuery, selectedCategoryFilterOption?.value, showMyThreads, currentUserAvatar]); 
-
-    useEffect(() => { 
-        const loadCategories = async () => { 
-            setIsLoadingCategories(true); 
-            setErrorCategories(null);
-            try { 
-                const categoriesData = await fetchAllCourseCategoriesFromAdminApi(); 
-                setCourseCategories(categoriesData.filter(cat => cat.status === 'active')); 
-            } catch (err: any) { 
-                const msg = getErrorMessage(err, "Could not load categories");
-                setErrorCategories(msg); 
-                toast.error(`Categories Error: ${msg}`); 
-            } finally { 
-                setIsLoadingCategories(false); 
-            }
-        };
-        loadCategories();
-    }, []);
-
-    useEffect(() => { 
-        const timerId = setTimeout(() => { 
-            setDebouncedSearchQuery(searchInput); 
-        }, 500); 
-        return () => clearTimeout(timerId);
-    }, [searchInput]);
-
-    const filterCategoryOptions: CategorySelectOption[] = [
-        { value: 'all', label: 'All Categories' }, 
-        ...courseCategories.map(cat => ({ value: cat.title, label: cat.title }))
-    ];
-
-    const handleCategoryFilterChange = (selectedOption: SingleValue<CategorySelectOption>) => { 
-        setSelectedCategoryFilterOption(selectedOption); 
-    };
 
     useEffect(() => { 
         fetchThreads(currentPage); 
@@ -371,7 +370,6 @@ const DiscussionForum: React.FC = () => {
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         if (thread.author?.id) {
-                                                                            // --- FIX: Pass state on navigation ---
                                                                             navigate(`/learner/profile/${thread.author.id}`, { state: { from: location.pathname } });
                                                                         }
                                                                     }}
@@ -414,8 +412,11 @@ const DiscussionForum: React.FC = () => {
                                                         </button>
                                                     </div>
                                                     {thread.showComments && (
-                                                        <div className="mt-3 pt-3 border-t border-purple-200/30">
-                                                            {/* --- FIX: Pass originPath prop --- */}
+                                                        // --- THIS IS THE FIX ---
+                                                        <div 
+                                                            className="mt-3 pt-3 border-t border-purple-200/30"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
                                                             <CommentSection 
                                                                 threadId={thread.id} 
                                                                 currentUserId={user?.id ?? null} 
