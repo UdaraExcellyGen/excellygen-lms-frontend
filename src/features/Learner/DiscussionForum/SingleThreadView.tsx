@@ -284,7 +284,7 @@ const SingleThreadView: React.FC = () => {
     return (
         <Layout>
             <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] py-6">
-                <div className="w-full px-6 sm:px-8 lg:px-12 space-y-6">
+                <div className="w-full px-8 sm:px-12 lg:px-20 xl:px-12.01 space-y-6">
                     <Link 
                         to="/learner/forum" 
                         className="inline-flex items-center gap-2 text-white/90 hover:text-white font-semibold font-nunito transition-colors group"

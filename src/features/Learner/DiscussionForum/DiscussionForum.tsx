@@ -269,15 +269,13 @@ const DiscussionForum: React.FC = () => {
 
     const userForActionBar = user ? {
         ...user,
-        // --- THIS IS THE FIX ---
-        // This ensures that if currentUserAvatar is null, the result is `undefined`, matching the `User` type.
         avatar: user.avatar || currentUserAvatar || undefined,
     } : null;
 
     return (
         <Layout>
-            <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] py-6">
-                <div className="w-full px-6 sm:px-8 lg:px-12 space-y-6 sm:space-y-8">
+            <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-4 sm:p-6 flex flex-col">
+                <div className="w-full px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8 flex-grow">
                     {/* Grouped header, button, and action bar to control spacing */}
                     <div>
                         <div className="text-center mb-4">
@@ -421,17 +419,18 @@ const DiscussionForum: React.FC = () => {
                                     </div>
                                 ))}
                             </div>
-                            
-                            {totalPages > 1 && (
-                                <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-                                    <button onClick={handlePreviousPage} disabled={currentPage <= 1 || isLoading || isActionLoading} className="w-full sm:w-auto px-4 py-2 bg-white/90 text-[#52007C] rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center sm:justify-start gap-1 font-nunito transition-colors"><ChevronLeft className="h-4 w-4" /> Previous</button>
-                                    <span className="text-sm text-white/80 font-nunito order-first sm:order-none">Page {currentPage} of {totalPages} <span className='hidden sm:inline'> ({totalThreads} threads)</span></span>
-                                    <button onClick={handleNextPage} disabled={currentPage >= totalPages || isLoading || isActionLoading} className="w-full sm:w-auto px-4 py-2 bg-white/90 text-[#52007C] rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center sm:justify-start gap-1 font-nunito transition-colors">Next <ChevronRight className="h-4 w-4" /></button>
-                                </div>
-                            )}
                         </>
                     )}
                 </div>
+
+                {/* Pagination moved outside of the main content wrapper */}
+                {!isLoading && threads.length > 0 && totalPages > 1 && (
+                    <div className="w-full px-4 sm:px-6 lg:px-8 mt-8 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <button onClick={handlePreviousPage} disabled={currentPage <= 1 || isLoading || isActionLoading} className="w-full sm:w-auto px-4 py-2 bg-white/90 text-[#52007C] rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center sm:justify-start gap-1 font-nunito transition-colors"><ChevronLeft className="h-4 w-4" /> Previous</button>
+                        <span className="text-sm text-white/80 font-nunito order-first sm:order-none">Page {currentPage} of {totalPages} <span className='hidden sm:inline'> ({totalThreads} threads)</span></span>
+                        <button onClick={handleNextPage} disabled={currentPage >= totalPages || isLoading || isActionLoading} className="w-full sm:w-auto px-4 py-2 bg-white/90 text-[#52007C] rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center sm:justify-start gap-1 font-nunito transition-colors">Next <ChevronRight className="h-4 w-4" /></button>
+                    </div>
+                )}
 
                 <CreateThreadModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onSubmit={handleCreateThread} availableCategories={courseCategories.map(cat => cat.title)} />
                 {editModalInitialData && threadToEdit && (<EditThreadModal isOpen={isEditModalOpen} onClose={() => { setIsEditModalOpen(false); setThreadToEdit(null); }} onSubmit={handleUpdateThread} initialData={editModalInitialData} availableCategories={courseCategories.map(cat => cat.title)} />)}
