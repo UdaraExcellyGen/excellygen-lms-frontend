@@ -58,6 +58,8 @@ const EmployeeManagement: React.FC = () => {
     
     const [skillFilter, setSkillFilter] = useState<string[]>([]);
     const [expandedProjects, setExpandedProjects] = useState<string[]>([]);
+    // ✅ NEW: Add expanded employees state
+    const [expandedEmployees, setExpandedEmployees] = useState<string[]>([]);
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
     const statusDropdownRef = useRef<HTMLDivElement>(null);
     const [isSkillMatchActive, setIsSkillMatchActive] = useState(false);
@@ -94,9 +96,17 @@ const EmployeeManagement: React.FC = () => {
     const [showEmployeesWithoutProjects, setShowEmployeesWithoutProjects] = useState(false);
     const [assignmentError, setAssignmentError] = useState('');
     const [isRemoveConfirmationOpen, setIsRemoveConfirmationOpen] = useState(false);
-    const [employeeToRemove, setEmployeeToRemove] = useState<Employee | null>(null);
-    const [projectToRemoveFrom, setProjectToRemoveFrom] = useState<Project | null>(null);
     const [showWarningMessage, setShowWarningMessage] = useState(false);
+
+    // ✅ UPDATED: States for specific assignment removal
+    const [assignmentToRemove, setAssignmentToRemove] = useState<{
+        id: number;
+        employeeId: string;
+        employeeName: string;
+        projectName: string;
+        role: string;
+        workloadPercentage: number;
+    } | null>(null);
 
     // Edit assignment modal states
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -110,7 +120,7 @@ const EmployeeManagement: React.FC = () => {
     } | null>(null);
     const [editAssignmentError, setEditAssignmentError] = useState('');
 
-    const multiSelectButtonRef = useRef<HTMLButtonButton>(null);
+    const multiSelectButtonRef = useRef<HTMLButtonElement>(null);
 
     // Memoized filter object to prevent unnecessary re-renders
     const employeeFilter = useMemo<EmployeeFilter>(() => ({
@@ -274,22 +284,22 @@ const EmployeeManagement: React.FC = () => {
                 result = await employeeApi.getAvailableEmployees(employeeFilter, page, pageSize);
             }
 
-            // ✅ IMPROVED: Additional client-side filtering for better matching
+            // ✅ FIXED: Exact skill matching (case-insensitive) instead of partial matching
             if (isSkillMatchActive && selectedProject && result.data.length > 0) {
                 const projectSkills = selectedProject.requiredSkills.map(skill => skill.name.toLowerCase());
                 
-                // Filter employees to ensure they have at least one matching skill (case-insensitive)
+                // Filter employees to ensure they have at least one matching skill (case-insensitive, exact match)
                 const filteredEmployees = result.data.filter(employee => {
                     const employeeSkills = employee.skills.map(skill => skill.toLowerCase());
                     return projectSkills.some(projectSkill => 
-                        employeeSkills.some(empSkill => empSkill.includes(projectSkill) || projectSkill.includes(empSkill))
+                        employeeSkills.some(empSkill => empSkill === projectSkill)
                     );
                 });
                 
                 result.data = filteredEmployees;
                 result.pagination.totalCount = filteredEmployees.length;
                 
-                console.log(`✅ Filtered ${filteredEmployees.length} employees with matching skills`);
+                console.log(`✅ Filtered ${filteredEmployees.length} employees with exact matching skills`);
             }
 
             // Update employees list based on whether we're loading a new page or replacing
@@ -361,6 +371,13 @@ const EmployeeManagement: React.FC = () => {
     const toggleProjectExpansion = (projectId: string) => {
         setExpandedProjects(prev =>
             prev.includes(projectId) ? prev.filter(id => id !== projectId) : [...prev, projectId]
+        );
+    };
+
+    // ✅ NEW: Add employee expansion toggle function
+    const toggleEmployeeExpansion = (employeeId: string) => {
+        setExpandedEmployees(prev =>
+            prev.includes(employeeId) ? prev.filter(id => id !== employeeId) : [...prev, employeeId]
         );
     };
 
@@ -445,42 +462,52 @@ const EmployeeManagement: React.FC = () => {
         setDuplicateEmployees([]);
     };
 
-    const handleRemoveFromProject = async (projectId: string, employeeId: string) => {
+    // ✅ UPDATED: Handle specific assignment removal instead of entire employee removal
+    const handleRemoveSpecificAssignment = async (assignmentId: number) => {
         try {
-            await assignmentApi.removeEmployeeFromProject(projectId, employeeId);
-            toast.success('Employee removed from project successfully!');
+            // Call API to remove specific assignment by ID
+            await assignmentApi.removeSpecificAssignment(assignmentId);
+            toast.success('Assignment removed successfully!');
 
             // Refresh data
             await Promise.all([loadProjects(), loadEmployees(currentPage)]);
         } catch (error) {
-            console.error('Error removing employee from project:', error);
-            toast.error('Failed to remove employee from project');
+            console.error('Error removing assignment:', error);
+            toast.error('Failed to remove assignment');
         }
     };
 
-    const confirmRemoveEmployee = () => {
-        if (employeeToRemove && projectToRemoveFrom) {
-            handleRemoveFromProject(projectToRemoveFrom.id, employeeToRemove.id);
+    const confirmRemoveAssignment = () => {
+        if (assignmentToRemove) {
+            handleRemoveSpecificAssignment(assignmentToRemove.id);
         }
         setIsRemoveConfirmationOpen(false);
-        setEmployeeToRemove(null);
-        setProjectToRemoveFrom(null);
+        setAssignmentToRemove(null);
     };
 
-    const cancelRemoveEmployee = () => {
+    const cancelRemoveAssignment = () => {
         setIsRemoveConfirmationOpen(false);
-        setEmployeeToRemove(null);
-        setProjectToRemoveFrom(null);
+        setAssignmentToRemove(null);
     };
 
-    const triggerRemoveConfirmation = (projectId: string, employeeId: string) => {
-        const employeeData = employees.find(e => e.id === employeeId);
-        const projectData = projects.find(p => p.id === projectId);
-        if (employeeData && projectData) {
-            setEmployeeToRemove(employeeData);
-            setProjectToRemoveFrom(projectData);
-            setIsRemoveConfirmationOpen(true);
-        }
+    // ✅ UPDATED: Updated function signature to handle specific assignment removal
+    const triggerRemoveConfirmation = (
+        assignmentId: number,
+        employeeId: string, 
+        employeeName: string, 
+        projectName: string,
+        role: string,
+        workloadPercentage: number
+    ) => {
+        setAssignmentToRemove({
+            id: assignmentId,
+            employeeId,
+            employeeName,
+            projectName,
+            role,
+            workloadPercentage
+        });
+        setIsRemoveConfirmationOpen(true);
     };
 
     // ✅ IMPROVED: Enhanced skill match handler
@@ -520,6 +547,7 @@ const EmployeeManagement: React.FC = () => {
         setIsSkillMatchActive(false);
         setShowEmployeesWithoutProjects(false);
         setSkillFilter([]); // ✅ Also clear skill filter
+        setExpandedEmployees([]); // ✅ NEW: Clear expanded employees too
     };
 
     // Pagination handlers
@@ -705,7 +733,7 @@ const EmployeeManagement: React.FC = () => {
                             {isSkillMatchActive ? (
                                 <>
                                     <FaBullseye className="w-3 h-3 sm:w-4 sm:h-4" />
-                                    <span className="hidden sm:inline">{t('projectManager.employeeAssign.matchedSkills')}</span>
+                                    <span className="hidden sm:inline">{t('projectManager.employeeAssign.matchedTechnologies')}</span>
                                     <span className="sm:hidden">{t('projectManager.employeeAssign.match')}</span>
                                 </>
                             ) : (
@@ -955,9 +983,11 @@ const EmployeeManagement: React.FC = () => {
                                             key={employee.id}
                                             employee={employee}
                                             isSelected={selectedEmployees.includes(employee.id)}
+                                            isExpanded={expandedEmployees.includes(employee.id)} // ✅ NEW
                                             projects={projects}
                                             handleEmployeeSelect={handleEmployeeSelect}
                                             handleOpenProjectDetails={handleOpenProjectDetails}
+                                            toggleEmployeeExpansion={toggleEmployeeExpansion} // ✅ NEW
                                             isDisabled={!selectedProject}
                                         />
                                     ))
@@ -1011,12 +1041,15 @@ const EmployeeManagement: React.FC = () => {
                         selectedProject={selectedProject}
                     />
 
+                    {/* ✅ UPDATED: Updated props for specific assignment removal */}
                     <RemoveEmployeeConfirmationDialog
                         isOpen={isRemoveConfirmationOpen}
-                        onClose={cancelRemoveEmployee}
-                        onConfirm={confirmRemoveEmployee}
-                        employeeName={employeeToRemove?.name}
-                        projectName={projectToRemoveFrom?.name}
+                        onClose={cancelRemoveAssignment}
+                        onConfirm={confirmRemoveAssignment}
+                        employeeName={assignmentToRemove?.employeeName}
+                        projectName={assignmentToRemove?.projectName}
+                        role={assignmentToRemove?.role}
+                        workloadPercentage={assignmentToRemove?.workloadPercentage}
                     />
 
                     {/* Conditionally render confirmation bar styles */}
