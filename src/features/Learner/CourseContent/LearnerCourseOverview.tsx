@@ -320,9 +320,9 @@ const LearnerCourseOverview: React.FC = () => {
         <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6">
           <div className="mb-2 flex justify-between items-center">
             <h2 className="text-[#BF4BF6] font-semibold">Your Progress</h2>
-            <span className="text-white">{courseData.progressPercentage}%</span>
+            <span className="text-[#1B0A3F] font-semibold">{courseData.progressPercentage}%</span>
           </div>
-          <div className="w-full bg-[#34137C] rounded-full h-4">
+          <div className="w-full border border-[#34137C] rounded-full h-4">
             <div className="h-4 rounded-full transition-all duration-500 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9]" style={{ width: `${courseData.progressPercentage}%` }}></div>
           </div>
           {isCourseCompleted && (

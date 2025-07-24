@@ -68,7 +68,7 @@ const AvailableCourseCard: React.FC<AvailableCourseCardProps> = ({
           </div>
         )}
         <div className="absolute top-2 right-2 bg-[#34137C] px-2 py-1 rounded-full text-xs text-white">
-          {course.category.title}
+          {course.category?.title}
         </div>
       </div>
       
@@ -76,12 +76,12 @@ const AvailableCourseCard: React.FC<AvailableCourseCardProps> = ({
         <h3 className="text-white font-semibold text-lg mb-1 line-clamp-1">{course.title}</h3>
         <div className="flex items-center text-sm text-gray-400 mb-3">
           <User className="w-3.5 h-3.5 mr-1.5" />
-          <span>By {course.creator.name}</span>
+          <span>By {course.creator?.name || 'Unknown Creator'}</span>
         </div>
         
         <div className="mb-3 flex flex-wrap gap-1">
-          {course.technologies.slice(0, 3).map(tech => (
-            <span key={tech.id} className="bg-[#34137C] text-xs text-white px-2 py-1 rounded-full">
+           {course.technologies?.slice(0, 3).map(tech => (
+            tech && <span key={tech.id} className="bg-[#34137C] text-xs text-white px-2 py-1 rounded-full">
               {tech.name}
             </span>
           ))}
