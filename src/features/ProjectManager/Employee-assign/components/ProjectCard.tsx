@@ -12,7 +12,7 @@ interface ProjectCardProps {
   employees: Employee[];
   handleProjectSelect: (project: Project) => void;
   toggleProjectExpansion: (projectId: string) => void;
-  triggerRemoveConfirmation: (projectId: string, employeeId: string, employeeName: string, projectName: string) => void;
+  triggerRemoveConfirmation: (assignmentId: number, employeeId: string, employeeName: string, projectName: string, role: string, workloadPercentage: number) => void;
   triggerEditAssignment: (assignment: {
     id: number;
     employeeName: string;
@@ -218,7 +218,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                   const employee = employees.find((e) => e.id === assignment.employeeId);
                   return employee ? (
                     <div
-                      key={`${assignment.employeeId}-${assignment.role}`}
+                      key={`${assignment.employeeId}-${assignment.role}-${assignment.id}`}
                       className="flex items-center justify-between p-3 rounded-lg bg-white"
                     >
                       <div className="flex items-center gap-3">
@@ -258,7 +258,15 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            triggerRemoveConfirmation(project.id, assignment.employeeId, assignment.employeeName, project.name);
+                            // ✅ UPDATED: Pass specific assignment details instead of just employee details
+                            triggerRemoveConfirmation(
+                              assignment.id,
+                              assignment.employeeId, 
+                              assignment.employeeName, 
+                              project.name,
+                              assignment.role,
+                              assignment.workloadPercentage
+                            );
                           }}
                           className="px-2 py-1 hover:bg-[#F6E6FF] dark:hover:bg-[#1B0A3F]
                             rounded transition-colors text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-500"

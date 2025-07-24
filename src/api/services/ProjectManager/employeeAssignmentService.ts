@@ -462,6 +462,14 @@ export const assignmentApi = {
     employeeApi.clearAllCache();
   },
 
+  // ✅ NEW: Remove specific assignment (alias for removeEmployeeAssignment for better naming)
+  removeSpecificAssignment: async (assignmentId: number): Promise<void> => {
+    await apiClient.delete(`${API_BASE}/employee-assignments/${assignmentId}`);
+    
+    // Clear all caches since we don't know which employee/project this affects
+    employeeApi.clearAllCache();
+  },
+
   // Remove employee from project by IDs
   removeEmployeeFromProject: async (projectId: string, employeeId: string): Promise<void> => {
     await apiClient.delete(`${API_BASE}/projects/${projectId}/employees/${employeeId}`);

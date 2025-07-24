@@ -99,6 +99,7 @@
       "activeProjects": "Active Projects",
       "totalEmployees": "Total Employees", 
       "activeEmployees": "Active Employees",
+      "employeesOnProjects": "On Projects",
       "totalTechnologies": "Total Technologies",
       "activeTechnologies": "Active Technologies",
       "quickActions": "Quick Actions"
@@ -132,7 +133,15 @@
       "active": "Active",
       "completed": "Completed",
       "name": "Name",
-      "id": "ID"
+      "id": "ID",
+      "skillMatchingActive": "Technology Matching Active",
+      "showingEmployeesWithSkills": "Showing employees with technologies",
+      "noMatchingEmployeesFound": "No matching employees found",
+"noEmployeesHaveSkillsMatching": "No employees have technologies matching",
+      "furtherFilteredBy": "Further filtered by",
+"matchedTechnologies": "Matched Technologies",
+      "match": "Match",
+      "free": "Free"
     },
     "dialogs": {
       "confirmEmployeeAssignment": "Confirm Employee Assignment?",
