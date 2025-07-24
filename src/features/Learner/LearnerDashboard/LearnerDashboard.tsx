@@ -12,8 +12,9 @@ import {
 import { getEnrolledCoursesForLearner, getLearnerCourseDetails } from '../../../api/services/Course/learnerCourseService';
 import { getRecentlyAccessedCourseIds } from '../../../api/services/Course/courseAccessService';
 import { getRecentActivities } from '../../../api/services/LearnerDashboard/learnerActivitiesService';
-// THIS IS THE CRITICAL IMPORT THAT WAS MISSING
 import { getWeeklyActivity } from '../../../api/services/LearnerDashboard/learnerOverallStatsService';
+// --- FIX: Import the user profile service ---
+import { getUserProfile } from '../../../api/services/LearnerProfile/userProfileService';
 
 const LearnerDashboard: React.FC = () => {
   const { user, currentRole, selectRole, navigateToRoleSelection } = useAuth();
@@ -31,8 +32,29 @@ const LearnerDashboard: React.FC = () => {
   const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
 
+  // --- FIX: Add state to hold the user's correct job role ---
+  const [userJobRole, setUserJobRole] = useState<string>('Learner');
+  const [isLoadingRole, setIsLoadingRole] = useState(true);
+
   useEffect(() => {
     const controller = new AbortController();
+
+    // --- FIX: Add a function to fetch the user's profile for their job role ---
+    const fetchUserProfile = async () => {
+      if (!user?.id) return;
+      setIsLoadingRole(true);
+      try {
+        const profile = await getUserProfile(user.id);
+        if (profile && profile.jobRole) {
+          setUserJobRole(profile.jobRole);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user job role for dashboard:", error);
+        // On error, we'll just keep the default 'Learner' role
+      } finally {
+        setIsLoadingRole(false);
+      }
+    };
 
     const fetchActiveCourses = async () => {
       setIsLoadingCourses(true);
@@ -82,11 +104,9 @@ const LearnerDashboard: React.FC = () => {
       }
     };
 
-    // THIS IS THE CRITICAL FIX: REMOVED MOCK DATA, USING REAL API
     const fetchLearningActivity = async () => {
       setIsLoadingActivity(true);
       try {
-        // This now calls your real, working backend API
         const weeklyData = await getWeeklyActivity();
         setLearningActivity(weeklyData);
       } catch (error) {
@@ -113,6 +133,7 @@ const LearnerDashboard: React.FC = () => {
     };
 
     if (user?.id) {
+      fetchUserProfile(); // --- FIX: Call the new function ---
       fetchActiveCourses();
       fetchLearningActivity();
       fetchRecentActivities();
@@ -181,9 +202,7 @@ const LearnerDashboard: React.FC = () => {
 
   return (
     <Layout>
-      {/* Outermost container for page background and overall padding - matching LearnerProjects */}
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-4 sm:p-6 flex flex-col font-nunito">
-        {/* Inner container for content - matching LearnerProjects with w-full and consistent padding */}
         <div className="w-full px-4 sm:px-6 lg:px-8 space-y-6 flex-grow">
           <div className="mb-2">
             <div className="p-2">
@@ -244,7 +263,10 @@ const LearnerDashboard: React.FC = () => {
                   <div className="w-full z-10">
                     <h1 className="text-2xl md:text-3xl font-bold font-['Unbounded'] mb-2 text-white">Hi, {user ? user.name : 'Learner Name'} 👋</h1>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-2">
-                      <p className="text-[#D68BF9] px-3 py-1 bg-white/10 rounded-full text-sm">Software Engineer</p>
+                      {/* --- FIX: Display the fetched job role --- */}
+                      <p className="text-[#D68BF9] px-3 py-1 bg-white/10 rounded-full text-sm">
+                        {isLoadingRole ? '...' : userJobRole}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -257,7 +279,7 @@ const LearnerDashboard: React.FC = () => {
             <RecentActivities activities={recentActivities} isLoading={isLoadingActivities} />
             <LearningActivityChart data={learningActivity} isLoading={isLoadingActivity} />
           </div>
-        </div> {/* End of w-full content wrapper */}
+        </div>
       </div>
     </Layout>
   );
