@@ -1,7 +1,7 @@
 // src/features/Learner/CourseContent/components/AvailableCourseCard.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, User, BookOpen,User } from 'lucide-react';
+import { Clock, User, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { LearnerCourseDto } from '../../../../types/course.types';
 import { createEnrollment } from '../../../../api/services/Course/enrollmentService';
