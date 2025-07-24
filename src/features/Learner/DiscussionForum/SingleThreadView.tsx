@@ -1,7 +1,7 @@
 // src/features/Learner/DiscussionForum/SingleThreadView.tsx
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'; // Import useLocation
 import { Clock, MessageSquare, ArrowLeft, RefreshCw, AlertCircle, Bookmark, Edit2, Trash2 } from 'lucide-react';
 
 import Layout from '../../../components/Sidebar/Layout';
@@ -9,6 +9,7 @@ import CommentSection from './components/CommentSection';
 import EditThreadModal from './components/EditThreadModal';
 import DeleteItemDialog from './components/DeleteItemDialog';
 
+// ... (imports and helper functions are unchanged)
 import * as forumApi from '../../../api/forumApi';
 import { ForumThreadDto, ThreadFormData, UpdateForumThreadDto } from './types/dto';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -37,11 +38,14 @@ const formatRelativeTime = (dateStringISO?: string): string => {
     }
 };
 
+
 const SingleThreadView: React.FC = () => {
     const { threadId } = useParams<{ threadId: string }>();
     const { user } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation(); // Get current location
     
+    // ... (state declarations are unchanged)
     const [thread, setThread] = useState<ForumThreadDto | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -53,6 +57,7 @@ const SingleThreadView: React.FC = () => {
     const [courseCategories, setCourseCategories] = useState<AdminCourseCategoryType[]>([]);
     const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
+    // ... (useEffect and handler functions are unchanged)
     useEffect(() => {
         const loadCategories = async () => { 
             setIsLoadingCategories(true);
@@ -145,8 +150,9 @@ const SingleThreadView: React.FC = () => {
             ? thread.imageUrl.substring(thread.imageUrl.indexOf("/uploads/"))
             : undefined
     } : undefined;
-    
+
     const renderContent = () => {
+        // ... (loading, error, and not found states are unchanged)
         if (isLoading) {
             return (
                 <div className="flex justify-center items-center p-20 text-white">
@@ -189,7 +195,7 @@ const SingleThreadView: React.FC = () => {
         return (
             <div className={`bg-white/90 backdrop-blur-sm rounded-xl border border-purple-300/40 shadow-lg overflow-hidden transition-opacity ${isActionLoading ? 'opacity-70' : ''}`}>
                 <div className="p-5 sm:p-8">
-                    {/* Header: Title, Author, etc. */}
+                    {/* ... header ... */}
                     <div className="pb-5 border-b border-purple-200/50">
                         <div className="flex justify-between items-start gap-4">
                             <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm font-bold rounded-full inline-flex items-center gap-2">
@@ -221,7 +227,6 @@ const SingleThreadView: React.FC = () => {
                             {thread.title}
                         </h1>
                         <div className="mt-3 flex items-center justify-between text-sm text-gray-600">
-                            {/* Left side: Author */}
                             <div className="flex items-center">
                                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold shadow" title={thread.author?.name ?? 'User'}>
                                     {thread.author?.avatar ? (
@@ -230,11 +235,11 @@ const SingleThreadView: React.FC = () => {
                                         thread.author?.name?.charAt(0)?.toUpperCase() ?? 'A'
                                     )}
                                 </div>
-                                {/* --- THIS IS THE FIX --- */}
                                 <button
                                     onClick={() => {
                                         if (thread.author?.id) {
-                                            navigate(`/learner/profile/${thread.author.id}`);
+                                            // --- FIX: Pass state on navigation ---
+                                            navigate(`/learner/profile/${thread.author.id}`, { state: { from: location.pathname } });
                                         }
                                     }}
                                     disabled={!thread.author?.id}
@@ -244,7 +249,6 @@ const SingleThreadView: React.FC = () => {
                                     {thread.author?.name ?? 'Anonymous'}
                                 </button>
                             </div>
-                            {/* Right side: Timestamp */}
                             <div className="flex items-center">
                                 <Clock className="h-4 w-4 mr-1.5 text-gray-400" />
                                 <span title={thread.createdAt}>{formatRelativeTime(thread.createdAt)}</span>
@@ -274,16 +278,17 @@ const SingleThreadView: React.FC = () => {
                     )}
                 </div>
 
-                {/* Comments Section */}
                 <div className="bg-purple-50/20 p-5 sm:p-8 border-t border-purple-200/50">
                     <h2 className="text-xl font-bold text-purple-900 mb-4 font-unbounded flex items-center">
                         <MessageSquare className="mr-3 text-purple-600"/>
                         Comments ({thread.commentsCount})
                     </h2>
+                     {/* --- FIX: Pass originPath prop --- */}
                      <CommentSection 
                         threadId={thread.id} 
                         currentUserId={user?.id ?? null}
                         onCommentPosted={handleCommentPosted}
+                        originPath={location.pathname}
                      />
                 </div>
             </div>
@@ -305,7 +310,7 @@ const SingleThreadView: React.FC = () => {
                 </div>
             </div>
 
-            {/* Modals for Edit and Delete */}
+            {/* ... modals ... */}
             {editModalInitialData && thread && (
                 <EditThreadModal
                     isOpen={isEditModalOpen}
