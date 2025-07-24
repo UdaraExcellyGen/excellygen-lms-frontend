@@ -1,6 +1,6 @@
 import React from 'react';
 import { Project } from '../types';
-import { Briefcase, CheckCircle, Calendar } from 'lucide-react';
+import { Briefcase, CheckCircle } from 'lucide-react';
 
 const ProjectsList: React.FC<{ projects: Project[] }> = ({ projects }) => {
   return (
