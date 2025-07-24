@@ -1,65 +1,111 @@
 // src/features/Learner/CourseContent/components/AvailableCourseCard.tsx
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Clock, Tag, User, BookOpen } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { LearnerCourseDto } from '../../../../types/course.types';
-import { BookOpen, Clock, Users, Play, Pause } from 'lucide-react';
+import { createEnrollment } from '../../../../api/services/Course/enrollmentService';
 
 interface AvailableCourseCardProps {
   course: LearnerCourseDto;
-  onEnroll: (courseId: number) => void;
-  loading: boolean;
-  isInactiveCategory: boolean;
+  onEnrollmentSuccess?: () => void; // Make this callback optional
 }
 
-const AvailableCourseCard: React.FC<AvailableCourseCardProps> = ({ course, onEnroll, loading, isInactiveCategory }) => {
-  return (
-    <div className="bg-white/90 backdrop-blur-md rounded-lg overflow-hidden border border-purple-500/10 h-full flex flex-col transition-all duration-300 hover:shadow-lg hover:border-purple-500/30">
-      <div className="h-40 overflow-hidden relative bg-gradient-to-br from-[#34137C] to-[#52007C]">
-        {course.thumbnailUrl ? (
-          <img src={course.thumbnailUrl} alt={course.title} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center"><BookOpen className="w-12 h-12 text-[#D68BF9]" /></div>
-        )}
-        {course.category?.title && (
-          <span className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded-md">
-            {course.category.title}
-          </span>
-        )}
-      </div>
+const AvailableCourseCard: React.FC<AvailableCourseCardProps> = ({ 
+  course, 
+  onEnrollmentSuccess 
+}) => {
+  const navigate = useNavigate();
+  const [isEnrolling, setIsEnrolling] = useState(false);
+  
+  const handleEnrollClick = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click (navigation) when enrolling
+    
+    if (isEnrolling) return; // Prevent multiple clicks
+    
+    setIsEnrolling(true);
+    try {
+      await createEnrollment(course.id);
+      toast.success(`Enrolled in "${course.title}" successfully!`);
       
-      <div className="p-4 flex flex-col flex-grow">
-        {/* CORRECTED: Course title now has space for two lines */}
-        <h3 className="text-gray-900 font-semibold text-lg mb-2 line-clamp-2 min-h-[3.5rem]">
-          {course.title}
-        </h3>
-        
-        {course.technologies && course.technologies.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-1">
-            {course.technologies.slice(0, 3).map(tech => (
-              <span key={tech.id} className="bg-gray-200 text-gray-700 text-xs font-medium px-2 py-0.5 rounded-full">{tech.name}</span>
-            ))}
-            {course.technologies.length > 3 && (
-              <span className="bg-gray-200 text-gray-700 text-xs font-medium px-2 py-0.5 rounded-full">+{course.technologies.length - 3}</span>
-            )}
+      // Call the callback if provided
+      if (typeof onEnrollmentSuccess === 'function') {
+        onEnrollmentSuccess();
+      }
+      
+      // Refresh the page after a short delay to show the updated enrollment status
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Enrollment error:', error);
+      toast.error('Failed to enroll in course');
+    } finally {
+      setIsEnrolling(false);
+    }
+  };
+  
+  const handleCardClick = () => {
+    navigate(`/learner/course-view/${course.id}`);
+  };
+  
+  return (
+    <div 
+      className="bg-[#1B0A3F]/50 rounded-xl overflow-hidden hover:shadow-lg hover:shadow-[#BF4BF6]/20 transition duration-300 cursor-pointer"
+      onClick={handleCardClick}
+    >
+      <div className="h-40 overflow-hidden relative">
+        {course.thumbnailUrl ? (
+          <img 
+            src={course.thumbnailUrl} 
+            alt={course.title} 
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-[#34137C] flex items-center justify-center">
+            <BookOpen className="w-12 h-12 text-[#D68BF9]" />
           </div>
         )}
+        <div className="absolute top-2 right-2 bg-[#34137C] px-2 py-1 rounded-full text-xs text-white">
+          {course.category.title}
+        </div>
+      </div>
+      
+      <div className="p-4">
+        <h3 className="text-white font-semibold text-lg mb-2 line-clamp-1">{course.title}</h3>
         
-        <p className="text-gray-600 text-sm mb-4 flex-grow line-clamp-2">{course.description}</p>
-        
-        <div className="flex justify-between items-center text-gray-500 text-xs mb-4">
-          <div className="flex items-center gap-1.5"><Clock size={14} className="text-purple-600"/><span>{course.estimatedTime} hours</span></div>
-          <div className="flex items-center gap-1.5"><Users size={14} className="text-purple-600"/><span>{course.activeLearners || 0} learners</span></div>
+        <div className="mb-3 flex flex-wrap gap-1">
+          {course.technologies.slice(0, 3).map(tech => (
+            <span key={tech.id} className="bg-[#34137C] text-xs text-white px-2 py-1 rounded-full">
+              {tech.name}
+            </span>
+          ))}
+          {course.technologies.length > 3 && (
+            <span className="bg-[#34137C] text-xs text-white px-2 py-1 rounded-full">
+              +{course.technologies.length - 3} more
+            </span>
+          )}
         </div>
         
-        <div className="flex gap-2 mt-auto pt-4 border-t border-gray-200">
-          <button
-            onClick={(e) => { e.stopPropagation(); onEnroll(course.id); }}
-            disabled={loading || isInactiveCategory}
-            className={`w-full flex-1 py-2.5 rounded-lg font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2 shadow-sm ${isInactiveCategory ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white hover:shadow-lg hover:scale-[1.02]'}`}
-          >
-            {isInactiveCategory ? <Pause size={16} /> : <Play size={16} />}
-            {isInactiveCategory ? 'Enrollment Paused' : 'Enroll Now'}
-          </button>
+        <div className="flex justify-between items-center text-gray-300 text-xs mb-4">
+          <div className="flex items-center">
+            <Clock className="w-3 h-3 mr-1" />
+            <span>{course.estimatedTime} hours</span>
+          </div>
+          <div className="flex items-center">
+            <User className="w-3 h-3 mr-1" />
+            <span>Active learners: {course.activeLearnersCount || 0}</span>
+          </div>
         </div>
+        
+        <button
+          onClick={handleEnrollClick}
+          disabled={isEnrolling}
+          className="w-full bg-[#BF4BF6] hover:bg-[#D68BF9] text-white py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isEnrolling ? 'Enrolling...' : 'Enroll Now'}
+        </button>
       </div>
     </div>
   );

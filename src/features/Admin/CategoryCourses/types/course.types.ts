@@ -1,39 +1,24 @@
+// src/features/Admin/CategoryCourses/types/course.types.ts
 export interface Course {
-  id: string;
+  id: number; // Course ID is a number
   title: string;
   description: string;
   status: string;
+  isInactive: boolean; // Field to show if course is active or not
   createdAt: string;
-  createdAtFormatted: string;
-  creatorId: string;
-  categoryId: string;
-  estimatedTime: number;
-  coursePoints?: number;
-  thumbnailImagePath?: string;
-  creator?: {
-    id: string;
+  creator: {
     name: string;
-    email: string;
-  };
-  lessons?: {
-    id: string;
-    lessonName: string;
-  }[];
+  } | null;
+  lessons: any[]; // lessons can be an empty array
 }
 
 export interface CourseCategory {
   id: string;
   title: string;
   description: string;
-  icon: string;
-  status: string;
-  totalCourses: number;
-  isDeleted: boolean;
 }
 
 export interface UpdateCourseAdminDto {
   title: string;
   description: string;
-  estimatedTime?: number;
-  coursePoints?: number;
 }
