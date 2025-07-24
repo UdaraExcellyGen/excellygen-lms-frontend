@@ -10,7 +10,6 @@ import { getLearnerCourseDetails, markLessonCompleted } from '../../../api/servi
 import { logCourseAccess } from '../../../api/services/Course/courseAccessService';
 import { useBadgeChecker } from '../../../hooks/useBadgeChecker';
 
-// THIS CONSTANT IS FROM THE WORKING CODE (CODE 1)
 const CERTIFICATE_GEN_STORAGE_KEY = 'recentCertificateGens';
 
 const LearnerCourseOverview: React.FC = () => {
@@ -25,11 +24,10 @@ const LearnerCourseOverview: React.FC = () => {
   const [isGeneratingCertificate, setIsGeneratingCertificate] = useState(false);
   const [expandedLessons, setExpandedLessons] = useState<Record<number, boolean>>({});
 
-  // Badge checker implementation from Code 2
   const [courseCompletionTrigger, setCourseCompletionTrigger] = useState(0);
   useBadgeChecker(courseCompletionTrigger);
 
-  // Centralized function to refetch data from the backend (from Code 2)
+  // Centralized function to refetch data from the backend
   const fetchCourseData = useCallback(async () => {
     if (!courseId) return;
     try {
@@ -281,9 +279,12 @@ const LearnerCourseOverview: React.FC = () => {
         )}
 
         {/* Course Header */}
-        <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-2xl p-6">
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-1">
+              <div className="flex flex-wrap gap-2 mb-4">
+                <span className="bg-[#34137C]/80 text-white px-3 py-1 rounded-lg text-sm">{courseData.category.title || courseData.category.name}</span>
+                </div>
               {courseData.thumbnailUrl || courseData.thumbnailImagePath ? (
                 <img src={courseData.thumbnailUrl || courseData.thumbnailImagePath} alt={courseData.title} className="w-full h-48 object-cover rounded-xl shadow-lg" />
               ) : (
@@ -293,19 +294,20 @@ const LearnerCourseOverview: React.FC = () => {
               )}
             </div>
             <div className="md:col-span-2">
+              
+              <h1 className="text-2xl font-bold text-[#1B0A3F] mb-3">{courseData.title}</h1>
               <div className="flex items-center text-gray-600 text-sm mb-4">
                 <User className="w-4 h-4 mr-2 text-[#52007C]" />
                 <span>Created by {courseData.creator.name}</span>
               </div>
-              <h1 className="text-2xl font-bold text-white mb-3">{courseData.title}</h1>
               <div className="flex flex-wrap gap-2 mb-4">
-                <span className="bg-[#34137C] text-[#D68BF9] px-3 py-1 rounded-full text-sm">{courseData.category.title || courseData.category.name}</span>
+                <span className="bg-[#34137C] text-white px-3 py-2 rounded-full text-sm">{courseData.category.title || courseData.category.name}</span>
                 {courseData.technologies.map(tech => (
-                  <span key={tech.id} className="bg-[#34137C] text-white px-3 py-1 rounded-full text-sm">{tech.name}</span>
+                  <span key={tech.id} className="bg-[#34137C] text-white px-3 py-2 rounded-full text-sm">{tech.name}</span>
                 ))}
               </div>
-              <p className="text-gray-300 mb-4">{courseData.description}</p>
-              <div className="flex flex-wrap gap-4 text-sm text-gray-300">
+              <p className="text-gray-800 mb-4">{courseData.description}</p>
+              <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                 <div className="flex items-center"><Clock className="w-4 h-4 mr-2 text-[#D68BF9]" />Estimated time: {courseData.estimatedTime} hours</div>
                 <div className="flex items-center"><BookOpen className="w-4 h-4 mr-2 text-[#D68BF9]" />Lessons: {courseData.totalLessons}</div>
                 <div className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-[#D68BF9]" />Completed: {courseData.completedLessons}/{courseData.totalLessons}</div>
@@ -315,9 +317,9 @@ const LearnerCourseOverview: React.FC = () => {
         </div>
 
         {/* Progress Bar */}
-        <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-2xl p-6">
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6">
           <div className="mb-2 flex justify-between items-center">
-            <h2 className="text-white font-semibold">Your Progress</h2>
+            <h2 className="text-[#BF4BF6] font-semibold">Your Progress</h2>
             <span className="text-white">{courseData.progressPercentage}%</span>
           </div>
           <div className="w-full bg-[#34137C] rounded-full h-4">
@@ -337,15 +339,15 @@ const LearnerCourseOverview: React.FC = () => {
         </div>
 
         {/* Course Content */}
-        <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-2xl p-6">
-          <h2 className="text-xl font-semibold text-white mb-6">Course Content</h2>
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6">
+          <h2 className="text-xl font-semibold text-c mb-6">Course Content</h2>
           <div className="space-y-4">
             {courseData.lessons.map((lesson) => (
-              <div key={lesson.id} className="bg-[#34137C]/30 rounded-lg overflow-hidden">
+              <div key={lesson.id} className="border border-[#52007C] rounded-lg overflow-hidden">
                 <div className="p-4 flex justify-between items-center cursor-pointer" onClick={() => toggleLessonExpand(lesson.id)}>
                   <div className="flex items-center space-x-3 flex-1">
-                    {expandedLessons[lesson.id] ? (<ArrowLeft className="text-[#D68BF9] w-5 h-5 transform rotate-90" />) : (<ArrowLeft className="text-[#D68BF9] w-5 h-5 transform -rotate-90" />)}
-                    <div className="flex-1"><div className="flex items-center"><h3 className="text-white font-medium">{lesson.lessonName}</h3>{lesson.isCompleted && (<CheckCircle className="w-4 h-4 ml-2 text-green-500" />)}</div></div>
+                    {expandedLessons[lesson.id] ? (<ArrowLeft className="text-[#BF4BF6] w-5 h-5 transform rotate-90" />) : (<ArrowLeft className="text-[#A845E8] w-5 h-5 transform -rotate-90" />)}
+                    <div className="flex-1"><div className="flex items-center"><h3 className="text-[#1B0A3F] font-medium">{lesson.lessonName}</h3>{lesson.isCompleted && (<CheckCircle className="w-4 h-4 ml-2 text-green-500" />)}</div></div>
                   </div>
                   {!lesson.isCompleted && (<button onClick={(e) => { e.stopPropagation(); handleMarkLessonComplete(lesson.id); }} disabled={isMarkingComplete[lesson.id]} className="bg-[#BF4BF6] hover:bg-[#D68BF9] text-white text-xs py-1 px-3 rounded-full disabled:opacity-50">{isMarkingComplete[lesson.id] ? (<span className="flex items-center"><svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Marking...</span>) : "Mark Complete"}</button>)}
                 </div>
@@ -353,16 +355,16 @@ const LearnerCourseOverview: React.FC = () => {
                   <div className="p-4 pt-0 border-t border-[#BF4BF6]/20 space-y-4">
                     {lesson.documents && lesson.documents.length > 0 && (
                       <div>
-                        <h4 className="text-[#D68BF9] text-sm font-semibold mb-2">Materials</h4>
+                        <h4 className="text-[#BF4BF6] text-sm font-semibold mb-2">Materials</h4>
                         <div className="space-y-2">
-                          {lesson.documents.map((doc) => (<div key={doc.id} className="bg-[#34137C]/50 p-2 rounded-md flex justify-between items-center"><div className="flex items-center">{doc.documentType === 'PDF' ? (<FileText className="w-4 h-4 text-[#D68BF9] mr-2" />) : (<PlayCircle className="w-4 h-4 text-[#D68BF9] mr-2" />)}<span className="text-white text-sm">{doc.name}</span></div><button onClick={() => handleDownloadDocument(doc.fileUrl || doc.filePath, doc.name)} className="text-[#D68BF9] hover:text-white"><Download className="w-4 h-4" /></button></div>))}
+                          {lesson.documents.map((doc) => (<div key={doc.id} className="bg-[#34137C]/80 p-2 rounded-md flex justify-between items-center"><div className="flex items-center">{doc.documentType === 'PDF' ? (<FileText className="w-4 h-4 text-white mr-2" />) : (<PlayCircle className="w-4 h-4 text-white mr-2" />)}<span className="text-white text-sm">{doc.name}</span></div><button onClick={() => handleDownloadDocument(doc.fileUrl || doc.filePath, doc.name)} className="text-white hover:text-[#D68BF9]"><Download className="w-4 h-4" /></button></div>))}
                         </div>
                       </div>
                     )}
                     {lesson.hasQuiz && (
                       <div>
-                        <h4 className="text-[#D68BF9] text-sm font-semibold mb-2">Quiz Assessment</h4>
-                        <div className="bg-[#34137C]/50 p-3 rounded-md"><div className="flex justify-between items-center"><div className="flex items-center"><List className="w-4 h-4 text-[#D68BF9] mr-2" /><span className="text-white text-sm">Lesson Quiz</span>{lesson.isQuizCompleted && (<span className="ml-2 text-green-500 text-xs flex items-center"><CheckCircle className="w-3 h-3 mr-1" /> Completed</span>)}</div><button onClick={() => handleQuizAction(lesson)} className="bg-[#BF4BF6] hover:bg-[#D68BF9] text-white text-xs py-1 px-3 rounded-full">{lesson.isQuizCompleted ? 'View Result' : 'Start Quiz'}</button></div></div>
+                        <h4 className="text-[#BF4BF6] text-sm font-semibold mb-2">Quiz Assessment</h4>
+                        <div className="bg-[#34137C]/80 p-3 rounded-md"><div className="flex justify-between items-center"><div className="flex items-center"><List className="w-4 h-4 text-white mr-2" /><span className="text-white text-sm">Lesson Quiz</span>{lesson.isQuizCompleted && (<span className="ml-2 text-green-500 text-xs flex items-center"><CheckCircle className="w-3 h-3 mr-1" /> Completed</span>)}</div><button onClick={() => handleQuizAction(lesson)} className="bg-[#BF4BF6] hover:bg-[#BF4BF6]/50 text-white text-xs py-1 px-3 rounded-full">{lesson.isQuizCompleted ? 'View Result' : 'Start Quiz'}</button></div></div>
                       </div>
                     )}
                     {(lesson.documents && lesson.documents.length > 0) && !lesson.isCompleted && (
