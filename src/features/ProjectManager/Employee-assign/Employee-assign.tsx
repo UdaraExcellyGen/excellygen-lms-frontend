@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import {
     FaUserCircle, FaProjectDiagram, FaSearch, FaArrowLeft,
     FaObjectGroup, FaChevronDown, FaChevronLeft, FaChevronRight,
-    FaUserSlash, FaHashtag, FaExclamationTriangle, FaSpinner
+    FaUserSlash, FaHashtag, FaExclamationTriangle, FaSpinner, FaBullseye, FaThumbtack
 } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 
@@ -43,25 +43,6 @@ const useDebounce = (value: string, delay: number) => {
     return debouncedValue;
 };
 
-// Virtual scrolling hook for large lists
-const useVirtualScrolling = (items: any[], containerHeight: number, itemHeight: number) => {
-    const [scrollTop, setScrollTop] = useState(0);
-    
-    const totalHeight = items.length * itemHeight;
-    const viewportHeight = containerHeight;
-    const startIndex = Math.floor(scrollTop / itemHeight);
-    const endIndex = Math.min(startIndex + Math.ceil(viewportHeight / itemHeight) + 1, items.length);
-    const visibleItems = items.slice(startIndex, endIndex);
-    
-    return {
-        visibleItems,
-        totalHeight,
-        startIndex,
-        offsetY: startIndex * itemHeight,
-        onScroll: (e: React.UIEvent<HTMLElement>) => setScrollTop(e.currentTarget.scrollTop)
-    };
-};
-
 const EmployeeManagement: React.FC = () => {
     const { t } = useTranslation();
     const [darkMode] = useState(false);
@@ -77,6 +58,8 @@ const EmployeeManagement: React.FC = () => {
     
     const [skillFilter, setSkillFilter] = useState<string[]>([]);
     const [expandedProjects, setExpandedProjects] = useState<string[]>([]);
+    // ✅ NEW: Add expanded employees state
+    const [expandedEmployees, setExpandedEmployees] = useState<string[]>([]);
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
     const statusDropdownRef = useRef<HTMLDivElement>(null);
     const [isSkillMatchActive, setIsSkillMatchActive] = useState(false);
@@ -113,9 +96,17 @@ const EmployeeManagement: React.FC = () => {
     const [showEmployeesWithoutProjects, setShowEmployeesWithoutProjects] = useState(false);
     const [assignmentError, setAssignmentError] = useState('');
     const [isRemoveConfirmationOpen, setIsRemoveConfirmationOpen] = useState(false);
-    const [employeeToRemove, setEmployeeToRemove] = useState<Employee | null>(null);
-    const [projectToRemoveFrom, setProjectToRemoveFrom] = useState<Project | null>(null);
     const [showWarningMessage, setShowWarningMessage] = useState(false);
+
+    // ✅ UPDATED: States for specific assignment removal
+    const [assignmentToRemove, setAssignmentToRemove] = useState<{
+        id: number;
+        employeeId: string;
+        employeeName: string;
+        projectName: string;
+        role: string;
+        workloadPercentage: number;
+    } | null>(null);
 
     // Edit assignment modal states
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -129,7 +120,7 @@ const EmployeeManagement: React.FC = () => {
     } | null>(null);
     const [editAssignmentError, setEditAssignmentError] = useState('');
 
-    const multiSelectButtonRef = useRef<HTMLButtonButton>(null);
+    const multiSelectButtonRef = useRef<HTMLButtonElement>(null);
 
     // Memoized filter object to prevent unnecessary re-renders
     const employeeFilter = useMemo<EmployeeFilter>(() => ({
@@ -137,6 +128,17 @@ const EmployeeManagement: React.FC = () => {
         availableOnly: showEmployeesWithoutProjects || undefined,
         skills: skillFilter.length > 0 ? skillFilter : undefined
     }), [debouncedSearchTerm, showEmployeesWithoutProjects, skillFilter]);
+
+    // ✅ NEW: Calculate filtered skills for MultiSelect dropdown
+    const filteredSkillsForDropdown = useMemo(() => {
+        if (isSkillMatchActive && selectedProject && selectedProject.requiredSkills.length > 0) {
+            // When match technologies is active, show only project's required technologies
+            return selectedProject.requiredSkills.map(skill => skill.name);
+        } else {
+            // When match technologies is NOT active, show all available skills
+            return availableSkills;
+        }
+    }, [isSkillMatchActive, selectedProject, availableSkills]);
 
     // Initialize data on component mount
     useEffect(() => {
@@ -181,6 +183,12 @@ const EmployeeManagement: React.FC = () => {
             return () => clearTimeout(timer);
         }
     }, [showWarningMessage]);
+
+    // ✅ NEW: Clear skill filter when match technologies or project changes
+    useEffect(() => {
+        // Clear skill filter when switching projects or toggling match technologies
+        setSkillFilter([]);
+    }, [isSkillMatchActive, selectedProject?.id]);
 
     // API Loading Functions
     const loadInitialData = async () => {
@@ -232,15 +240,66 @@ const EmployeeManagement: React.FC = () => {
             let result: PaginatedResponse<Employee>;
 
             if (isSkillMatchActive && selectedProject) {
-                // Get employees matching project skills
+                // ✅ IMPROVED: Get employees matching project skills with case-insensitive matching
                 const projectSkills = selectedProject.requiredSkills.map(skill => skill.name);
+                console.log('🔍 Filtering employees by project skills:', projectSkills);
+                
                 if (projectSkills.length > 0) {
-                    result = await employeeApi.getEmployeesBySkills(projectSkills, page, pageSize);
+                    // If additional skill filter is applied, combine with project skills
+                    let skillsToMatch = projectSkills;
+                    
+                    if (skillFilter.length > 0) {
+                        // Find intersection of project skills and selected skill filter
+                        const lowerProjectSkills = projectSkills.map(s => s.toLowerCase());
+                        const lowerSkillFilter = skillFilter.map(s => s.toLowerCase());
+                        
+                        // Only use skills that are both in project AND in selected filter
+                        skillsToMatch = projectSkills.filter(projectSkill => 
+                            lowerSkillFilter.includes(projectSkill.toLowerCase())
+                        );
+                        
+                        console.log('🎯 Combined skills filter (project + selected):', skillsToMatch);
+                    }
+                    
+                    if (skillsToMatch.length > 0) {
+                        result = await employeeApi.getEmployeesBySkills(skillsToMatch, page, pageSize);
+                    } else {
+                        // No matching skills, return empty result
+                        result = {
+                            data: [],
+                            pagination: {
+                                currentPage: 1,
+                                pageSize: pageSize,
+                                totalCount: 0,
+                                totalPages: 0,
+                                hasNextPage: false,
+                                hasPreviousPage: false
+                            }
+                        };
+                    }
                 } else {
                     result = await employeeApi.getAvailableEmployees(employeeFilter, page, pageSize);
                 }
             } else {
                 result = await employeeApi.getAvailableEmployees(employeeFilter, page, pageSize);
+            }
+
+            // ✅ FIXED: Exact skill matching (case-insensitive) instead of partial matching
+            if (isSkillMatchActive && selectedProject && result.data.length > 0) {
+                const projectSkills = selectedProject.requiredSkills.map(skill => skill.name.toLowerCase());
+                
+                // Filter employees to ensure they have at least one matching skill (case-insensitive, exact match)
+                const filteredEmployees = result.data.filter(employee => {
+                    const employeeSkills = employee.skills.map(skill => skill.toLowerCase());
+                    return projectSkills.some(projectSkill => 
+                        employeeSkills.some(empSkill => empSkill === projectSkill)
+                    );
+                });
+                
+                result.data = filteredEmployees;
+                result.pagination.totalCount = filteredEmployees.length;
+                
+                console.log(`✅ Filtered ${filteredEmployees.length} employees with exact matching skills`);
             }
 
             // Update employees list based on whether we're loading a new page or replacing
@@ -262,7 +321,7 @@ const EmployeeManagement: React.FC = () => {
         } finally {
             setIsLoading(prev => ({ ...prev, [loadingKey]: false }));
         }
-    }, [employeeFilter, isSkillMatchActive, selectedProject, pageSize]);
+    }, [employeeFilter, isSkillMatchActive, selectedProject, pageSize, skillFilter]);
 
     const loadRoles = async () => {
         setIsLoading(prev => ({ ...prev, roles: true }));
@@ -306,11 +365,19 @@ const EmployeeManagement: React.FC = () => {
         setSelectedProject(prevProject => (prevProject?.id === project.id ? null : project));
         setIsSkillMatchActive(false);
         setSelectedEmployees([]);
+        setSkillFilter([]); // ✅ Clear skill filter when changing projects
     };
 
     const toggleProjectExpansion = (projectId: string) => {
         setExpandedProjects(prev =>
             prev.includes(projectId) ? prev.filter(id => id !== projectId) : [...prev, projectId]
+        );
+    };
+
+    // ✅ NEW: Add employee expansion toggle function
+    const toggleEmployeeExpansion = (employeeId: string) => {
+        setExpandedEmployees(prev =>
+            prev.includes(employeeId) ? prev.filter(id => id !== employeeId) : [...prev, employeeId]
         );
     };
 
@@ -395,49 +462,75 @@ const EmployeeManagement: React.FC = () => {
         setDuplicateEmployees([]);
     };
 
-    const handleRemoveFromProject = async (projectId: string, employeeId: string) => {
+    // ✅ UPDATED: Handle specific assignment removal instead of entire employee removal
+    const handleRemoveSpecificAssignment = async (assignmentId: number) => {
         try {
-            await assignmentApi.removeEmployeeFromProject(projectId, employeeId);
-            toast.success('Employee removed from project successfully!');
+            // Call API to remove specific assignment by ID
+            await assignmentApi.removeSpecificAssignment(assignmentId);
+            toast.success('Assignment removed successfully!');
 
             // Refresh data
             await Promise.all([loadProjects(), loadEmployees(currentPage)]);
         } catch (error) {
-            console.error('Error removing employee from project:', error);
-            toast.error('Failed to remove employee from project');
+            console.error('Error removing assignment:', error);
+            toast.error('Failed to remove assignment');
         }
     };
 
-    const confirmRemoveEmployee = () => {
-        if (employeeToRemove && projectToRemoveFrom) {
-            handleRemoveFromProject(projectToRemoveFrom.id, employeeToRemove.id);
+    const confirmRemoveAssignment = () => {
+        if (assignmentToRemove) {
+            handleRemoveSpecificAssignment(assignmentToRemove.id);
         }
         setIsRemoveConfirmationOpen(false);
-        setEmployeeToRemove(null);
-        setProjectToRemoveFrom(null);
+        setAssignmentToRemove(null);
     };
 
-    const cancelRemoveEmployee = () => {
+    const cancelRemoveAssignment = () => {
         setIsRemoveConfirmationOpen(false);
-        setEmployeeToRemove(null);
-        setProjectToRemoveFrom(null);
+        setAssignmentToRemove(null);
     };
 
-    const triggerRemoveConfirmation = (projectId: string, employeeId: string) => {
-        const employeeData = employees.find(e => e.id === employeeId);
-        const projectData = projects.find(p => p.id === projectId);
-        if (employeeData && projectData) {
-            setEmployeeToRemove(employeeData);
-            setProjectToRemoveFrom(projectData);
-            setIsRemoveConfirmationOpen(true);
-        }
+    // ✅ UPDATED: Updated function signature to handle specific assignment removal
+    const triggerRemoveConfirmation = (
+        assignmentId: number,
+        employeeId: string, 
+        employeeName: string, 
+        projectName: string,
+        role: string,
+        workloadPercentage: number
+    ) => {
+        setAssignmentToRemove({
+            id: assignmentId,
+            employeeId,
+            employeeName,
+            projectName,
+            role,
+            workloadPercentage
+        });
+        setIsRemoveConfirmationOpen(true);
     };
 
+    // ✅ IMPROVED: Enhanced skill match handler
     const handleSkillMatch = () => {
         if (!selectedProject) {
+            toast.error('Please select a project first');
             return;
         }
-        setIsSkillMatchActive(!isSkillMatchActive);
+        
+        const newSkillMatchState = !isSkillMatchActive;
+        setIsSkillMatchActive(newSkillMatchState);
+        
+        if (newSkillMatchState) {
+            console.log('🎯 Skill matching activated for project:', selectedProject.name);
+            console.log('📋 Project required skills:', selectedProject.requiredSkills.map(s => s.name));
+            toast.success(`Filtering employees by ${selectedProject.name} technologies`);
+        } else {
+            console.log('🔄 Skill matching deactivated');
+            toast.info('Showing all employees');
+        }
+        
+        // Reset pagination when toggling skill match
+        setCurrentPage(1);
     };
 
     const handleOpenProjectDetails = (project: Project) => {
@@ -453,6 +546,8 @@ const EmployeeManagement: React.FC = () => {
         setSelectedProject(null);
         setIsSkillMatchActive(false);
         setShowEmployeesWithoutProjects(false);
+        setSkillFilter([]); // ✅ Also clear skill filter
+        setExpandedEmployees([]); // ✅ NEW: Clear expanded employees too
     };
 
     // Pagination handlers
@@ -595,107 +690,123 @@ const EmployeeManagement: React.FC = () => {
     );
 
     return (
-        <div className="min-h-screen bg-[#52007C] p-4 sm:p-6 lg:p-8">
-            <div className="max-w-[1920px] mx-auto">
-                <header className="bg-white rounded-xl shadow-lg p-6 mb-6 flex justify-between items-center">
+        <div className="min-h-screen bg-[#52007C] p-2 sm:p-4 lg:p-6 xl:p-8">
+            <div className="max-w-full mx-auto">
+                <header className="bg-white rounded-xl shadow-lg p-3 sm:p-4 lg:p-6 mb-4 lg:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div className="flex items-center justify-start">
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 sm:gap-4">
                             <Link
                                 to="/project-manager/dashboard"
                                 className="p-2 rounded-lg hover:bg-[#F6E6FF] dark:hover:bg-[#1B0A3F]
                                     text-[#52007C] dark:text-[#D68BF9] transition-colors"
                             >
-                                <FaArrowLeft className="w-6 h-6" />
+                                <FaArrowLeft className="w-4 h-4 sm:w-6 sm:h-6" />
                             </Link>
-                            <h1 className="text-2xl font-bold text-[#52007C] dark:text-white font-unbounded">
+                            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-[#52007C] dark:text-white font-unbounded">
                                 {t('projectManager.employeeAssign.title')}
                             </h1>
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-2 w-full lg:w-auto">
                         <LanguageSwitcher />
+                        {/* ✅ UPDATED: Pass filtered skills to MultiSelect */}
                         <MultiSelect
                             value={skillFilter}
                             onChange={setSkillFilter}
-                            options={availableSkills}
+                            options={filteredSkillsForDropdown}
                             darkMode={darkMode}
                             buttonRef={multiSelectButtonRef}
                         />
                         <button
                             onClick={handleSkillMatch}
                             disabled={!selectedProject}
-                            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors
+                            className={`px-3 sm:px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm whitespace-nowrap
                                 ${isSkillMatchActive && selectedProject
-                                    ? 'bg-[#52007C] text-white'
+                                    ? 'bg-[#52007C] text-white shadow-lg'
                                     : selectedProject
                                         ? 'bg-[#D68BF9] dark:bg-[#BF4BF6] text-white hover:bg-[#BF4BF6] dark:hover:bg-[#D68BF9]'
                                         : 'bg-[#F6E6FF] dark:bg-[#1B0A3F] text-[#52007C] dark:text-[#D68BF9] opacity-50 cursor-not-allowed'
                                 }`}
-                            title="Filter employees to show only those who possess skills matching the selected project's required technologies."
+                            title={`${isSkillMatchActive ? 'Disable' : 'Enable'} filtering employees by project's required technologies.`}
                         >
-                            <FaObjectGroup className="w-4 h-4" />
-                            {t('projectManager.employeeAssign.matchTechnologies')}
+                            {isSkillMatchActive ? (
+                                <>
+                                    <FaBullseye className="w-3 h-3 sm:w-4 sm:h-4" />
+                                    <span className="hidden sm:inline">{t('projectManager.employeeAssign.matchedTechnologies')}</span>
+                                    <span className="sm:hidden">{t('projectManager.employeeAssign.match')}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <FaObjectGroup className="w-3 h-3 sm:w-4 sm:h-4" />
+                                    <span className="hidden sm:inline">{t('projectManager.employeeAssign.matchTechnologies')}</span>
+                                    <span className="sm:hidden">{t('projectManager.employeeAssign.match')}</span>
+                                </>
+                            )}
                         </button>
                     </div>
                 </header>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6 h-full">
                     <div className="space-y-4 flex flex-col">
-                        <div className="bg-white rounded-xl shadow-lg p-6 h-full flex flex-col">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-[#52007C] dark:text-white font-unbounded">
+                        <div className="bg-white rounded-xl shadow-lg p-3 sm:p-4 lg:p-6 h-full flex flex-col">
+                            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-4 lg:mb-6 gap-4">
+                                <h2 className="text-lg sm:text-xl font-bold text-[#52007C] dark:text-white font-unbounded">
                                     {t('projectManager.employeeAssign.projects')} ({filteredProjects.length})
                                 </h2>
-                                <div className="relative flex-grow max-w-sm ml-4">
-                                    <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7A00B8]" />
-                                    <input
-                                        type="text"
-                                        placeholder={t('projectManager.employeeAssign.searchProjects')}
-                                        value={projectSearchTerm}
-                                        onChange={(e) => setProjectSearchTerm(e.target.value)}
-                                        className="w-full pl-10 pr-24 py-2 rounded-lg border border-[#F6E6FF]
-                                            dark:border-[#7A00B8] bg-white dark:bg-[#1B0A3F]
-                                            text-[#52007C] dark:text-white focus:outline-none
-                                            focus:ring-2 focus:ring-[#BF4BF6]"
-                                    />
-                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
-                                        <button
-                                            onClick={() => setProjectSearchType('name')}
-                                            className={`px-3 py-1 rounded-l-md flex items-center gap-1 ${projectSearchType === 'name'
-                                                    ? 'bg-[#BF4BF6] text-white'
-                                                    : 'bg-[#F6E6FF] dark:bg-[#1B0A3F] text-[#52007C] dark:text-[#D68BF9] hover:bg-[#e0c1f5] dark:hover:bg-[#4a006e]'
-                                                }`}
-                                            title={t('projectManager.employeeAssign.searchByName')}
-                                        >
-                                            <FaProjectDiagram /> <span>{t('projectManager.employeeAssign.name')}</span>
-                                        </button>
-                                        <button
-                                            onClick={() => setProjectSearchType('id')}
-                                            className={`px-3 py-1 rounded-r-md flex items-center gap-1 ${projectSearchType === 'id'
-                                                    ? 'bg-[#BF4BF6] text-white'
-                                                    : 'bg-[#F6E6FF] dark:bg-[#1B0A3F] text-[#52007C] dark:text-[#D68BF9] hover:bg-[#e0c1f5] dark:hover:bg-[#4a006e]'
-                                                }`}
-                                            title={t('projectManager.employeeAssign.searchById')}
-                                        >
-                                            <FaHashtag /> <span>{t('projectManager.employeeAssign.id')}</span>
-                                        </button>
+                                <div className="flex-1 max-w-full lg:max-w-sm">
+                                    <div className="relative">
+                                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7A00B8] w-3 h-3 sm:w-4 sm:h-4" />
+                                        <input
+                                            type="text"
+                                            placeholder={t('projectManager.employeeAssign.searchProjects')}
+                                            value={projectSearchTerm}
+                                            onChange={(e) => setProjectSearchTerm(e.target.value)}
+                                            className="w-full pl-8 sm:pl-10 pr-20 sm:pr-24 py-2 text-sm rounded-lg border border-[#F6E6FF]
+                                                dark:border-[#7A00B8] bg-white dark:bg-[#1B0A3F]
+                                                text-[#52007C] dark:text-white focus:outline-none
+                                                focus:ring-2 focus:ring-[#BF4BF6]"
+                                        />
+                                        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
+                                            <button
+                                                onClick={() => setProjectSearchType('name')}
+                                                className={`px-2 sm:px-3 py-1 rounded-l-md flex items-center gap-1 text-xs ${projectSearchType === 'name'
+                                                        ? 'bg-[#BF4BF6] text-white'
+                                                        : 'bg-[#F6E6FF] dark:bg-[#1B0A3F] text-[#52007C] dark:text-[#D68BF9] hover:bg-[#e0c1f5] dark:hover:bg-[#4a006e]'
+                                                    }`}
+                                                title={t('projectManager.employeeAssign.searchByName')}
+                                            >
+                                                <FaProjectDiagram className="w-3 h-3" /> <span className="hidden sm:inline">{t('projectManager.employeeAssign.name')}</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setProjectSearchType('id')}
+                                                className={`px-2 sm:px-3 py-1 rounded-r-md flex items-center gap-1 text-xs ${projectSearchType === 'id'
+                                                        ? 'bg-[#BF4BF6] text-white'
+                                                        : 'bg-[#F6E6FF] dark:bg-[#1B0A3F] text-[#52007C] dark:text-[#D68BF9] hover:bg-[#e0c1f5] dark:hover:bg-[#4a006e]'
+                                                    }`}
+                                                title={t('projectManager.employeeAssign.searchById')}
+                                            >
+                                                <FaHashtag className="w-3 h-3" /> <span className="hidden sm:inline">{t('projectManager.employeeAssign.id')}</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex gap-4">
-                                    <div ref={statusDropdownRef} className="relative">
+                                <div className="flex gap-2 sm:gap-4 w-full lg:w-auto">
+                                    <div ref={statusDropdownRef} className="relative flex-1 lg:flex-initial">
                                         <button
                                             onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
                                             className="inline-flex justify-center w-full rounded-lg border border-[#F6E6FF]
-                                                dark:border-[#7A00B8] bg-white dark:bg-[#1B0A3F] px-4 py-2 text-sm
+                                                dark:border-[#7A00B8] bg-white dark:bg-[#1B0A3F] px-3 sm:px-4 py-2 text-xs sm:text-sm
                                                 font-medium text-[#52007C] dark:text-white hover:bg-[#F6E6FF]
                                                 dark:hover:bg-[#34137C] focus:outline-none focus:ring-2
-                                                focus:ring-[#BF4BF6]"
+                                                focus:ring-[#BF4BF6] whitespace-nowrap"
                                         >
-                                            {projectStatusFilter === 'All' ? t('projectManager.employeeAssign.allStatuses') : 
-                                             projectStatusFilter === 'Active' ? t('projectManager.employeeAssign.activeStatuses') : 
-                                             t('projectManager.employeeAssign.completedStatuses')}
-                                            <FaChevronDown className="-mr-1 ml-2 h-5 w-5" />
+                                            <span className="truncate">
+                                                {projectStatusFilter === 'All' ? t('projectManager.employeeAssign.allStatuses') : 
+                                                 projectStatusFilter === 'Active' ? t('projectManager.employeeAssign.activeStatuses') : 
+                                                 t('projectManager.employeeAssign.completedStatuses')}
+                                            </span>
+                                            <FaChevronDown className="-mr-1 ml-2 h-3 w-3 sm:h-5 sm:w-5" />
                                         </button>
 
                                         {isStatusDropdownOpen && (
@@ -755,62 +866,92 @@ const EmployeeManagement: React.FC = () => {
                     </div>
 
                     <div className="space-y-4 flex flex-col">
-                        <div className="bg-white rounded-xl shadow-lg p-6 h-full flex flex-col">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-xl font-bold text-[#52007C] dark:text-white font-unbounded">
+                        <div className="bg-white rounded-xl shadow-lg p-3 sm:p-4 lg:p-6 h-full flex flex-col">
+                            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-4 gap-4">
+                                <h2 className="text-lg sm:text-xl font-bold text-[#52007C] dark:text-white font-unbounded">
                                     {isSkillMatchActive && selectedProject
                                         ? t('projectManager.employeeAssign.matchedEmployees')
                                         : t('projectManager.employeeAssign.availableEmployees')}{' '}
                                     ({totalCount})
                                 </h2>
-                                <div className="relative flex-grow max-w-sm ml-4">
-                                    <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7A00B8]" />
-                                    <input
-                                        type="text"
-                                        placeholder={t('projectManager.employeeAssign.searchEmployees')}
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-10 pr-24 py-2 rounded-lg border border-[#F6E6FF]
-                                            dark:border-[#7A00B8] bg-white dark:bg-[#1B0A3F]
-                                            text-[#52007C] dark:text-white focus:outline-none
-                                            focus:ring-2 focus:ring-[#BF4BF6]"
-                                    />
-                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
-                                        <button
-                                            onClick={() => setSearchType('name')}
-                                            className={`px-3 py-1 rounded-l-md flex items-center gap-1 ${searchType === 'name'
-                                                    ? 'bg-[#BF4BF6] text-white'
-                                                    : 'bg-[#F6E6FF] dark:bg-[#1B0A3F] text-[#52007C] dark:text-[#D68BF9] hover:bg-[#e0c1f5] dark:hover:bg-[#4a006e]'
-                                                }`}
-                                            title={t('projectManager.employeeAssign.searchByNameRole')}
-                                        >
-                                            <FaUserCircle /> <span>{t('projectManager.employeeAssign.searchByNameRole')}</span>
-                                        </button>
-                                        <button
-                                            onClick={() => setSearchType('id')}
-                                            className={`px-3 py-1 rounded-r-md flex items-center gap-1 ${searchType === 'id'
-                                                    ? 'bg-[#BF4BF6] text-white'
-                                                    : 'bg-[#F6E6FF] dark:bg-[#1B0A3F] text-[#52007C] dark:text-[#D68BF9] hover:bg-[#e0c1f5] dark:hover:bg-[#4a006e]'
-                                                }`}
-                                            title={t('projectManager.employeeAssign.searchById')}
-                                        >
-                                            <FaHashtag /> <span>{t('projectManager.employeeAssign.id')}</span>
-                                        </button>
+                                <div className="flex-1 max-w-full lg:max-w-sm">
+                                    <div className="relative">
+                                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7A00B8] w-3 h-3 sm:w-4 sm:h-4" />
+                                        <input
+                                            type="text"
+                                            placeholder={t('projectManager.employeeAssign.searchEmployees')}
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full pl-8 sm:pl-10 pr-16 sm:pr-20 py-2 text-sm rounded-lg border border-[#F6E6FF]
+                                                dark:border-[#7A00B8] bg-white dark:bg-[#1B0A3F]
+                                                text-[#52007C] dark:text-white focus:outline-none
+                                                focus:ring-2 focus:ring-[#BF4BF6]"
+                                        />
+                                        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
+                                            <button
+                                                onClick={() => setSearchType('name')}
+                                                className={`px-2 sm:px-3 py-1 rounded-l-md flex items-center gap-1 text-xs ${searchType === 'name'
+                                                        ? 'bg-[#BF4BF6] text-white'
+                                                        : 'bg-[#F6E6FF] dark:bg-[#1B0A3F] text-[#52007C] dark:text-[#D68BF9] hover:bg-[#e0c1f5] dark:hover:bg-[#4a006e]'
+                                                    }`}
+                                                title="Search by employee name or role"
+                                            >
+                                                <FaUserCircle className="w-3 h-3" /> <span className="hidden sm:inline">Name</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setSearchType('id')}
+                                                className={`px-2 sm:px-3 py-1 rounded-r-md flex items-center gap-1 text-xs ${searchType === 'id'
+                                                        ? 'bg-[#BF4BF6] text-white'
+                                                        : 'bg-[#F6E6FF] dark:bg-[#1B0A3F] text-[#52007C] dark:text-[#D68BF9] hover:bg-[#e0c1f5] dark:hover:bg-[#4a006e]'
+                                                    }`}
+                                                title="Search by employee ID"
+                                            >
+                                                <FaHashtag className="w-3 h-3" /> <span className="hidden sm:inline">ID</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setShowEmployeesWithoutProjects(!showEmployeesWithoutProjects)}
-                                    className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ml-2
+                                    className={`px-3 sm:px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm whitespace-nowrap
                                         ${showEmployeesWithoutProjects
                                             ? 'bg-[#52007C] text-white'
                                             : 'bg-[#F6E6FF] dark:bg-[#1B0A3F] text-[#52007C] dark:text-[#D68BF9] hover:bg-[#D68BF9] dark:hover:bg-[#34137C]'
                                         }`}
                                     title="Show employees without assigned projects"
                                 >
-                                    <FaUserSlash className="w-4 h-4" />
-                                    {t('projectManager.employeeAssign.freeBench')}
+                                    <FaUserSlash className="w-3 h-3 sm:w-4 sm:h-4" />
+                                    <span className="hidden sm:inline">{t('projectManager.employeeAssign.freeBench')}</span>
+                                    <span className="sm:hidden">{t('projectManager.employeeAssign.free')}</span>
                                 </button>
                             </div>
+
+                            {/* ✅ NEW: Show skill matching status */}
+                            {isSkillMatchActive && selectedProject && (
+                                <div className="mb-4 p-3 rounded-lg bg-purple-50 border border-purple-200 text-purple-800">
+                                    <p className="text-xs sm:text-sm flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                                        <span className="flex items-center gap-2">
+                                            <FaBullseye className="w-3 h-3 sm:w-4 sm:h-4 text-[#BF4BF6] flex-shrink-0" />
+                                            <strong>{t('projectManager.employeeAssign.skillMatchingActive')}:</strong>
+                                        </span>
+                                        <span className="flex flex-wrap items-center gap-1">
+                                            {t('projectManager.employeeAssign.showingEmployeesWithSkills')}: {' '}
+                                            <span className="font-mono text-xs bg-purple-100 px-2 py-1 rounded break-all">
+                                                {selectedProject.requiredSkills.map(s => s.name).join(', ')}
+                                            </span>
+                                        </span>
+                                    </p>
+                                    {skillFilter.length > 0 && (
+                                        <p className="text-xs mt-1 flex flex-col sm:flex-row items-start sm:items-center gap-1">
+                                            <span className="flex items-center gap-1">
+                                                <FaThumbtack className="w-3 h-3 text-[#BF4BF6] flex-shrink-0" />
+                                                {t('projectManager.employeeAssign.furtherFilteredBy')}:
+                                            </span>
+                                            <strong className="break-all">{skillFilter.join(', ')}</strong>
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Warning message if no project is selected */}
                             {showWarningMessage && (
@@ -842,20 +983,43 @@ const EmployeeManagement: React.FC = () => {
                                             key={employee.id}
                                             employee={employee}
                                             isSelected={selectedEmployees.includes(employee.id)}
+                                            isExpanded={expandedEmployees.includes(employee.id)} // ✅ NEW
                                             projects={projects}
                                             handleEmployeeSelect={handleEmployeeSelect}
                                             handleOpenProjectDetails={handleOpenProjectDetails}
+                                            toggleEmployeeExpansion={toggleEmployeeExpansion} // ✅ NEW
                                             isDisabled={!selectedProject}
                                         />
                                     ))
                                 ) : (
-                                    <p className="text-center text-[#7A00B8] dark:text-[#D68BF9] italic">
-                                        {isSkillMatchActive && selectedProject
-                                            ? t('projectManager.employeeAssign.noEmployeesMatch')
-                                            : showEmployeesWithoutProjects
-                                                ? t('projectManager.employeeAssign.noAvailableEmployees')
-                                                : t('projectManager.employeeAssign.noEmployeesMatchFilters')}
-                                    </p>
+                                    <div className="flex flex-col items-center justify-center h-64 text-center">
+                                        {isSkillMatchActive && selectedProject ? (
+                                            <div className="flex flex-col items-center gap-3">
+                                                <div>
+                                                    <p className="text-lg font-medium text-[#52007C] dark:text-white mb-2">
+                                                        {t('projectManager.employeeAssign.noMatchingEmployeesFound')}
+                                                    </p>
+                                                    <p className="text-sm text-[#7A00B8] dark:text-[#D68BF9] max-w-md">
+                                                        {t('projectManager.employeeAssign.noEmployeesHaveSkillsMatching')}: <strong>{selectedProject.requiredSkills.map(s => s.name).join(', ')}</strong>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ) : showEmployeesWithoutProjects ? (
+                                            <div className="flex flex-col items-center gap-3">
+                                                <FaUserSlash className="w-12 h-12 text-gray-400" />
+                                                <p className="text-lg font-medium text-[#52007C] dark:text-white">
+                                                    {t('projectManager.employeeAssign.noAvailableEmployees')}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center gap-3">
+                                                <FaSearch className="w-12 h-12 text-gray-400" />
+                                                <p className="text-lg font-medium text-[#52007C] dark:text-white">
+                                                    {t('projectManager.employeeAssign.noEmployeesMatchFilters')}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                             </div>
 
@@ -877,12 +1041,15 @@ const EmployeeManagement: React.FC = () => {
                         selectedProject={selectedProject}
                     />
 
+                    {/* ✅ UPDATED: Updated props for specific assignment removal */}
                     <RemoveEmployeeConfirmationDialog
                         isOpen={isRemoveConfirmationOpen}
-                        onClose={cancelRemoveEmployee}
-                        onConfirm={confirmRemoveEmployee}
-                        employeeName={employeeToRemove?.name}
-                        projectName={projectToRemoveFrom?.name}
+                        onClose={cancelRemoveAssignment}
+                        onConfirm={confirmRemoveAssignment}
+                        employeeName={assignmentToRemove?.employeeName}
+                        projectName={assignmentToRemove?.projectName}
+                        role={assignmentToRemove?.role}
+                        workloadPercentage={assignmentToRemove?.workloadPercentage}
                     />
 
                     {/* Conditionally render confirmation bar styles */}
