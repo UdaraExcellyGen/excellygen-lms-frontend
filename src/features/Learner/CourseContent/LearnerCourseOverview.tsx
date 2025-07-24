@@ -27,6 +27,8 @@ const LearnerCourseOverview: React.FC = () => {
   const [courseCompletionTrigger, setCourseCompletionTrigger] = useState(0);
   useBadgeChecker(courseCompletionTrigger);
 
+  const [isCertificateGenerated, setIsCertificateGenerated] = useState(false);
+
   // Centralized function to refetch data from the backend
   const fetchCourseData = useCallback(async () => {
     if (!courseId) return;
@@ -56,6 +58,11 @@ const LearnerCourseOverview: React.FC = () => {
       navigate("/learner/course-categories");
       return;
     }
+
+    const certificateGeneratedForCourse = sessionStorage.getItem(`certificateGenerated_${courseId}`);
+  if (certificateGeneratedForCourse) {
+    setIsCertificateGenerated(true);
+  }
 
     const fetchInitialData = async () => {
       try {
@@ -198,7 +205,7 @@ const LearnerCourseOverview: React.FC = () => {
 
   // THIS IS THE MERGED AND CORRECTED FUNCTION
   const handleGenerateCertificate = async () => {
-    if (!courseData || !courseId || isGeneratingCertificate) return;
+    if (!courseData || !courseId || isGeneratingCertificate || isCertificateGenerated) return;
     
     if (courseData.progressPercentage < 100) {
       toast.error("You must complete 100% of the course to generate a certificate.");
@@ -225,6 +232,8 @@ const LearnerCourseOverview: React.FC = () => {
       } catch (e) {
         console.error("Could not save certificate generation to session storage:", e);
       }
+      sessionStorage.setItem(`certificateGenerated_${courseId}`, 'true');
+    setIsCertificateGenerated(true);
       
       toast.success("Certificate generated successfully!");
       navigate(`/learner/certificate`);
@@ -327,10 +336,13 @@ const LearnerCourseOverview: React.FC = () => {
           </div>
           {isCourseCompleted && (
             <div className="mt-4 flex justify-end">
-              <button onClick={handleGenerateCertificate} disabled={isGeneratingCertificate} className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-6 py-3 rounded-lg flex items-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-medium">
+              <button onClick={handleGenerateCertificate} disabled={isGeneratingCertificate || isCertificateGenerated} className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-6 py-3 rounded-lg flex items-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-medium disabled:bg-slate-300 disabled:from-slate-300 disabled:to-slate-300 disabled:text-slate-500 disabled:shadow-none disabled:transform-none disabled:cursor-not-allowed"
+>
                 {isGeneratingCertificate ? (
                   <><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Generating...</>
-                ) : (
+                )  : isCertificateGenerated ? (
+                  <><CheckCircle className="w-4 h-4 mr-2" />Certificate Generated</>
+  ) : (
                   <><Award className="w-4 h-4 mr-2" />Generate Certificate</>
                 )}
               </button>
