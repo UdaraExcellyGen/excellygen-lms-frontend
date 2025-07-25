@@ -221,14 +221,12 @@ const LearnerProfile: React.FC = () => {
             </div>
           ) : (
             <>
-              {/* --- FIX: Conditionally render the back button --- */}
               {fromForumPath && (
                 <Link 
                     to={fromForumPath}
                     className="inline-flex items-center gap-2 text-white/90 hover:text-white font-semibold font-nunito transition-colors group mb-6"
                 >
                     <ArrowLeft className="h-5 w-5 transition-transform group-hover:-translate-x-1" />
-                    
                 </Link>
               )}
 
@@ -254,7 +252,8 @@ const LearnerProfile: React.FC = () => {
               <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
                   <div className="lg:col-span-4 xl:col-span-3 lg:border-r border-gray-200/80 p-6 space-y-6">
-                    <ProfileHeader profileData={profileData} isEditing={isEditing && !isViewOnly} onAvatarUpload={handleAvatarUpload} onAvatarDelete={handleAvatarDelete}/>
+                    {/* --- THIS IS THE MODIFIED LINE --- */}
+                    <ProfileHeader profileData={profileData} isEditing={isEditing && !isViewOnly} onAvatarUpload={handleAvatarUpload} onAvatarDelete={handleAvatarDelete} setProfileData={setProfileData}/>
                     <ContactInfo profileData={profileData} />
                     <Bio profileData={profileData} isEditing={isEditing && !isViewOnly} setProfileData={setProfileData} />
                   </div>

@@ -7,11 +7,11 @@ interface ProfileHeaderProps {
   isEditing: boolean;
   onAvatarUpload: (file: File) => void;
   onAvatarDelete: () => void;
-  // This prop is no longer needed here as the parent controls saving state
-  // isSaving?: boolean;
+  // Prop added to allow updating the profile data state from the parent
+  setProfileData: React.Dispatch<React.SetStateAction<ProfileData | null>>;
 }
 
-const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profileData, isEditing, onAvatarUpload, onAvatarDelete }) => {
+const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profileData, isEditing, onAvatarUpload, onAvatarDelete, setProfileData }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,11 +63,20 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profileData, isEditing, o
       </div>
 
       <h1 className="text-2xl font-bold text-gray-800">{profileData.name}</h1>
+      
+      {/* --- THIS IS THE MODIFIED SECTION --- */}
       {isEditing ? (
-        <p className="text-md text-gray-500">{profileData.role || 'Learner'}</p> // Role is not editable in this view
+        <input
+          type="text"
+          value={profileData.role || ''}
+          onChange={(e) => setProfileData(p => p ? { ...p, role: e.target.value } : null)}
+          className="w-full max-w-[200px] mx-auto text-center text-md p-1 mt-1 border rounded-lg bg-indigo-50/50 border-indigo-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+          placeholder="Enter your job role"
+        />
       ) : (
-        <p className="text-md text-indigo-600 font-medium">{profileData.role || 'Learner'}</p>
+        <p className="text-md text-indigo-600 font-medium">{profileData.role || 'No role assigned'}</p>
       )}
+      
       <p className="text-xs text-gray-400 mt-2 bg-gray-100 px-2 py-0.5 rounded-md inline-block">ID: {profileData.id}</p>
     </div>
   );
