@@ -1,3 +1,5 @@
+// src/features/Learner/LearnerDashboard/components/Sections.tsx
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Book, Clock, BarChart2 } from 'lucide-react';
@@ -38,7 +40,8 @@ const CustomBar = (props: any) => {
                 width={width} 
                 height={height} 
                 fill={isSelected ? '#52007C' : '#CDB4DB'}
-                radius={[4, 4, 0, 0]}
+                // FIX: The 'radius' prop is not valid for SVG <rect>. Use 'rx' for rounded corners.
+                rx="4"
                 className="transition-all duration-300"
             />
         );
@@ -54,7 +57,8 @@ const CustomBar = (props: any) => {
                 width={width} 
                 height={height} 
                 fill="#CDB4DB"
-                radius={[4, 4, 0, 0]} 
+                // FIX: The 'radius' prop is not valid for SVG <rect>. Use 'rx' for rounded corners.
+                rx="4"
             />
             {/* Layer 2: The dark purple overlay with the "filling" animation. */}
             <rect 
@@ -63,7 +67,8 @@ const CustomBar = (props: any) => {
                 width={width} 
                 height={height} 
                 fill="#52007C" 
-                radius={[4, 4, 0, 0]} 
+                // FIX: The 'radius' prop is not valid for SVG <rect>. Use 'rx' for rounded corners.
+                rx="4"
                 className="animate-liquid-fill"
             />
         </g>
@@ -238,7 +243,8 @@ export const LearningActivityChart: React.FC<LearningActivityChartProps> = ({ da
                         <Tooltip
                             cursor={{ fill: 'rgba(191, 75, 246, 0.1)' }}
                             contentStyle={{ backgroundColor: 'white', border: '1px solid #EAE0F5', borderRadius: '8px' }}
-                            formatter={(value: number, name, props) => {
+                            // FIX: Prefix unused 'name' parameter with an underscore.
+                            formatter={(value: number, _name, props) => {
                                 if (props.payload.totalMinutes === null) return ["Future day", null];
                                 if (value === 0) return ["No activity recorded", null];
                                 const { hours, minutes } = formatTime(value);
@@ -247,7 +253,8 @@ export const LearningActivityChart: React.FC<LearningActivityChartProps> = ({ da
                         />
                         <Bar
                             dataKey="totalMinutes"
-                            shape={(props) => (
+                            // FIX: Explicitly type 'props' as 'any' to resolve implicit any error.
+                            shape={(props: any) => (
                                 <CustomBar {...props} isSelected={selectedDay?.day === props.payload.day}/>
                             )}
                         />
