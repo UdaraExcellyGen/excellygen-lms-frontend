@@ -693,18 +693,22 @@ export const useUsers = () => {
   // Get role color for UI display
   const getRoleColor = (role: string) => {
     switch (role.toLowerCase()) {
-      case 'superadmin': return 'bg-purple-100 text-purple-800';
-      case 'admin': return 'bg-red-100 text-red-800';
-      case 'learner': return 'bg-green-100 text-green-800';
-      case 'coursecoordinator': 
-      case 'course coordinator': 
-      case 'course_coordinator': 
-        return 'bg-blue-100 text-blue-800';
-      case 'projectmanager': 
-      case 'project manager': 
-      case 'project_manager': 
-        return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'superadmin':
+        return 'bg-brand-federal-blue text-white'; // #03045e
+      case 'admin':
+        return 'bg-brand-indigo text-white'; // #52007C
+      case 'projectmanager':
+      case 'project manager':
+      case 'project_manager':
+        return 'bg-brand-persian-indigo text-white'; // #34137C
+      case 'coursecoordinator':
+      case 'course coordinator':
+      case 'course_coordinator':
+        return 'bg-brand-medium-blue text-white'; // #0609C6
+      case 'learner':
+        return 'bg-brand-phlox text-white'; // #BF4BF6
+      default:
+        return 'bg-gray-500 text-white'; // A safe, visible default
     }
   };
 
