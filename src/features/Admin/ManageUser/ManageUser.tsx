@@ -137,18 +137,19 @@ const ManageUser: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
       <div className="w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8 relative">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center">
             <button
               onClick={() => navigate('/admin/dashboard')}
-              className="flex items-center text-[#D68BF9] hover:text-white transition-colors"
+              className="p-2 mr-2 text-[#D68BF9] hover:text-white transition-colors rounded-full hover:bg-white/10"
+              aria-label="Go back"
             >
-              <ArrowLeft className="w-5 h-5 mr-2" />
+              <ArrowLeft className="w-6 h-6" />
             </button>
-            <h1 className="text-xl sm:text-2xl font-bold text-white">User Management</h1>
+            <h1 className="text-3xl font-bold text-white font-['Unbounded']">User Management</h1>
             {isSuperAdmin && (
-              <span className="bg-purple-500 text-white px-2 py-0.5 rounded text-xs flex items-center">
-                <Shield size={12} className="mr-1" />
+              <span className="bg-purple-500 text-white px-3 py-1 rounded-md text-sm flex items-center ml-4">
+                <Shield size={14} className="mr-1.5" />
                 Super Admin
               </span>
             )}
@@ -160,9 +161,9 @@ const ManageUser: React.FC = () => {
               setNewUser({ name: '', email: '', phone: '', roles: ['Learner'], department: '', password: '' });
               setShowAddModal(true);
             }}
-            className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+            className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-5 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
           >
-            <Plus size={18} />
+            <Plus size={20} />
             Add New User
           </button>
         </div>

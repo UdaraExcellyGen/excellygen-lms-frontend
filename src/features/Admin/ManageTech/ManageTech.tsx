@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { 
-  ArrowLeft, Plus, X, AlertCircle, Zap,
+  ArrowLeft, Plus, X, AlertCircle, Cpu,
   Pencil, Trash2, Check, ChevronLeft, ChevronRight, Search 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -25,6 +25,7 @@ const ManageTech: React.FC = () => {
     searchTerm: '',
     filterStatus: 'all'
   });
+  const [showStatusFilter, setShowStatusFilter] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -48,7 +49,6 @@ const ManageTech: React.FC = () => {
   useEffect(() => {
     if (!user) {
       console.log('User not authenticated, redirecting to login');
-      // You might want to redirect to login or show a message
     }
   }, [user]);
 
@@ -64,14 +64,8 @@ const ManageTech: React.FC = () => {
 
   const handleStatusChange = (filterStatus: FilterStatus) => {
     setFilters(prev => ({ ...prev, filterStatus }));
+    setShowStatusFilter(false);
   };
-
-  const resetFilters = useCallback(() => {
-    setFilters({
-      searchTerm: '',
-      filterStatus: 'all'
-    });
-  }, []);
 
   // Modal handlers
   const handleAddEditModalOpen = (tech: Technology | null = null) => {
@@ -131,28 +125,68 @@ const ManageTech: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
-      <div className="w-full max-w-[1280px] mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-6 relative">
+      <div className="w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8 relative">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center">
             <button
               onClick={() => navigate('/admin/dashboard')}
-              className="flex items-center text-[#D68BF9] hover:text-white transition-colors"
+              className="p-2 mr-2 text-[#D68BF9] hover:text-white transition-colors rounded-full hover:bg-white/10"
+              aria-label="Go back"
             >
-              <ArrowLeft className="w-5 h-5 mr-2" />
+              <ArrowLeft className="w-6 h-6" />
             </button>
-            <h1 className="text-xl sm:text-2xl font-bold text-white">Technology Management</h1>
+            <h1 className="text-3xl font-bold text-white font-['Unbounded']">Technology Management</h1>
           </div>
           
           <button
             onClick={() => handleAddEditModalOpen()}
-            className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+            className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-5 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
             disabled={isLoading}
           >
-            <Plus size={18} />
+            <Plus size={20} />
             Add New Technology
           </button>
         </div>
+
+        {/* Technology statistics summary */}
+        {!isLoading && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 pt-4">
+                <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center shadow-lg">
+                <div className="p-3 rounded-full bg-[#F6E6FF] text-[#BF4BF6] mr-4">
+                    <Cpu size={24} />
+                </div>
+                <div>
+                    <p className="text-sm text-gray-500">Total Technologies</p>
+                    <p className="text-2xl font-semibold text-[#1B0A3F]">{technologies.length}</p>
+                </div>
+                </div>
+                
+                <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center shadow-lg">
+                <div className="p-3 rounded-full bg-[#F6E6FF] text-[#BF4BF6] mr-4">
+                    <Check size={24} />
+                </div>
+                <div>
+                    <p className="text-sm text-gray-500">Active Technologies</p>
+                    <p className="text-2xl font-semibold text-[#1B0A3F]">
+                    {technologies.filter(tech => tech.status === 'active').length}
+                    </p>
+                </div>
+                </div>
+                
+                <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center shadow-lg">
+                <div className="p-3 rounded-full bg-[#F6E6FF] text-[#BF4BF6] mr-4">
+                    <X size={24} />
+                </div>
+                <div>
+                    <p className="text-sm text-gray-500">Inactive Technologies</p>
+                    <p className="text-2xl font-semibold text-[#1B0A3F]">
+                    {technologies.filter(tech => tech.status === 'inactive').length}
+                    </p>
+                </div>
+                </div>
+            </div>
+        )}
 
         {/* Error Message */}
         {(error || networkError) && (
@@ -194,44 +228,38 @@ const ManageTech: React.FC = () => {
 
         {/* Filter Bar */}
         <div className="bg-white/90 backdrop-blur-md rounded-xl p-6 border border-[#BF4BF6]/20 shadow-lg relative z-[90]">
-          <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
-            <div className="relative flex-1">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                value={filters.searchTerm}
-                onChange={handleSearchChange}
-                placeholder="Search technologies..."
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-[#BF4BF6] focus:border-[#BF4BF6] text-gray-900 bg-white"
-              />
+            <div className="grid md:grid-cols-3 gap-4">
+                <div className="relative md:col-span-2">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#BF4BF6] w-5 h-5" />
+                    <input
+                        type="text"
+                        value={filters.searchTerm}
+                        onChange={handleSearchChange}
+                        placeholder="Search technologies..."
+                        className="w-full p-3 pl-10 rounded-lg bg-[#F6E6FF]/50 text-[#52007C] border border-[#BF4BF6]/30 focus:outline-none focus:ring-1 focus:ring-[#BF4BF6] focus:border-[#BF4BF6]"
+                    />
+                </div>
+                <div className="relative md:col-span-1">
+                    <button
+                        onClick={() => setShowStatusFilter(!showStatusFilter)}
+                        className="w-full p-3 rounded-lg bg-[#F6E6FF]/50 text-[#52007C] border border-[#BF4BF6]/30 focus:outline-none focus:ring-1 focus:ring-[#BF4BF6] focus:border-[#BF4BF6] flex justify-between items-center"
+                    >
+                        <span>
+                            {filters.filterStatus === 'all' ? 'All Statuses' : `Status: ${filters.filterStatus.charAt(0).toUpperCase() + filters.filterStatus.slice(1)}`}
+                        </span>
+                        <svg className="fill-current h-4 w-4 text-[#BF4BF6]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </button>
+                    {showStatusFilter && (
+                        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
+                            <div className="py-1">
+                                <div onClick={() => handleStatusChange('all')} className="px-3 py-2 cursor-pointer hover:bg-gray-100">All Statuses</div>
+                                <div onClick={() => handleStatusChange('active')} className="px-3 py-2 cursor-pointer hover:bg-gray-100">Active</div>
+                                <div onClick={() => handleStatusChange('inactive')} className="px-3 py-2 cursor-pointer hover:bg-gray-100">Inactive</div>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="flex items-center">
-                <span className="text-sm font-medium text-gray-700 mr-3">Status:</span>
-                <select
-                  value={filters.filterStatus}
-                  onChange={(e) => handleStatusChange(e.target.value as FilterStatus)}
-                  className="bg-white border border-gray-300 rounded-lg px-4 py-3 focus:ring-[#BF4BF6] focus:border-[#BF4BF6] min-w-[120px]"
-                >
-                  <option value="all">All</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-              
-              <button
-                onClick={resetFilters}
-                className="px-4 py-3 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 flex items-center gap-2"
-                disabled={!filters.searchTerm && filters.filterStatus === 'all'}
-              >
-                <X size={16} />
-                Clear
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Technologies Table */}
@@ -244,20 +272,12 @@ const ManageTech: React.FC = () => {
             </div>
           ) : filteredTechnologies.length === 0 ? (
             <div className="p-8 text-center">
-              <Zap size={48} className="text-[#BF4BF6] mx-auto mb-4" />
+              <Cpu size={48} className="text-[#BF4BF6] mx-auto mb-4" />
               <p className="text-[#52007C] text-lg mb-2">
                 {filters.searchTerm || filters.filterStatus !== 'all'
                   ? 'No technologies match your search criteria.'
                   : 'No technologies found. Add your first technology!'}
               </p>
-              {(filters.searchTerm || filters.filterStatus !== 'all') && (
-                <button 
-                  onClick={resetFilters}
-                  className="mt-4 px-6 py-2 bg-[#BF4BF6] hover:bg-[#D68BF9] text-white rounded-full transition-colors"
-                >
-                  Clear All Filters
-                </button>
-              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -296,39 +316,10 @@ const ManageTech: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <div className="text-sm font-medium text-gray-700">
-                            {(() => {
-                              // Get the date from the backend
-                              const utcDate = new Date(tech.createdAt);
-                              
-                              // Convert to Sri Lanka time by adding the offset (UTC+5:30)
-                              const sriLankaTime = new Date(utcDate.getTime() + (5.5 * 60 * 60 * 1000));
-                              
-                              // Format as M/D/YYYY
-                              const month = sriLankaTime.getMonth() + 1;
-                              const day = sriLankaTime.getDate();
-                              const year = sriLankaTime.getFullYear();
-                              
-                              return `${month}/${day}/${year}`;
-                            })()}
+                            {new Date(tech.createdAt).toLocaleDateString()}
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
-                            {(() => {
-                              // Get the date from the backend
-                              const utcDate = new Date(tech.createdAt);
-                              
-                              // Convert to Sri Lanka time by adding the offset (UTC+5:30)
-                              const sriLankaTime = new Date(utcDate.getTime() + (5.5 * 60 * 60 * 1000));
-                              
-                              // Format time as h:mm AM/PM
-                              let hours = sriLankaTime.getHours();
-                              const ampm = hours >= 12 ? 'PM' : 'AM';
-                              hours = hours % 12;
-                              hours = hours ? hours : 12; // the hour '0' should be '12'
-                              
-                              const minutes = sriLankaTime.getMinutes().toString().padStart(2, '0');
-                              
-                              return `${hours}:${minutes} ${ampm}`;
-                            })()}
+                            {new Date(tech.createdAt).toLocaleTimeString()}
                           </div>
                         </div>
                       </td>
@@ -432,45 +423,6 @@ const ManageTech: React.FC = () => {
             </div>
           )}
         </div>
-
-        {/* Technology statistics summary */}
-        {!isLoading && filteredTechnologies.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-            <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center">
-              <div className="p-3 rounded-full bg-[#F6E6FF] text-[#BF4BF6] mr-4">
-                <Zap size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Total Technologies</p>
-                <p className="text-xl font-semibold text-[#1B0A3F]">{technologies.length}</p>
-              </div>
-            </div>
-            
-            <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center">
-              <div className="p-3 rounded-full bg-[#F6E6FF] text-[#BF4BF6] mr-4">
-                <Check size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Active Technologies</p>
-                <p className="text-xl font-semibold text-[#1B0A3F]">
-                  {technologies.filter(tech => tech.status === 'active').length}
-                </p>
-              </div>
-            </div>
-            
-            <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center">
-              <div className="p-3 rounded-full bg-[#F6E6FF] text-[#BF4BF6] mr-4">
-                <X size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Inactive Technologies</p>
-                <p className="text-xl font-semibold text-[#1B0A3F]">
-                  {technologies.filter(tech => tech.status === 'inactive').length}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Add/Edit Modal */}
