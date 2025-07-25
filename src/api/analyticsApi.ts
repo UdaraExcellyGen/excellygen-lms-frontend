@@ -1,4 +1,3 @@
-// src/api/analyticsApi.ts
 import { createApiClient, handleApiError } from '../utils/apiConfig';
 
 export interface ChartData {
@@ -13,43 +12,75 @@ export interface CourseCategoryDto {
   description: string;
   icon: string;
   status: string;
+  totalCourses?: number;
 }
 
-export interface EnrollmentDataItem {
-  courseName: string;
-  enrollmentCount: number;
+export interface EnrollmentChartItem {
+  id: string; 
+  name: string;
+  inProgress: number;
+  completed: number;
 }
 
 export interface EnrollmentAnalyticsDto {
-  enrollmentData: EnrollmentDataItem[];
+  enrollmentData: EnrollmentChartItem[];
   categories: CourseCategoryDto[];
+}
+
+export interface EnrollmentKpiDto {
+  mostPopularCategoryName: string | null;
+  mostPopularCategoryEnrollments: number;
+  mostPopularCourseName: string | null;
+  mostPopularCourseEnrollments: number;
+  // --- NEW PROPERTIES ---
+  mostCompletedCourseName: string | null;
+  mostCompletedCourseCount: number;
+}
+
+export interface KpiSummaryDto {
+  totalUsers: number;
+  activeUsers: number;
+  totalCourses: number;
+  totalEnrollments: number;
+  completedEnrollments: number;
+  completionRate: number;
 }
 
 export interface CourseAvailabilityDto {
   availabilityData: ChartData[];
 }
 
-export interface UserDistributionDto {
-  distributionData: ChartData[];
+export interface UserDistributionItem {
+    role: string;
+    active: number;
+    inactive: number;
 }
 
-export interface DashboardAnalyticsDto {
-  enrollmentAnalytics: EnrollmentAnalyticsDto;
-  courseAvailability: CourseAvailabilityDto;
-  userDistribution: UserDistributionDto;
+export interface UserDistributionDto {
+  distributionData: UserDistributionItem[];
 }
+
+
+// API Client and Functions
 
 const apiClient = createApiClient();
 
-export const getDashboardAnalytics = async (categoryId?: string): Promise<DashboardAnalyticsDto> => {
-  try {
-    const response = await apiClient.get('/admin/analytics/dashboard', {
-      params: categoryId ? { categoryId } : undefined
-    });
-    return response.data;
-  } catch (error) {
-    return handleApiError(error);
-  }
+export const getKpiSummary = async (): Promise<KpiSummaryDto> => {
+    try {
+        const response = await apiClient.get('/admin/analytics/kpi-summary');
+        return response.data;
+    } catch (error) {
+        return handleApiError(error);
+    }
+};
+
+export const getEnrollmentKpis = async (): Promise<EnrollmentKpiDto> => {
+    try {
+        const response = await apiClient.get('/admin/analytics/enrollment-kpis');
+        return response.data;
+    } catch (error) {
+        return handleApiError(error);
+    }
 };
 
 export const getEnrollmentAnalytics = async (categoryId?: string | null): Promise<EnrollmentAnalyticsDto> => {
@@ -72,7 +103,6 @@ export const getCourseAvailabilityAnalytics = async (): Promise<CourseAvailabili
   }
 };
 
-// Update or add if missing
 export const getUserDistributionAnalytics = async (): Promise<UserDistributionDto> => {
   try {
     const response = await apiClient.get('/admin/analytics/user-distribution');
