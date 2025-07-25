@@ -1,5 +1,3 @@
-// src/App.tsx - Optimized with Role-based NotificationProvider
-
 import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
@@ -36,7 +34,7 @@ const BadgesAndRewards = lazy(() => import('./features/Learner/BadgesAndRewards/
 const LearnerProjects = lazy(() => import('./features/Learner/LearnerProjects/LearnerProjects'));
 const CertificatesPage = lazy(() => import('./features/Learner/Certificates/CertificatePage'));
 const DiscussionForum = lazy(() => import('./features/Learner/DiscussionForum/DiscussionForum'));
-const SingleThreadView = lazy(() => import('./features/Learner/DiscussionForum/SingleThreadView')); // <-- ADDED THIS IMPORT
+const SingleThreadView = lazy(() => import('./features/Learner/DiscussionForum/SingleThreadView'));
 const LearnerNotifications = lazy(() => import('./features/Learner/LearnerNotifications/LearnerNotification'));
 const Leaderboard = lazy(() => import('./features/Learner/Leaderboard/Leaderboard'));
 const CourseCategories = lazy(() => import('./features/Learner/CourseCategories/CourseCategories'));
@@ -50,6 +48,7 @@ const AdminDashboard = lazy(() => import('./features/Admin/AdminDashboard/AdminD
 const AdminNotifications = lazy(() => import('./features/Admin/AdminNotifications/MainAdminNotification'));
 const AdminAnalytics = lazy(() => import('./features/Admin/AdminAnalytics/Adminanalytics'));
 const ManageUsers = lazy(() => import('./features/Admin/ManageUser/ManageUser'));
+const ViewUserProfile = lazy(() => import('./features/Admin/ViewUserProfile/ViewUserProfile'));
 const ManageTech = lazy(() => import('./features/Admin/ManageTech/ManageTech'));
 const CategoryCoursesPage = lazy(() => import('./features/Admin/CategoryCourses/CategoryCoursesPage'));
 const ManageCourseCategory = lazy(() => import('./features/Admin/ManageCourseCategory/ManageCourseCategory'));
@@ -224,7 +223,7 @@ function App() {
           <Route path="projects" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(LearnerProjects)}</ProtectedRoute>} />
           <Route path="certificate" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(CertificatesPage)}</ProtectedRoute>} />
           <Route path="forum" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(DiscussionForum)}</ProtectedRoute>} />
-          <Route path="forum/threads/:threadId" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(SingleThreadView)}</ProtectedRoute>} /> {/* <-- ADDED THIS ROUTE */}
+          <Route path="forum/threads/:threadId" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(SingleThreadView)}</ProtectedRoute>} />
           <Route path="notifications" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(LearnerNotifications)}</ProtectedRoute>} />
           <Route path="leaderboard" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(Leaderboard)}</ProtectedRoute>} />
           <Route path="course-categories" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(CourseCategories)}</ProtectedRoute>} />
@@ -239,13 +238,14 @@ function App() {
 
         {/* ADMIN ROUTES */}
         <Route path="/admin">
-          <Route path="dashboard" element={<ProtectedRoute allowedRoles={[UserRole.Admin]}>{suspenseWrapper(AdminDashboard)}</ProtectedRoute>} />
-          <Route path="notifications" element={<ProtectedRoute allowedRoles={[UserRole.Admin]}>{suspenseWrapper(AdminNotifications)}</ProtectedRoute>} />
-          <Route path="analytics" element={<ProtectedRoute allowedRoles={[UserRole.Admin]}>{suspenseWrapper(AdminAnalytics)}</ProtectedRoute>} />
-          <Route path="manage-users" element={<ProtectedRoute allowedRoles={[UserRole.Admin]}>{suspenseWrapper(ManageUsers)}</ProtectedRoute>} />
-          <Route path="manage-tech" element={<ProtectedRoute allowedRoles={[UserRole.Admin]}>{suspenseWrapper(ManageTech)}</ProtectedRoute>} />
-          <Route path="course-categories" element={<ProtectedRoute allowedRoles={[UserRole.Admin]}>{suspenseWrapper(ManageCourseCategory)}</ProtectedRoute>} />
-          <Route path="categories/:categoryId" element={<ProtectedRoute allowedRoles={[UserRole.Admin]}>{suspenseWrapper(CategoryCoursesPage)}</ProtectedRoute>} />
+            <Route path="dashboard" element={<ProtectedRoute allowedRoles={[UserRole.Admin, UserRole.SuperAdmin]}>{suspenseWrapper(AdminDashboard)}</ProtectedRoute>} />
+            <Route path="notifications" element={<ProtectedRoute allowedRoles={[UserRole.Admin, UserRole.SuperAdmin]}>{suspenseWrapper(AdminNotifications)}</ProtectedRoute>} />
+            <Route path="analytics" element={<ProtectedRoute allowedRoles={[UserRole.Admin, UserRole.SuperAdmin]}>{suspenseWrapper(AdminAnalytics)}</ProtectedRoute>} />
+            <Route path="manage-users" element={<ProtectedRoute allowedRoles={[UserRole.Admin, UserRole.SuperAdmin]}>{suspenseWrapper(ManageUsers)}</ProtectedRoute>} />
+            <Route path="view-profile/:id" element={<ProtectedRoute allowedRoles={[UserRole.Admin, UserRole.SuperAdmin]}>{suspenseWrapper(ViewUserProfile)}</ProtectedRoute>} />
+            <Route path="manage-tech" element={<ProtectedRoute allowedRoles={[UserRole.Admin, UserRole.SuperAdmin]}>{suspenseWrapper(ManageTech)}</ProtectedRoute>} />
+            <Route path="course-categories" element={<ProtectedRoute allowedRoles={[UserRole.Admin, UserRole.SuperAdmin]}>{suspenseWrapper(ManageCourseCategory)}</ProtectedRoute>} />
+            <Route path="categories/:categoryId" element={<ProtectedRoute allowedRoles={[UserRole.Admin, UserRole.SuperAdmin]}>{suspenseWrapper(CategoryCoursesPage)}</ProtectedRoute>} />
         </Route>
         
         {/* COORDINATOR ROUTES */}
