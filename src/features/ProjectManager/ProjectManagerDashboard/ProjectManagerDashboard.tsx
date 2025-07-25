@@ -21,7 +21,7 @@ import QuickActionsGrid from './components/QuickActionsGrid';
 // Import types
 import { QuickAction, DashboardStats } from './types/types';
 
-// Import the dashboard service (matching Admin pattern)
+// Import the updated dashboard service
 import { getDashboardStats, getDashboardNotifications } from '../../../api/services/ProjectManager/projectManagerDashboardService';
 
 const ProjectManagerDashboard: React.FC = () => {
@@ -29,10 +29,10 @@ const ProjectManagerDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<any>(null);
   
-  // States for dashboard data (matching Admin pattern)
+  // States for dashboard data - Updated to match new backend structure
   const [stats, setStats] = useState<DashboardStats>({
-    projects: { total: 0, active: 0 },
-    employees: { total: 0, active: 0 },
+    projects: { total: 0, active: 0, withEmployees: 0 },
+    employees: { total: 0, onProjects: 0, available: 0, fullyUtilized: 0 },
     technologies: { total: 0, active: 0 }
   });
   const [notifications, setNotifications] = useState([]);
@@ -44,7 +44,7 @@ const ProjectManagerDashboard: React.FC = () => {
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
   
-  // Use memoized values for better performance (matching Admin)
+  // Use memoized values for better performance
   const quickActions: QuickAction[] = useMemo(() => [
     {
       text: t('projectManager.dashboard.projectManagementSystem'),
@@ -90,7 +90,7 @@ const ProjectManagerDashboard: React.FC = () => {
       
       console.log(`Fetching Project Manager dashboard data... (background: ${isBackground})`);
       
-      // Fetch fresh data (matching Admin pattern)
+      // Fetch fresh data using the new backend endpoint
       const [dashboardStats, notificationsData] = await Promise.all([
         getDashboardStats(),
         getDashboardNotifications()
@@ -135,8 +135,7 @@ const ProjectManagerDashboard: React.FC = () => {
     // Initial fetch
     fetchDashboardData(false);
     
-    // Set up refresh interval (matching Admin - every 5 minutes)
-    // Clear any existing interval first
+    // Set up refresh interval (every 5 minutes)
     if (refreshIntervalRef.current) {
       clearInterval(refreshIntervalRef.current);
     }
@@ -160,7 +159,7 @@ const ProjectManagerDashboard: React.FC = () => {
     };
   }, [fetchDashboardData]);
 
-  // Loading state (matching Admin styling exactly)
+  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-4 sm:p-6 lg:p-8 flex items-center justify-center">
@@ -172,7 +171,7 @@ const ProjectManagerDashboard: React.FC = () => {
     );
   }
 
-  // Error state (matching Admin styling exactly)
+  // Error state
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-4 sm:p-6 lg:p-8 flex items-center justify-center">
@@ -196,7 +195,7 @@ const ProjectManagerDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
       <div className="w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8 relative">
-        {/* Header Section (matching Admin styling) */}
+        {/* Header Section */}
         <div className="bg-white/90 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg relative z-50">
           <Header
             notifications={notifications}
@@ -206,7 +205,7 @@ const ProjectManagerDashboard: React.FC = () => {
           />
         </div>
 
-        {/* Stats Grid (matching Admin styling) */}
+        {/* Stats Grid - Updated to show new employee metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 relative z-10">
           <div className="cursor-default [&>*]:cursor-default [&_*]:!cursor-default">
             <StatCard
@@ -219,13 +218,17 @@ const ProjectManagerDashboard: React.FC = () => {
             />
           </div>
 
+          {/* Updated Employee Card to show "Employees on Projects" instead of "Active Employees" */}
           <div className="cursor-default [&>*]:cursor-default [&_*]:!cursor-default">
             <StatCard
               icon={Users}
               title={t('projectManager.dashboard.employeeManagement')}
-              stats={stats.employees}
+              stats={{
+                total: stats.employees.total,
+                active: stats.employees.onProjects  // Changed from just "active" to "onProjects"
+              }}
               totalLabel={t('projectManager.dashboard.totalEmployees')}
-              activeLabel={t('projectManager.dashboard.activeEmployees')}
+              activeLabel={t('projectManager.dashboard.employeesOnProjects')}  // Updated label
               onClick={() => navigate('/project-manager/employee-assign')}
             />
           </div>
@@ -242,7 +245,7 @@ const ProjectManagerDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Actions Section (matching Admin styling) */}
+        {/* Quick Actions Section */}
         <div className="bg-white/10 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg p-6 relative z-10">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-1.5 h-12 bg-[#BF4BF6] rounded-full"></div>

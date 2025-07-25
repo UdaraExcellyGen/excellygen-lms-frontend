@@ -1,16 +1,18 @@
 // Path: src/api/services/ProjectManager/projectManagerDashboardService.ts
 
-import { getAllProjects, getProjectTechnologies } from '../../projectManagerApi';
-import { employeeApi } from './employeeAssignmentService';
+import apiClient from '../../apiClient';
 
 export interface ProjectManagerDashboardStats {
   projects: {
     total: number;
     active: number;
+    withEmployees: number;
   };
   employees: {
     total: number;
-    active: number;
+    onProjects: number;
+    available: number;
+    fullyUtilized: number;
   };
   technologies: {
     total: number;
@@ -43,8 +45,7 @@ let statsPromise: Promise<ProjectManagerDashboardStats> | null = null;
 
 /**
  * Fetches dashboard statistics for Project Manager
- * Matches Admin dashboard pattern for consistency
- * Includes caching and request deduplication
+ * Now uses the backend dashboard/stats endpoint instead of manual calculation
  */
 export const getDashboardStats = async (): Promise<ProjectManagerDashboardStats> => {
   // Check cache first
@@ -62,10 +63,10 @@ export const getDashboardStats = async (): Promise<ProjectManagerDashboardStats>
 
   try {
     isStatsLoading = true;
-    console.log('Fetching Project Manager dashboard stats...');
+    console.log('Fetching Project Manager dashboard stats from backend...');
     
-    // Create and store the promise
-    statsPromise = fetchStatsFromAPI();
+    // Create and store the promise - USE THE BACKEND ENDPOINT
+    statsPromise = fetchStatsFromBackend();
     const result = await statsPromise;
     
     // Cache the result
@@ -74,7 +75,7 @@ export const getDashboardStats = async (): Promise<ProjectManagerDashboardStats>
       timestamp: now
     };
     
-    console.log('Final PM dashboard stats:', result);
+    console.log('PM dashboard stats from backend:', result);
     return result;
 
   } catch (error) {
@@ -90,16 +91,60 @@ export const getDashboardStats = async (): Promise<ProjectManagerDashboardStats>
 };
 
 /**
- * Internal function to fetch stats from API
+ * NEW: Fetch stats directly from the backend dashboard endpoint
+ * This uses the properly calculated stats from EmployeeAssignmentService
  */
-const fetchStatsFromAPI = async (): Promise<ProjectManagerDashboardStats> => {
+const fetchStatsFromBackend = async (): Promise<ProjectManagerDashboardStats> => {
+  try {
+    console.log('Calling backend dashboard/stats endpoint...');
+    
+    // Call the backend dashboard stats endpoint
+    const response = await apiClient.get('/project-manager/dashboard/stats');
+    
+    const backendStats = response.data;
+    console.log('Backend dashboard response:', backendStats);
+    
+    // The backend returns ProjectManagerDashboardStatsDto which matches our interface
+    return {
+      projects: {
+        total: backendStats.projects.total,
+        active: backendStats.projects.active,
+        withEmployees: backendStats.projects.withEmployees
+      },
+      employees: {
+        total: backendStats.employees.total,
+        onProjects: backendStats.employees.onProjects,  // This is the correct count!
+        available: backendStats.employees.available,
+        fullyUtilized: backendStats.employees.fullyUtilized
+      },
+      technologies: {
+        total: backendStats.technologies.total,
+        active: backendStats.technologies.active
+      }
+    };
+    
+  } catch (error) {
+    console.error('Error calling backend dashboard stats:', error);
+    
+    // Fallback to manual calculation if backend fails
+    console.log('Falling back to manual calculation...');
+    return await fetchStatsManually();
+  }
+};
+
+/**
+ * Fallback manual calculation (keeping the old logic as backup)
+ */
+const fetchStatsManually = async (): Promise<ProjectManagerDashboardStats> => {
+  const { getAllProjects, getProjectTechnologies } = await import('../../projectManagerApi');
+  const { employeeApi } = await import('./employeeAssignmentService');
+  
   // Fetch all data in parallel for better performance
-  const [allProjects, allEmployeesResponse, allTechnologies] = await Promise.all([
+  const [allProjects, allEmployees, allTechnologies] = await Promise.all([
     getAllProjects().catch(err => {
       console.error('Error fetching projects:', err);
       return [];
     }),
-    // FIX: Use the new getAllEmployees method that returns Employee[] directly
     employeeApi.getAllEmployees().catch(err => {
       console.error('Error fetching employees:', err);
       return [];
@@ -110,10 +155,7 @@ const fetchStatsFromAPI = async (): Promise<ProjectManagerDashboardStats> => {
     })
   ]);
 
-  console.log('Dashboard data fetched successfully');
-
-  // FIXED: allEmployeesResponse is now an array directly (Employee[])
-  const allEmployees = allEmployeesResponse;
+  console.log('Manual calculation data fetched');
 
   // Calculate project statistics
   const totalProjects = allProjects.length;
@@ -126,6 +168,19 @@ const fetchStatsFromAPI = async (): Promise<ProjectManagerDashboardStats> => {
   const activeEmployees = allEmployees.filter(employee => 
     employee.status === 'active'
   ).length;
+  
+  // Count employees who have any workload (assigned to projects)
+  const employeesOnProjects = allEmployees.filter(employee => 
+    employee.currentWorkloadPercentage > 0
+  ).length;
+  
+  // Available employees (active but not on projects)
+  const availableEmployees = activeEmployees - employeesOnProjects;
+  
+  // Fully utilized employees (>= 80% workload)
+  const fullyUtilizedEmployees = allEmployees.filter(employee => 
+    employee.currentWorkloadPercentage >= 80
+  ).length;
 
   // Calculate technology statistics
   const totalTechnologies = allTechnologies.length;
@@ -136,11 +191,14 @@ const fetchStatsFromAPI = async (): Promise<ProjectManagerDashboardStats> => {
   return {
     projects: {
       total: totalProjects,
-      active: activeProjects
+      active: activeProjects,
+      withEmployees: 0 // We don't have this data in manual calculation
     },
     employees: {
       total: totalEmployees,
-      active: activeEmployees
+      onProjects: employeesOnProjects,
+      available: availableEmployees,
+      fullyUtilized: fullyUtilizedEmployees
     },
     technologies: {
       total: totalTechnologies,
@@ -195,48 +253,32 @@ export const clearStatsCache = () => {
 };
 
 /**
- * Helper function to get project statistics only
+ * Helper functions for individual stats (using backend when possible)
  */
 export const getProjectStats = async () => {
   try {
-    const allProjects = await getAllProjects();
-    return {
-      total: allProjects.length,
-      active: allProjects.filter(project => project.status === 'Active').length
-    };
+    const stats = await getDashboardStats();
+    return stats.projects;
   } catch (error) {
     console.error('Error fetching project stats:', error);
-    return { total: 0, active: 0 };
+    return { total: 0, active: 0, withEmployees: 0 };
   }
 };
 
-/**
- * Helper function to get employee statistics only
- */
 export const getEmployeeStats = async () => {
   try {
-    // Use getAllEmployees which returns Employee[] directly
-    const allEmployees = await employeeApi.getAllEmployees();
-    return {
-      total: allEmployees.length,
-      active: allEmployees.filter(employee => employee.status === 'active').length
-    };
+    const stats = await getDashboardStats();
+    return stats.employees;
   } catch (error) {
     console.error('Error fetching employee stats:', error);
-    return { total: 0, active: 0 };
+    return { total: 0, onProjects: 0, available: 0, fullyUtilized: 0 };
   }
 };
 
-/**
- * Helper function to get technology statistics only
- */
 export const getTechnologyStats = async () => {
   try {
-    const allTechnologies = await getProjectTechnologies();
-    return {
-      total: allTechnologies.length,
-      active: allTechnologies.filter(tech => tech.status === 'active').length
-    };
+    const stats = await getDashboardStats();
+    return stats.technologies;
   } catch (error) {
     console.error('Error fetching technology stats:', error);
     return { total: 0, active: 0 };

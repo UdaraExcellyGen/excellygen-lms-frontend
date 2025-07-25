@@ -4,13 +4,9 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 import { useCourseContext } from '../../contexts/CourseContext';
-// Import refined types
 import {
-    // CourseContextState, // Not directly used
     SubtopicFE,
-    // ExistingMaterialFile, // Not directly used
     BasicCourseDetailsState,
-    // CourseDto, // Not directly used
 } from '../../../../types/course.types';
 
 import { QuizBank } from '../../../../types/quiz.types';
@@ -20,11 +16,12 @@ import { getCourseById, deleteDocument, publishCourse } from '../../../../api/se
 import { getQuizzesByLessonId, deleteQuiz } from '../../../../api/services/Course/quizService';
 
 import PageHeader from './components/PageHeader';
-import ProgressSteps from '../BasicCourseDetails/components/ProgressSteps';
+import ProgressSteps from '../commonComponent/ProgressSteps';
 import CourseMaterialsSection from './components/CourseMaterialsSection';
 import ConfirmationDialog from './components/ConfirmationDialog';
 import PublishButton from './components/PublishButton';
-//import QuizOverviewModal from './components/QuizOverviewModal';
+// Import the common confirmation dialog hook
+import { useConfirmationDialog } from '../../coordinatorCourseView/CoordinatorCourseOverview/components/ConfirmationDialog';
 
 // Local interface for the course data displayed on this page
 interface DisplayCourseData {
@@ -33,7 +30,6 @@ interface DisplayCourseData {
     description: string;
     thumbnailUrl: string | null;
     estimatedTime: string;
-    coordinatorPoints: number;
     lessons: SubtopicFE[];
 }
 
@@ -41,14 +37,13 @@ const PublishCoursePage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { courseId: courseIdFromParam } = useParams<{ courseId: string }>();
-    const { courseData: contextCourseData, setLessonsState, updateBasicCourseDetails: updateContextBasicDetails, removeDocumentFromLessonState, resetCourseContext } = useCourseContext(); // Added updateContextBasicDetails
+    const { courseData: contextCourseData, setLessonsState, updateBasicCourseDetails: updateContextBasicDetails, removeDocumentFromLessonState, resetCourseContext } = useCourseContext();
 
     const courseId = contextCourseData.createdCourseId || (courseIdFromParam ? parseInt(courseIdFromParam, 10) : null);
 
     const [displayCourse, setDisplayCourse] = useState<DisplayCourseData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isPublishing, setIsPublishing] = useState(false);
-    const [isDeletingMaterial, setIsDeletingMaterial] = useState(false);
     const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
 
     const [expandedTopics, setExpandedTopics] = useState<string[]>(['materials']);
@@ -61,15 +56,14 @@ const PublishCoursePage: React.FC = () => {
     const [loadingQuizzes, setLoadingQuizzes] = useState(false);
     const [deleteQuizConfirmation, setDeleteQuizConfirmation] = useState<{lessonId: number, quizId: number} | null>(null);
 
+    const { showConfirmation, ConfirmationDialog } = useConfirmationDialog();
+
     const mapToDisplayData = useCallback((
         basicDetailsFromSource: BasicCourseDetailsState,
         lessonsFromContext: SubtopicFE[],
         courseIdForDisplay: number,
         apiThumbnailUrl?: string | null // This is the URL from the backend for an existing thumbnail
     ): DisplayCourseData => {
-        const totalPoints = lessonsFromContext.reduce((sum, subtopic) => sum + (subtopic.lessonPoints || 0), 0);
-        const numSubtopics = lessonsFromContext.length || 1;
-        const averagePoints = Math.round(totalPoints / numSubtopics);
         
         let thumbUrl: string | null = null;
         if (basicDetailsFromSource.thumbnail instanceof File) {
@@ -77,8 +71,6 @@ const PublishCoursePage: React.FC = () => {
         } else if (apiThumbnailUrl) { // Use API URL if no new file and API URL is provided
             thumbUrl = apiThumbnailUrl;
         }
-        // If basicDetailsFromSource.thumbnail is null (not a File), and apiThumbnailUrl is also null/undefined,
-        // then thumbUrl will correctly be null.
 
         return {
             id: courseIdForDisplay,
@@ -86,7 +78,6 @@ const PublishCoursePage: React.FC = () => {
             description: basicDetailsFromSource.description || "",
             thumbnailUrl: thumbUrl,
             estimatedTime: basicDetailsFromSource.estimatedTime || "",
-            coordinatorPoints: averagePoints,
             lessons: lessonsFromContext,
         };
     }, []);
@@ -133,66 +124,45 @@ const PublishCoursePage: React.FC = () => {
         let isMounted = true;
         setIsLoading(true);
         
-        // Primary condition: Always try to fetch if `displayCourse` isn't set for the current `courseId`,
-        // or if `lessonsLoaded` flag in context suggests context is stale for this course.
-        // `lastRefresh` will also trigger this.
-        // The context `basicDetails` and `lessons` changes will also re-trigger.
-        
         getCourseById(courseId)
             .then(fetchedCourse => {
                 if (!isMounted) return;
 
-                // This `basicDetailsForDisplay` will be the definitive source from the backend.
                 const basicDetailsFromAPI: BasicCourseDetailsState = {
                     title: fetchedCourse.title,
                     description: fetchedCourse.description || '',
                     estimatedTime: fetchedCourse.estimatedTime.toString(),
                     categoryId: fetchedCourse.category.id,
                     technologies: fetchedCourse.technologies.map(t => t.id),
-                    // Thumbnail: if context has a File for *this* course, it's a pending edit.
-                    // Otherwise, we'll rely on fetchedCourse.thumbnailUrl passed to mapToDisplayData.
                     thumbnail: (contextCourseData.createdCourseId === fetchedCourse.id && contextCourseData.basicDetails.thumbnail instanceof File)
                                ? contextCourseData.basicDetails.thumbnail
                                : null, 
                 };
 
-                // Update context with the fetched basic details if context is stale or for a different course
-                // This ensures context basicDetails are aligned with the latest fetched data,
-                // unless a more recent File-based thumbnail change is in context.
                 if (contextCourseData.createdCourseId !== fetchedCourse.id || 
                     JSON.stringify(contextCourseData.basicDetails.title) !== JSON.stringify(basicDetailsFromAPI.title) // Example check
                 ) {
                     updateContextBasicDetails({
                         ...basicDetailsFromAPI,
-                        // Preserve local thumbnail file if it exists and is more recent than API's lack of one
-                        thumbnail: basicDetailsFromAPI.thumbnail // This already considers context's File
-                                   // or a File from context might be more appropriate if context was just updated on another page:
-                                   // (contextCourseData.createdCourseId === fetchedCourse.id && contextCourseData.basicDetails.thumbnail instanceof File)
-                                   // ? contextCourseData.basicDetails.thumbnail
-                                   // : null, // No, basicDetailsFromAPI.thumbnail is better.
+                        thumbnail: basicDetailsFromAPI.thumbnail
                     });
                 }
 
                 const mappedLessons: SubtopicFE[] = fetchedCourse.lessons.map(l => ({
                     id: l.id,
                     lessonName: l.lessonName,
-                    lessonPoints: l.lessonPoints,
                     courseId: l.courseId,
                     documents: l.documents.map(d => ({
                         id: d.id, name: d.name, fileUrl: d.fileUrl,
-                        documentType: d.documentType, fileSize: d.fileSize, lessonId: d.lessonId, lastUpdatedDate: d.lastUpdatedDate
+                        documentType: d.documentType, fileSize: d.fileSize, lessonId: d.lessonId, lastUpdatedDate: d.lastUpdatedDate,filePath: d.filePath,
+                        uploadedAt: d.uploadedAt
                     })),
                     isEditing: false,
                     originalName: l.lessonName,
-                    originalPoints: l.lessonPoints,
                 }));
                 
                 setLessonsState(mappedLessons); 
 
-                // Determine which basic details to use for display:
-                // Prefer context's basic details if they are for the current course,
-                // as they might contain unpersisted changes from the BasicDetails page.
-                // Otherwise, use the fresh details from the API.
                 const finalBasicDetailsForDisplay = (contextCourseData.createdCourseId === fetchedCourse.id)
                                                   ? contextCourseData.basicDetails // Context might have latest edits
                                                   : basicDetailsFromAPI;          // API is fallback
@@ -234,31 +204,12 @@ const PublishCoursePage: React.FC = () => {
 
         return () => { isMounted = false; };
 
-    // This useEffect should primarily react to:
-    // - courseId changing (param or context)
-    // - lastRefresh (manual refresh trigger)
-    // - Changes in context's lessons or basic details if we want to reflect them immediately without a full re-fetch always.
-    //   However, the current logic fetches on every significant change anyway.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [courseId, lastRefresh, updateContextBasicDetails, setLessonsState, mapToDisplayData, navigate, 
-        // Add context parts that, if changed externally, should trigger a re-fetch/re-evaluation
-        contextCourseData.createdCourseId, // if this changes, courseId calculated above changes.
-        // contextCourseData.basicDetails, // Deep comparison is tricky; `lastRefresh` or direct fetch is more reliable
-        // contextCourseData.lessons,      // for updates from other pages.
-        // contextCourseData.lessonsLoaded // This flag is mainly for initial load strategy
+        contextCourseData.createdCourseId,
         ]);
 
-
-    // Effect to re-sync displayCourse if relevant parts of context change FOR THE SAME courseId
-    // This is more for minor updates from context after initial load.
     useEffect(() => {
         if (displayCourse && courseId === displayCourse.id && courseId === contextCourseData.createdCourseId) {
-            // If basic details in context changed for the current course
-            // (e.g., title edited on BasicDetails page and context updated)
-            // Or if lessons in context changed (e.g., document deleted)
-
-            // Check if a re-map is actually needed by comparing relevant fields.
-            // This avoids re-mapping if only irrelevant parts of context changed.
             const needsRemapForBasicDetails = 
                 contextCourseData.basicDetails.title !== displayCourse.title ||
                 (contextCourseData.basicDetails.description || "") !== displayCourse.description ||
@@ -277,44 +228,37 @@ const PublishCoursePage: React.FC = () => {
                                            ? displayCourse.thumbnailUrl
                                            : null;
 
-                // If basic details in context changed, AND context has a File thumbnail, that takes precedence.
-                // Otherwise, retain the existing displayCourse's API thumbnail URL.
                 const thumbnailFileFromContext = contextCourseData.basicDetails.thumbnail instanceof File 
                                                ? contextCourseData.basicDetails.thumbnail 
                                                : null;
 
                 setDisplayCourse(mapToDisplayData(
                     {
-                        ...contextCourseData.basicDetails, // Use latest basic details from context
-                        thumbnail: thumbnailFileFromContext, // Prioritize File from context
+                        ...contextCourseData.basicDetails,
+                        thumbnail: thumbnailFileFromContext,
                     },
-                    contextCourseData.lessons, // Use latest lessons from context
+                    contextCourseData.lessons,
                     courseId,
-                    thumbnailFileFromContext ? null : currentApiThumbnailUrl // Pass API URL only if no new File
+                    thumbnailFileFromContext ? null : currentApiThumbnailUrl
                 ));
 
-                if (needsRemapForLessons) { // If lessons structure changed, re-fetch quizzes.
+                if (needsRemapForLessons) {
                     fetchQuizzesForLessons(contextCourseData.lessons);
                 }
             }
         }
-    // This effect specifically listens to detailed changes in context basicDetails and lessons
-    // for the *currently displayed course*.
-    // mapToDisplayData, courseId are stable or derived.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [contextCourseData.basicDetails, contextCourseData.lessons, courseId, displayCourse]);
 
 
     useEffect(() => {
         const handleRouteChange = () => {
-            if (!isLoading) { // Only refresh if not already loading
+            if (!isLoading) {
                 console.log("PublishPage: Route changed, triggering lastRefresh.");
                 setLastRefresh(Date.now());
             }
         };
         handleRouteChange(); 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [location.pathname]); // Removed isLoading from here to simplify, main fetch handles isLoading state.
+    }, [location.pathname]);
 
 
     const handleBack = () => {
@@ -328,65 +272,118 @@ const PublishCoursePage: React.FC = () => {
     const handleSaveDraft = () => {
         toast.success('Course saved as draft.');
         resetCourseContext(); 
-        
-        // Navigate to the course display page.
         navigate('/coordinator/course-display-page'); 
     };
 
-    const handlePublish = async () => {
-        if (!courseId) {
-            toast.error("Cannot publish: Course ID is missing.");
-            return;
-        }
-        if (displayCourse?.lessons.length === 0) {
-            toast.error("Cannot publish: Course must have at least one lesson/subtopic.");
-            return;
-        }
+    // const handlePublish = async () => {
+    //     if (!courseId) {
+    //         toast.error("Cannot publish: Course ID is missing.");
+    //         return;
+    //     }
+    //     if (displayCourse?.lessons.length === 0) {
+    //         toast.error("Cannot publish: Course must have at least one lesson/subtopic.");
+    //         return;
+    //     }
 
-        setIsPublishing(true);
-        const loadingToastId = toast.loading("Publishing course...");
-        try {
-            await publishCourse(courseId);
-            toast.dismiss(loadingToastId);
-            toast.success('Course published successfully!');
-            resetCourseContext(); 
-            navigate('/coordinator/course-display-page'); 
-        } catch (error) {
-            toast.dismiss(loadingToastId);
-            console.error("Failed to publish course:", error);
-            toast.error("Failed to publish course. Please try again.");
-        } finally {
-            setIsPublishing(false);
-        }
-    };
+    //     setIsPublishing(true);
+    //     const loadingToastId = toast.loading("Publishing course...");
+    //     try {
+    //         await publishCourse(courseId);
+    //         toast.dismiss(loadingToastId);
+    //         toast.success('Course published successfully!');
+    //         resetCourseContext(); 
+    //         navigate('/coordinator/course-display-page'); 
+    //     } catch (error) {
+    //         toast.dismiss(loadingToastId);
+    //         console.error("Failed to publish course:", error);
+    //         toast.error("Failed to publish course. Please try again.");
+    //     } finally {
+    //         setIsPublishing(false);
+    //     }
+    // };
+    const handlePublish = () => {
+    if (!courseId) {
+        toast.error("Cannot publish: Course ID is missing.");
+        return;
+    }
+    if (displayCourse?.lessons.length === 0) {
+        toast.error("Cannot publish: Course must have at least one lesson/subtopic.");
+        return;
+    }
 
+    // 1. Call the confirmation hook instead of directly publishing.
+    showConfirmation({
+        title: "Publish Course?",
+        message: "Once published, this course cannot be deleted. You can only deactivate it later. Are you sure you want to proceed?",
+        confirmText: "Publish",
+        cancelText: "Cancel",
+        type: 'warning',
+        // 2. The original logic is now inside the onConfirm callback.
+        onConfirm: async () => {
+            setIsPublishing(true);
+            const loadingToastId = toast.loading("Publishing course...");
+            try {
+                await publishCourse(courseId);
+                toast.dismiss(loadingToastId);
+                toast.success('Course published successfully!');
+                resetCourseContext();
+                navigate('/coordinator/course-display-page');
+            } catch (error) {
+                toast.dismiss(loadingToastId);
+                console.error("Failed to publish course:", error);
+                toast.error("Failed to publish course. Please try again.");
+            } finally {
+                setIsPublishing(false);
+            }
+        }
+    });
+};
+
+    // const handleDeleteMaterialRequest = (lessonId: number, documentId: number, documentName: string) => {
+    //     setMaterialToDelete({ lessonId, documentId, name: documentName });
+    //     setIsDeleteDialogOpen(true);
+    // };
+
+    // const handleConfirmDeleteMaterial = async () => {
+    //     if (!materialToDelete) return;
+    //     const loadingToastId = toast.loading(`Deleting ${materialToDelete.name}...`);
+    //     try {
+    //         await deleteDocument(materialToDelete.documentId);
+    //         // This will update contextCourseData.lessons, triggering the secondary useEffect to re-map displayCourse.
+    //         removeDocumentFromLessonState(materialToDelete.lessonId, materialToDelete.documentId);
+    //         toast.dismiss(loadingToastId);
+    //         toast.success(`Material "${materialToDelete.name}" deleted.`);
+    //     } catch (error) {
+    //         toast.dismiss(loadingToastId);
+    //         console.error("Failed to delete material:", error);
+    //         toast.error("Failed to delete material. Please try again.");
+    //     } finally {
+    //         setIsDeleteDialogOpen(false);
+    //         setMaterialToDelete(null);
+    //     }
+    // };
     const handleDeleteMaterialRequest = (lessonId: number, documentId: number, documentName: string) => {
-        setMaterialToDelete({ lessonId, documentId, name: documentName });
-        setIsDeleteDialogOpen(true);
-    };
-
-    const handleConfirmDeleteMaterial = async () => {
-        if (!materialToDelete) return;
-        setIsDeletingMaterial(true);
-        const loadingToastId = toast.loading(`Deleting ${materialToDelete.name}...`);
-        try {
-            await deleteDocument(materialToDelete.documentId);
-            // This will update contextCourseData.lessons, triggering the secondary useEffect to re-map displayCourse.
-            removeDocumentFromLessonState(materialToDelete.lessonId, materialToDelete.documentId);
-            toast.dismiss(loadingToastId);
-            toast.success(`Material "${materialToDelete.name}" deleted.`);
-        } catch (error) {
-            toast.dismiss(loadingToastId);
-            console.error("Failed to delete material:", error);
-            toast.error("Failed to delete material. Please try again.");
-        } finally {
-            setIsDeleteDialogOpen(false);
-            setMaterialToDelete(null);
-            setIsDeletingMaterial(false);
+    showConfirmation({
+        title: "Delete Material?",
+        message: `Are you sure you want to delete "${documentName}"? This action cannot be undone.`,
+        confirmText: "Delete",
+        type: "danger",
+        onConfirm: async () => {
+            const loadingToastId = toast.loading(`Deleting ${documentName}...`);
+            try {
+                await deleteDocument(documentId);
+                removeDocumentFromLessonState(lessonId, documentId);
+                toast.dismiss(loadingToastId);
+                toast.success(`Material "${documentName}" deleted.`);
+            } catch (error) {
+                toast.dismiss(loadingToastId);
+                console.error("Failed to delete material:", error);
+                toast.error("Failed to delete material. Please try again.");
+            }
         }
-    };
+    });
+};
 
-    // ... (rest of the component, including JSX, remains the same as your last "image fixing" version)
     const handleCancelDelete = () => {
         setIsDeleteDialogOpen(false);
         setMaterialToDelete(null);
@@ -461,42 +458,76 @@ const PublishCoursePage: React.FC = () => {
             });
     };
 
-    const handleRemoveQuiz = (lessonId: number) => {
-        if (!courseId) {
-            toast.error("Course ID is missing. Cannot remove quiz.");
-            return;
-        }
-        if (quizzes[lessonId] && quizzes[lessonId].length > 0) {
-            const quizId = quizzes[lessonId][0].quizId;
-            setDeleteQuizConfirmation({ lessonId, quizId });
-        } else {
-            toast.error("No quiz found for this lesson.");
-        }
-    };
+    // const handleRemoveQuiz = (lessonId: number) => {
+    //     if (!courseId) {
+    //         toast.error("Course ID is missing. Cannot remove quiz.");
+    //         return;
+    //     }
+    //     if (quizzes[lessonId] && quizzes[lessonId].length > 0) {
+    //         const quizId = quizzes[lessonId][0].quizId;
+    //         setDeleteQuizConfirmation({ lessonId, quizId });
+    //     } else {
+    //         toast.error("No quiz found for this lesson.");
+    //     }
+    // };
 
-    const handleConfirmDeleteQuiz = async () => {
-        if (!deleteQuizConfirmation) return;
+    // const handleConfirmDeleteQuiz = async () => {
+    //     if (!deleteQuizConfirmation) return;
         
-        const { lessonId, quizId } = deleteQuizConfirmation;
-        const loadingToastId = toast.loading("Deleting quiz...");
+    //     const { lessonId, quizId } = deleteQuizConfirmation;
+    //     const loadingToastId = toast.loading("Deleting quiz...");
         
-        try {
-            await deleteQuiz(quizId);
-            setQuizzes(prev => {
-                const newQuizzes = { ...prev };
-                newQuizzes[lessonId] = [];
-                return newQuizzes;
-            });
-            toast.dismiss(loadingToastId);
-            toast.success("Quiz deleted successfully.");
-        } catch (error) {
-            toast.dismiss(loadingToastId);
-            console.error(`Failed to delete quiz ${quizId}:`, error);
-            toast.error("Failed to delete quiz. Please try again.");
-        } finally {
-            setDeleteQuizConfirmation(null);
-        }
-    };
+    //     try {
+    //         await deleteQuiz(quizId);
+    //         setQuizzes(prev => {
+    //             const newQuizzes = { ...prev };
+    //             newQuizzes[lessonId] = [];
+    //             return newQuizzes;
+    //         });
+    //         toast.dismiss(loadingToastId);
+    //         toast.success("Quiz deleted successfully.");
+    //     } catch (error) {
+    //         toast.dismiss(loadingToastId);
+    //         console.error(`Failed to delete quiz ${quizId}:`, error);
+    //         toast.error("Failed to delete quiz. Please try again.");
+    //     } finally {
+    //         setDeleteQuizConfirmation(null);
+    //     }
+    // };
+    const handleRemoveQuiz = (lessonId: number) => {
+    if (!courseId) {
+        toast.error("Course ID is missing. Cannot remove quiz.");
+        return;
+    }
+    if (quizzes[lessonId] && quizzes[lessonId].length > 0) {
+        const quizId = quizzes[lessonId][0].quizId;
+        showConfirmation({
+            title: "Delete Quiz?",
+            message: "Are you sure you want to delete this quiz? This action cannot be undone.",
+            confirmText: "Delete",
+            type: "danger",
+            onConfirm: async () => {
+                const loadingToastId = toast.loading("Deleting quiz...");
+                try {
+                    await deleteQuiz(quizId);
+                    setQuizzes(prev => {
+                        const newQuizzes = { ...prev };
+                        newQuizzes[lessonId] = [];
+                        return newQuizzes;
+                    });
+                    toast.dismiss(loadingToastId);
+                    toast.success("Quiz deleted successfully.");
+                } catch (error) {
+                    toast.dismiss(loadingToastId);
+                    console.error(`Failed to delete quiz ${quizId}:`, error);
+                    toast.error("Failed to delete quiz. Please try again.");
+                }
+            }
+        });
+    } else {
+        toast.error("No quiz found for this lesson.");
+    }
+};
 
     if (isLoading) {
         return (
@@ -522,6 +553,7 @@ const PublishCoursePage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#52007C] p-6">
+            <ConfirmationDialog />
             <PageHeader title="Publish Course" onBack={handleBack} onSaveDraft={handleSaveDraft} />
             <ProgressSteps stage={3} />
 
@@ -545,9 +577,6 @@ const PublishCoursePage: React.FC = () => {
                     <p className="text-gray-700 mb-2">
                         <span className="font-semibold text-[#1B0A3F]">Estimated Time :</span> {displayCourse.estimatedTime ? `${displayCourse.estimatedTime} hours` : "Not specified"}
                     </p>
-                    <p className="text-gray-700">
-                        <span className="font-semibold text-[#1B0A3F]">Total Points :</span> {displayCourse.coordinatorPoints}
-                    </p>
                 </div>
 
                 <CourseMaterialsSection
@@ -568,29 +597,19 @@ const PublishCoursePage: React.FC = () => {
                     handleSaveOverviewQuizDetails={handleSaveOverviewQuizDetails}
                 />
 
-                <ConfirmationDialog
+                {/* <ConfirmationDialog
                     isOpen={isDeleteDialogOpen}
                     onConfirm={handleConfirmDeleteMaterial}
                     onCancel={handleCancelDelete}
                     message={`Are you sure you want to delete "${materialToDelete?.name || 'this material'}"? This action cannot be undone.`}
-                />
+                /> */}
 
-                <ConfirmationDialog
+                {/* <ConfirmationDialog
                     isOpen={!!deleteQuizConfirmation}
                     onConfirm={handleConfirmDeleteQuiz}
                     onCancel={() => setDeleteQuizConfirmation(null)}
                     message="Are you sure you want to delete this quiz? This action cannot be undone."
-                />
-
-                {/* {showQuizOverviewPage && (
-                    <QuizOverviewModal
-                        quizBank={showQuizOverviewPage}
-                        onClose={handleCloseQuizOverview}
-                        onSave={handleSaveOverviewQuizDetails}
-                        isFullScreen={true}
-                        subtopicId={showQuizOverviewPage.lessonId.toString()}
-                    />
-                )} */}
+                /> */}
             </div>
 
             <PublishButton

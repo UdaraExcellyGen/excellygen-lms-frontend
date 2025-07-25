@@ -98,7 +98,8 @@
       "totalProjects": "Totalt prosjekter",
       "activeProjects": "Aktive prosjekter",
       "totalEmployees": "Totalt ansatte",
-      "activeEmployees": "Aktive ansatte", 
+      "activeEmployees": "Aktive ansatte",
+      "employeesOnProjects": "På Prosjekter",
       "totalTechnologies": "Totalt teknologier",
       "activeTechnologies": "Aktive teknologier",
       "quickActions": "Hurtighandlinger"
@@ -132,7 +133,15 @@
       "active": "Aktiv",
       "completed": "Fullført",
       "name": "Navn",
-      "id": "ID"
+      "id": "ID",
+"skillMatchingActive": "Teknologimatch aktiv",
+"showingEmployeesWithSkills": "Viser ansatte med teknologier",
+      "noMatchingEmployeesFound": "Ingen matchende ansatte funnet",
+"noEmployeesHaveSkillsMatching": "Ingen ansatte har teknologier som matcher",
+      "furtherFilteredBy": "Ytterligere filtrert av",
+"matchedTechnologies": "Matchede teknologier",
+      "match": "Match",
+      "free": "Ledig"
     },
     "dialogs": {
       "confirmEmployeeAssignment": "Bekreft ansatttildeling?",

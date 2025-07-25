@@ -15,15 +15,13 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ stage }) => {
         }
     };
 
-    const getTextClasses = (stageNumber: number) => {
-        return "text-white font-['Nunito_Sans']";
-    };
+    const textClasses = "text-white font-['Nunito_Sans']";
 
     const getLineClasses = (stageNumber: number) => {
         if (stageNumber < stage) {
             return "h-0.5 flex-1 mx-4 bg-[#F6E6FF]";
         } else {
-            return "h-0.5 flex-1 mx-4 bg-[#F6E6FF]"; // Keep same color for simplicity, can be changed if needed
+            return "h-0.5 flex-1 mx-4 bg-[#F6E6FF]"; 
         }
     };
 
@@ -34,21 +32,21 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ stage }) => {
                 <div className={getStageClasses(1)}>
                     {stage > 1 ? '✓' : '1'}
                 </div>
-                <span className={getTextClasses(1)}>Course Details</span>
+                <span className={ textClasses}>Course Details</span>
             </div>
             <div className={getLineClasses(1)} />
             <div className="flex items-center gap-2">
                 <div className={getStageClasses(2)}>
                     {stage > 2 ? '✓' : '2'}
                 </div>
-                <span className={getTextClasses(2)}>Upload Materials</span>
+                <span className={ textClasses}>Upload Materials</span>
             </div>
             <div className={getLineClasses(2)} />
             <div className="flex items-center gap-2">
                 <div className={getStageClasses(3)}>
                     3
                 </div>
-                <span className={getTextClasses(3)}>Publish Course</span>
+                <span className={ textClasses}>Publish Course</span>
             </div>
         </div>
     );

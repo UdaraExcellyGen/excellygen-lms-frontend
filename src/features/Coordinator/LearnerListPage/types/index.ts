@@ -6,6 +6,7 @@ export interface Student {
 }
 
 export interface Course {
+    id: number;
     title: string;
     students: Student[];
 }
