@@ -1,4 +1,7 @@
-import { Course, Activity, WeeklyTimeData, LearningStat } from '../types/types';
+// src/features/Learner/LearnerDashboard/data/mockData.ts
+
+// FIX: Removed the unused 'Activity' type from the import.
+import { Course, WeeklyTimeData, LearningStat } from '../types/types';
 
 export const learningStats: LearningStat[] = [
   { title: 'Courses Completed', value: 12, trend: '+2 this month', link: '/completed-courses' },

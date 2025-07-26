@@ -1,10 +1,12 @@
+// src/features/Learner/LearnerProfile/LearnerProfile.tsx
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'; // Import useLocation and Link
 import Layout from '../../../components/Sidebar/Layout';
 import { toast } from 'react-hot-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react'; // Import ArrowLeft
 
-// Import components
+// ... (other imports are unchanged)
 import ProfileHeader from './components/ProfileHeader';
 import ContactInfo from './components/ContactInfo';
 import Bio from './components/Bio';
@@ -12,22 +14,18 @@ import RewardsBadges from './components/RewardsBadges';
 import TechnologyStack from './components/TechnologyStack';
 import ProjectsList from './components/ProjectsList';
 import CertificationsList from './components/CertificationsList';
-
-// Import services
 import { getUserProfile, updateUserProfile, uploadUserAvatar, deleteUserAvatar } from '../../../api/services/LearnerProfile/userProfileService';
 import { getBadgesForUser } from '../../../api/services/Learner/badgesAndRewardsService';
 import { getUserTechnologies, addUserTechnology, removeUserTechnology, getAvailableTechnologies } from '../../../api/services/LearnerProfile/userTechnologyService';
 import { getUserProjects } from '../../../api/services/LearnerProfile/userProjectService';
-// FIX: Importing from the updated Course services
 import { getCertificatesForUser, getExternalCertificatesForUser } from '../../../api/services/Course/certificateService'; 
-
-// Import types
 import { ProfileData } from './types';
 import { useAuth } from '../../../contexts/AuthContext';
 
 const LearnerProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation(); // Get location object
   const { user: loggedInUser } = useAuth();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -41,7 +39,9 @@ const LearnerProfile: React.FC = () => {
   const [isTechOperationInProgress, setIsTechOperationInProgress] = useState(false);
 
   const isViewOnly = !!id && id !== loggedInUser?.id;
+  const fromForumPath = location.state?.from; // Check for the 'from' state
 
+  // ... (fetchProfileData and other handlers are unchanged)
   const fetchProfileData = useCallback(async () => {
     setIsLoading(true);
     setLoadingError(null);
@@ -56,13 +56,12 @@ const LearnerProfile: React.FC = () => {
     }
 
     try {
-        // Fetch all data in parallel using the updated services
         const promises = [
             getUserProfile(userIdToFetch),
             getBadgesForUser(userIdToFetch),
             getUserProjects(userIdToFetch),
-            getCertificatesForUser(userIdToFetch),         // Internal Certs
-            getExternalCertificatesForUser(userIdToFetch),  // External Certs
+            getCertificatesForUser(userIdToFetch),
+            getExternalCertificatesForUser(userIdToFetch),
             getUserTechnologies(userIdToFetch)
         ];
 
@@ -82,11 +81,10 @@ const LearnerProfile: React.FC = () => {
         const externalCerts = externalCertsResult.status === 'fulfilled' ? (externalCertsResult.value as any[]) : [];
         const skills = techResult.status === 'fulfilled' ? techResult.value : [];
 
-        // Combine and map both certificate types into the structure needed by ProfileData
         const combinedCerts = [
             ...internalCerts.map(c => ({
                 id: c.id.toString(),
-                name: c.courseTitle, // Internal uses courseTitle
+                name: c.courseTitle,
                 issuingOrganization: 'ExcellyGen LMS',
                 issueDate: new Date(c.completionDate).toLocaleDateString(),
                 status: 'Completed',
@@ -95,8 +93,8 @@ const LearnerProfile: React.FC = () => {
             })),
             ...externalCerts.map(c => ({
                 id: c.id,
-                name: c.title, // External uses title
-                issuingOrganization: c.issuer, // External uses issuer
+                name: c.title,
+                issuingOrganization: c.issuer,
                 issueDate: new Date(c.completionDate).toLocaleDateString(),
                 status: 'Completed',
                 imageUrl: c.imageUrl,
@@ -111,7 +109,7 @@ const LearnerProfile: React.FC = () => {
             ...baseProfile,
             skills,
             projects,
-            certifications: combinedCerts, // Use the combined list
+            certifications: combinedCerts,
             rewards: {
                 totalBadges: claimedBadges.length,
                 thisMonth: thisMonthBadges,
@@ -138,7 +136,6 @@ const LearnerProfile: React.FC = () => {
     fetchProfileData();
   }, [fetchProfileData]);
   
-  // Handlers and JSX remain the same...
   const handleEdit = () => setIsEditing(true);
   const handleCancel = () => {
       setIsEditing(false);
@@ -224,6 +221,17 @@ const LearnerProfile: React.FC = () => {
             </div>
           ) : (
             <>
+              {/* --- FIX: Conditionally render the back button --- */}
+              {fromForumPath && (
+                <Link 
+                    to={fromForumPath}
+                    className="inline-flex items-center gap-2 text-white/90 hover:text-white font-semibold font-nunito transition-colors group mb-6"
+                >
+                    <ArrowLeft className="h-5 w-5 transition-transform group-hover:-translate-x-1" />
+                    
+                </Link>
+              )}
+
               <div className="flex flex-col md:flex-row justify-between items-start mb-8">
                   <h1 className="text-3xl font-bold text-white font-unbounded">
                     {isViewOnly ? `${profileData.name}'s Profile` : 'My Profile'}
