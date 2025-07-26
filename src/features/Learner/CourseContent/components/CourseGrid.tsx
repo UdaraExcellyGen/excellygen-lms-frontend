@@ -1,30 +1,28 @@
 // src/features/Learner/CourseContent/components/CourseGrid.tsx
 import React from 'react';
-import { LearnerCourseDto } from '../../../../types/course.types'; // Use LearnerCourseDto directly
+import { LearnerCourseDto } from '../../../../types/course.types';
 import AvailableCourseCard from './AvailableCourseCard';
 import EnrolledCourseCard from './EnrolledCourseCard';
 
 interface CourseGridProps {
   activeTab: 'courses' | 'learning';
-  availableCourses: LearnerCourseDto[]; // Expects LearnerCourseDto[]
-  enrolledCourses: LearnerCourseDto[]; // Expects LearnerCourseDto[]
-  loading: boolean;
-  onEnroll: (courseId: number) => void; // Expects number ID
-  onUnenroll: (course: LearnerCourseDto) => void; // Expects LearnerCourseDto
-  onContinueLearning: (courseId: number) => void; // Expects number ID
+  availableCourses: LearnerCourseDto[];
+  enrolledCourses: LearnerCourseDto[];
+  onEnroll: (courseId: number) => void;
+  onUnenroll: (course: LearnerCourseDto) => void;
+  onContinueLearning: (courseId: number) => void;
 }
 
 const CourseGrid: React.FC<CourseGridProps> = ({
   activeTab,
   availableCourses,
   enrolledCourses,
-  loading,
   onEnroll,
   onUnenroll,
   onContinueLearning
 }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       {activeTab === 'courses' ? (
         availableCourses.length > 0 ? (
           availableCourses.map(course => (
@@ -32,7 +30,6 @@ const CourseGrid: React.FC<CourseGridProps> = ({
               key={course.id}
               course={course}
               onEnroll={onEnroll}
-              loading={loading}
             />
           ))
         ) : (

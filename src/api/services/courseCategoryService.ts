@@ -6,15 +6,22 @@ export interface CourseCategoryDtoBackend {
   id: string;
   title: string;
   description: string;
-  icon: string; // The string name of the icon (e.g., "code")
+  icon: string;
   status: string;
   totalCourses: number; 
   activeLearnersCount: number; 
   avgDuration: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdAtFormatted?: string;
+  updatedAtFormatted?: string;
+  createdBy?: string;
 }
 
-// OPTIMIZATION: Add caching for categories
-let categoriesCache: {
+// Simple cache to prevent duplicate calls
+let categoryCache: {
   data: CourseCategoryDtoBackend[] | null;
   timestamp: number;
   isLoading: boolean;
@@ -24,140 +31,137 @@ let categoriesCache: {
   isLoading: false
 };
 
-// Cache duration: 10 minutes (categories don't change often)
-const CATEGORIES_CACHE_DURATION = 10 * 60 * 1000;
+// Cache for 2 minutes
+const CACHE_DURATION = 2 * 60 * 1000;
 
 /**
- * Get all course categories (works for both Admin and Learner roles)
- * Includes caching for better performance
+ * Get all course categories for the current user.
+ * Backend automatically filters inactive/deleted categories for learners.
  */
 export const getCategories = async (): Promise<CourseCategoryDtoBackend[]> => {
   const now = Date.now();
   
-  // Return cached data if it's still fresh
-  if (categoriesCache.data && (now - categoriesCache.timestamp) < CATEGORIES_CACHE_DURATION && !categoriesCache.isLoading) {
-    console.log('Returning cached categories data');
-    return categoriesCache.data;
+  // Return cached data if valid
+  if (categoryCache.data && (now - categoryCache.timestamp) < CACHE_DURATION && !categoryCache.isLoading) {
+    console.log('Returning cached categories');
+    return categoryCache.data;
   }
   
-  // If already loading, wait for the existing request
-  if (categoriesCache.isLoading) {
-    console.log('Categories request already in progress, waiting...');
+  // If already loading, wait for it
+  if (categoryCache.isLoading) {
+    console.log('Categories already loading, waiting...');
     let attempts = 0;
-    while (categoriesCache.isLoading && attempts < 100) {
+    while (categoryCache.isLoading && attempts < 50) {
       await new Promise(resolve => setTimeout(resolve, 100));
       attempts++;
     }
-    
-    if (categoriesCache.data) {
-      return categoriesCache.data;
+    if (categoryCache.data) {
+      return categoryCache.data;
     }
   }
   
   try {
-    categoriesCache.isLoading = true;
-    console.log('Fetching categories from API...');
+    categoryCache.isLoading = true;
+    console.log('Fetching fresh categories from API...');
     
-    // Add timeout for this specific request
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
-    const response = await apiClient.get<CourseCategoryDtoBackend[]>('/CourseCategories', {
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-    
-    console.log('API Response:', response.data);
+    const response = await apiClient.get<CourseCategoryDtoBackend[]>('/CourseCategories');
     
     if (!Array.isArray(response.data)) {
       console.error('API response for categories is not an array:', response.data);
       throw new Error('Invalid API response format for categories');
     }
     
-    // Update cache
-    categoriesCache.data = response.data;
-    categoriesCache.timestamp = now;
+    // Cache the result
+    categoryCache.data = response.data;
+    categoryCache.timestamp = now;
     
-    // Backend now handles role-based filtering automatically
     return response.data;
     
   } catch (error: any) {
     console.error('Error fetching course categories:', error);
     
-    // Return cached data if available, even if expired
-    if (categoriesCache.data) {
-      console.log('Returning expired cached categories due to error');
-      return categoriesCache.data;
+    // Return cached data if available on error
+    if (categoryCache.data) {
+      console.log('Returning cached categories due to error');
+      return categoryCache.data;
     }
     
-    // Check error type for better error handling
-    if (error.name === 'AbortError') {
-      throw new Error('Request timed out. Please check your connection and try again.');
-    } else if (error.code === 'NETWORK_ERROR' || !error.response) {
-      throw new Error('Network error. Please check your internet connection.');
-    } else if (error.response?.status === 403) {
-      throw new Error('You do not have permission to view course categories.');
+    // Handle specific error cases
+    if (error.response?.status === 403) {
+      throw new Error('Access denied to course categories');
     } else if (error.response?.status === 404) {
-      throw new Error('Course categories service not found.');
-    } else {
-      throw error;
+      throw new Error('Course categories not found');
+    } else if (!error.response) {
+      throw new Error('Network error - please check your connection');
     }
+    
+    throw error;
   } finally {
-    categoriesCache.isLoading = false;
+    categoryCache.isLoading = false;
   }
 };
 
+// Cache for individual categories
+const individualCategoryCache = new Map<string, {
+  data: CourseCategoryDtoBackend;
+  timestamp: number;
+}>();
+
 /**
- * Get courses by category ID (works for both Admin and Learner roles)
- * No caching for courses as they change more frequently
+ * Get a specific category by ID - for admin use
  */
-export const getCoursesByCategory = async (categoryId: string) => {
+export const getCategoryById = async (id: string): Promise<CourseCategoryDtoBackend> => {
+  const now = Date.now();
+  const cached = individualCategoryCache.get(id);
+  
+  // Return cached data if valid (1 minute cache)
+  if (cached && (now - cached.timestamp) < 60000) {
+    console.log(`📦 Returning cached category: ${id}`);
+    return cached.data;
+  }
+  
   try {
-    console.log(`Fetching courses for category: ${categoryId}`);
-    
-    // Add timeout for this request
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
-    
-    const response = await apiClient.get(`/CourseCategories/${categoryId}/courses`, {
-      signal: controller.signal
+    console.log(`🔍 Fetching category by ID: ${id}`);
+    const response = await apiClient.get<CourseCategoryDtoBackend>(`/CourseCategories/${id}`, {
+      timeout: 10000 // 10 second timeout
     });
     
-    clearTimeout(timeoutId);
+    // Cache the result
+    individualCategoryCache.set(id, {
+      data: response.data,
+      timestamp: now
+    });
     
     return response.data;
   } catch (error: any) {
-    console.error(`Error fetching courses for category ${categoryId}:`, error);
+    console.error('Error fetching category by ID:', error);
     
-    if (error.name === 'AbortError') {
-      throw new Error('Request timed out while loading courses.');
-    } else if (error.response?.status === 404) {
-      throw new Error('Course category not found or no courses available.');
-    } else if (error.response?.status === 403) {
-      throw new Error('You do not have permission to view courses in this category.');
+    // Return cached data on error if available
+    if (cached) {
+      console.log(`🔄 Returning expired cached category due to error: ${id}`);
+      return cached.data;
     }
     
+    if (error.response?.status === 404) {
+      throw new Error('Category not found or has been removed');
+    } else if (error.code === 'ECONNABORTED') {
+      throw new Error('Request timed out - please try again');
+    } else if (!error.response) {
+      throw new Error('Network error - please check your connection');
+    }
     throw error;
   }
 };
 
 /**
- * Clear the categories cache - useful for forcing a refresh
+ * Clear any local caches - updated to clear new cache
  */
 export const clearCategoriesCache = () => {
-  categoriesCache.data = null;
-  categoriesCache.timestamp = 0;
-  categoriesCache.isLoading = false;
-  console.log('Categories cache cleared');
-};
-
-/**
- * Preload categories data in the background
- */
-export const preloadCategories = () => {
-  // Don't wait for the result, just trigger the request
-  getCategories().catch(() => {
-    // Silently handle errors for preload
-  });
+  console.log('Clearing categories cache');
+  categoryCache.data = null;
+  categoryCache.timestamp = 0;
+  categoryCache.isLoading = false;
+  individualCategoryCache.clear(); // Clear individual category cache too
+  // Clear any session storage cache
+  sessionStorage.removeItem('course_categories_simple');
 };
