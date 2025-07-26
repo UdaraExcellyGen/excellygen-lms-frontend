@@ -39,7 +39,7 @@ const CustomBar = (props: any) => {
                 y={y} 
                 width={width} 
                 height={height} 
-                fill={isSelected ? '#52007C' : '#CDB4DB'}
+                fill={isSelected ? '#52007C' : '#BF4BF6'}
                 // FIX: The 'radius' prop is not valid for SVG <rect>. Use 'rx' for rounded corners.
                 rx="4"
                 className="transition-all duration-300"

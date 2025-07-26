@@ -23,6 +23,7 @@ const QuizResults: React.FC = () => {
   const [quizCompletionTrigger, setQuizCompletionTrigger] = useState(0);
   useBadgeChecker(quizCompletionTrigger);
 
+  // Score animation function
   const animateScore = (targetScore: number) => {
     let current = 0;
     const increment = targetScore > 0 ? targetScore / 60 : 0; 
@@ -39,7 +40,7 @@ const QuizResults: React.FC = () => {
   useEffect(() => {
     const fetchAttemptDetails = async () => {
       if (!attemptId) {
-        toast.error('No quiz attempt specified');
+        toast.error('No quiz attempt specified', { id: `quiz-error-${attemptId}` });
         navigate(-1);
         return;
       }
@@ -52,13 +53,17 @@ const QuizResults: React.FC = () => {
           const scorePercentage = details.totalQuestions > 0 
             ? Math.round((details.correctAnswers / details.totalQuestions) * 100)
             : 0;
+          
+          // Start the animation
           animateScore(scorePercentage);
           setQuizCompletionTrigger(count => count + 1);
         }
       } catch (error: any) {
         if (error.name !== 'CanceledError') {
           console.error('Error fetching quiz attempt details:', error);
-          toast.error('Failed to load quiz results. Please try again.');
+          toast.error('Failed to load quiz results. Please try again.', { 
+            id: `quiz-load-error-${attemptId}` 
+          });
         }
       } finally {
         setIsLoading(false);
@@ -72,7 +77,7 @@ const QuizResults: React.FC = () => {
     const targetCourseId = courseIdFromLocation || attemptDetails?.courseId;
     
     if (targetCourseId && attemptDetails) {
-      // Primary navigation action: Pass state back to the course view for seamless UI updates.
+      // Pass state back to the course view for seamless UI updates
       navigate(`/learner/course-view/${targetCourseId}`, {
         replace: true,
         state: { 
@@ -82,7 +87,7 @@ const QuizResults: React.FC = () => {
         }
       });
     } else {
-      // Fallback navigation if courseId is not available.
+      // Fallback navigation if courseId is not available
       navigate('/learner/dashboard');
       toast('Redirected to your dashboard');
     }
@@ -138,22 +143,18 @@ const QuizResults: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
-      
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <button
-            onClick={handleBackToCourse}
-            className="flex items-center text-[#D68BF9] hover:text-white transition-colors text-sm px-4 py-2 rounded-xl"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Course
-          </button>
+          onClick={handleBackToCourse}
+          className="flex items-center text-[#D68BF9] hover:text-white transition-colors text-sm px-4 py-2 rounded-xl"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Course
+        </button>
+
         {/* Header */}
         <div className="flex justify-between items-center bg-white/90 backdrop-blur-md rounded-2xl p-4">
-        
-          
-          
           <h1 className="text-[#1B0A3F] text-2xl font-bold">Quiz Results</h1>
-          
           <div className="flex items-center text-[#1B0A3F] text-sm border border-[#34137C]/50 px-4 py-2 rounded-xl">
             {attemptDetails.quizTitle}
           </div>
@@ -175,8 +176,14 @@ const QuizResults: React.FC = () => {
                   className="transition-stroke-dashoffset duration-1000 ease-out"
                 />
                 <defs>
-                  <linearGradient id="gradient-pass"><stop offset="0%" stopColor="#00a33cff" /><stop offset="100%" stopColor="#028e7dff" /></linearGradient>
-                  <linearGradient id="gradient-fail"><stop offset="0%" stopColor="#951d1dff" /><stop offset="100%" stopColor="#ef4444" /></linearGradient>
+                  <linearGradient id="gradient-pass">
+                    <stop offset="0%" stopColor="#00a33cff" />
+                    <stop offset="100%" stopColor="#028e7dff" />
+                  </linearGradient>
+                  <linearGradient id="gradient-fail">
+                    <stop offset="0%" stopColor="#951d1dff" />
+                    <stop offset="100%" stopColor="#ef4444" />
+                  </linearGradient>
                 </defs>
               </svg>
               <div className="text-center z-10">
@@ -258,20 +265,21 @@ const QuizResults: React.FC = () => {
                       {answer.questionContent}
                     </p>
                     {answer.isCorrect ? (
-                    <div className="p-4 rounded-lg border border-green-500">
+                      <div className="p-4 rounded-lg border border-green-500">
                         <p className="text-[#D68BF9] text-sm font-bold mb-2">Correct Answer:</p>
                         <p className="font-medium text-green-400">
                           {answer.correctOptionText}
                         </p>
                       </div>
-                    ) : (<div className="p-4 rounded-lg border border-red-500 grid md:grid-cols-2 gap-4">
+                    ) : (
+                      <div className="p-4 rounded-lg border border-red-500 grid md:grid-cols-2 gap-4">
                         <div className="p-4 rounded-lg">
                           <p className="text-red-400 text-sm font-bold mb-2">Your Answer:</p>
                           <p className="font-medium text-red-400">
                             {answer.selectedOptionText || 'No answer selected'}
                           </p>
                         </div>
-                      <div className="p-4 rounded-lg">
+                        <div className="p-4 rounded-lg">
                           <p className="text-green-400 text-sm font-bold mb-2">Correct Answer:</p>
                           <p className="text-green-400 font-medium">{answer.correctOptionText}</p>
                         </div>

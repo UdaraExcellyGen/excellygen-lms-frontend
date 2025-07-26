@@ -187,6 +187,23 @@ const CourseContent: React.FC = () => {
         }
     }, [availableCourses]);
 
+    // Listen for course progress updates
+    useEffect(() => {
+    const handleProgressUpdate = (event: CustomEvent) => {
+        const { courseId } = event.detail;
+        console.log(`🔄 Received progress update for course ${courseId}`);
+        
+        // Refetch data for the updated course
+        fetchData();
+    };
+
+    window.addEventListener('courseProgressUpdated', handleProgressUpdate as EventListener);
+    
+    return () => {
+        window.removeEventListener('courseProgressUpdated', handleProgressUpdate as EventListener);
+    };
+    }, [fetchData]);
+
     const handleUnenroll = useCallback(async () => {
         if (!selectedCourseForUnenroll?.enrollmentId) return;
         const unenrollToast = toast.loading("Unenrolling...");
