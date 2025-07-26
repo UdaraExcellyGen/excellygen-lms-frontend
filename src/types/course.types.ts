@@ -66,6 +66,7 @@ export interface CourseDocumentDto {
     fileSize: number; // In bytes
     uploadedAt: string; // ISO 8601 string
     lastUpdatedDate: string; // ISO 8601 string for compatibility
+     isCompleted: boolean;
 }
 
 export interface LessonDto {
