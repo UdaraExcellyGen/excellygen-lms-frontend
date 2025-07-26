@@ -2,7 +2,7 @@
 // ULTRA-FAST API SERVICE - Sub-second responses
 
 import { Category, CreateCategoryDto, UpdateCategoryDto } from '../types/category.types';
-import { createApiClient, handleApiError } from '../../../../utils/apiConfig';
+import { createApiClient } from '../../../../utils/apiConfig';
 
 const apiClient = createApiClient();
 
@@ -28,12 +28,12 @@ class CategoryApiCache {
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
     if (!entry) return null;
-    
+
     if (Date.now() > entry.expiry) {
       this.cache.delete(key);
       return null;
     }
-    
+
     return entry.data as T;
   }
 
@@ -140,10 +140,10 @@ async function withRetry<T>(
       return await fn();
     } catch (error: any) {
       lastError = error;
-      
+
       // Don't retry for certain error types
-      if (error.response?.status === 401 || 
-          error.response?.status === 403 || 
+      if (error.response?.status === 401 ||
+          error.response?.status === 403 ||
           error.response?.status === 404) {
         throw error;
       }
@@ -169,7 +169,7 @@ async function withRetry<T>(
  */
 export const getAllCategories = async (useCache: boolean = true): Promise<Category[]> => {
   const cacheKey = 'categories_all';
-  
+
   // Check cache first
   if (useCache) {
     const cachedData = cache.get<Category[]>(cacheKey);
@@ -183,22 +183,22 @@ export const getAllCategories = async (useCache: boolean = true): Promise<Catego
   return dedupedRequest(cacheKey, async () => {
     return withRetry(async () => {
       const startTime = performance.now();
-      
+
       const response = await apiClient.get<Category[]>('/CourseCategories', {
         params: { useCache: true }, // Tell backend to use its cache
         timeout: 10000 // 10 second timeout
       });
-      
+
       const endTime = performance.now();
       console.log(`Categories API call completed in ${(endTime - startTime).toFixed(2)}ms`);
-      
+
       if (!Array.isArray(response.data)) {
         throw new Error('Invalid API response format');
       }
-      
+
       // Cache the successful response
       cache.set(cacheKey, response.data);
-      
+
       return response.data;
     });
   });
@@ -209,7 +209,7 @@ export const getAllCategories = async (useCache: boolean = true): Promise<Catego
  */
 export const getCategoryById = async (id: string): Promise<Category> => {
   const cacheKey = `category_${id}`;
-  
+
   // Check cache first
   const cachedData = cache.get<Category>(cacheKey);
   if (cachedData) {
@@ -222,10 +222,10 @@ export const getCategoryById = async (id: string): Promise<Category> => {
       const response = await apiClient.get<Category>(`/CourseCategories/${id}`, {
         timeout: 8000
       });
-      
+
       // Cache the successful response
       cache.set(cacheKey, response.data, 2 * 60 * 1000); // 2 minutes for individual items
-      
+
       return response.data;
     });
   });
@@ -239,11 +239,11 @@ export const createCategory = async (category: CreateCategoryDto): Promise<Categ
     const response = await apiClient.post<Category>('/CourseCategories', category, {
       timeout: 15000
     });
-    
+
     // Invalidate cache after successful creation
     cache.invalidate('categories_all');
     console.log('Categories cache invalidated after creation');
-    
+
     return response.data;
   });
 };
@@ -256,12 +256,12 @@ export const updateCategory = async (id: string, category: UpdateCategoryDto): P
     const response = await apiClient.put<Category>(`/CourseCategories/${id}`, category, {
       timeout: 15000
     });
-    
+
     // Invalidate specific caches
     cache.invalidate('categories_all');
     cache.invalidate(`category_${id}`);
     console.log(`Caches invalidated after updating category ${id}`);
-    
+
     return response.data;
   });
 };
@@ -274,7 +274,7 @@ export const deleteCategory = async (id: string): Promise<void> => {
     await apiClient.delete(`/CourseCategories/${id}`, {
       timeout: 15000
     });
-    
+
     // Invalidate caches
     cache.invalidate('categories_all');
     cache.invalidate(`category_${id}`);
@@ -290,12 +290,12 @@ export const toggleCategoryStatus = async (id: string): Promise<Category> => {
     const response = await apiClient.patch<Category>(`/CourseCategories/${id}/toggle-status`, {}, {
       timeout: 10000
     });
-    
+
     // Invalidate caches
     cache.invalidate('categories_all');
     cache.invalidate(`category_${id}`);
     console.log(`Caches invalidated after toggling status for category ${id}`);
-    
+
     return response.data;
   });
 };
@@ -322,8 +322,8 @@ export const batchUpdateCategories = createBatchedRequest(
     const results = await Promise.allSettled(
       updates.map(({ id, data }) => updateCategory(id, data))
     );
-    
-    return results.map(result => 
+
+    return results.map(result =>
       result.status === 'fulfilled' ? result.value : null
     ).filter(Boolean);
   }
@@ -338,10 +338,10 @@ export const categoryApiUtils = {
     cache.clear();
     console.log('All category caches cleared');
   },
-  
+
   // Get cache statistics
   getCacheStats: () => cache.getStats(),
-  
+
   // Warm up cache
   warmupCache: async () => {
     console.log('Warming up category cache...');
@@ -352,36 +352,36 @@ export const categoryApiUtils = {
       console.error('Cache warmup failed:', error);
     }
   },
-  
+
   // Invalidate specific patterns
   invalidatePattern: (pattern: string) => {
     cache.invalidatePattern(pattern);
     console.log(`Invalidated cache pattern: ${pattern}`);
   },
-  
+
   // Check if data is cached
   isCached: (key: string) => !!cache.get(key),
-  
+
   // Manual cache operations
   setCache: <T>(key: string, data: T, ttl?: number) => cache.set(key, data, ttl),
   getCache: <T>(key: string) => cache.get<T>(key),
-  
+
   // Performance monitoring
   getActiveRequests: () => Array.from(activeRequests.keys()),
-  
+
   // Health check
   healthCheck: async (): Promise<boolean> => {
     try {
       const startTime = performance.now();
-      await apiClient.get('/CourseCategories', { 
+      await apiClient.get('/CourseCategories', {
         params: { page: 1, pageSize: 1 },
-        timeout: 5000 
+        timeout: 5000
       });
       const endTime = performance.now();
-      
+
       const responseTime = endTime - startTime;
       console.log(`API health check: ${responseTime.toFixed(2)}ms`);
-      
+
       return responseTime < 3000; // Consider healthy if under 3 seconds
     } catch (error) {
       console.error('API health check failed:', error);

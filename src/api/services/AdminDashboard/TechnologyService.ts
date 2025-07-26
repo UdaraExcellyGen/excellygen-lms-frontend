@@ -5,6 +5,8 @@ export interface Technology {
   id: string;
   name: string;
   status: string;
+  creatorType: string; // 'admin' or 'project_manager'
+  creatorId: string;
   createdAt: string;
   updatedAt: string | null;
 }

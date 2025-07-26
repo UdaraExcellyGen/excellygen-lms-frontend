@@ -9,7 +9,7 @@ interface UserCardProps {
   handleToggleStatus: (id: string) => Promise<void>;
   handleDeleteUser: (id: string) => void;
   formatRoleName: (role: string) => string;
-  getRoleColor: (role: string) => string;
+  // REMOVED: getRoleColor from props as it's not used in component
   navigate: (path: string) => void;
   onEditUser: (user: User) => void;
 }
@@ -21,7 +21,6 @@ const UserCard: React.FC<UserCardProps> = ({
   handleToggleStatus,
   handleDeleteUser,
   formatRoleName,
-  getRoleColor,
   navigate,
   onEditUser
 }) => {
@@ -65,7 +64,7 @@ const UserCard: React.FC<UserCardProps> = ({
     return formatRoleName(normalizedRole);
   };
   
-  // Get standardized role color
+  // Get standardized role color - LOCAL FUNCTION since getRoleColor was unused
   const getStandardRoleColor = (role: string) => {
     switch(role.toLowerCase()) {
       case 'admin': return 'bg-red-100 text-red-800';
@@ -142,9 +141,9 @@ const UserCard: React.FC<UserCardProps> = ({
         </div>
       </div>
       
-      {/* Role Tags */}
+      {/* Role Tags - FIXED: Added proper typing for map function */}
       <div className="flex flex-wrap gap-1 my-3">
-        {user.roles.map((role, index) => (
+        {user.roles.map((role: string, index: number) => (
           <span 
             key={index} 
             className={`inline-block px-3 py-1 rounded-full text-xs ${getStandardRoleColor(role)}`}

@@ -9,16 +9,16 @@ import { QuickAction } from '../types/types';
 
 export const getQuickActions = (navigate: (path: string) => void): QuickAction[] => [
   {
-    text: 'Manage Course Categories',
-    icon: Book,
-    color: 'bg-[#BF4BF6]',
-    onClick: () => navigate('/admin/course-categories')
-  },
-  {
     text: 'Manage Users',
     icon: Users,
     color: 'bg-[#BF4BF6]',
     onClick: () => navigate('/admin/manage-users')
+  },
+  {
+    text: 'Manage Course Categories',
+    icon: Book,
+    color: 'bg-[#BF4BF6]',
+    onClick: () => navigate('/admin/course-categories')
   },
   {
     text: "Manage Technologies",
