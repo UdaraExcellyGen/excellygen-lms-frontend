@@ -81,6 +81,17 @@ const normalizeLessonCounts = (course: LearnerCourseDto): LearnerCourseDto => {
   };
 };
 
+export const getCoursePreview = async (courseId: number): Promise<LearnerCourseDto> => {
+  const response = await apiClient.get<LearnerCourseDto>(`/LearnerCourses/preview/${courseId}`);
+  console.log(`🔍 Course Preview API Response for ${courseId}:`, {
+    title: response.data.title,
+    lessonsCount: response.data.lessons?.length || 0,
+    totalLessons: response.data.totalLessons,
+    lessons: response.data.lessons?.map(l => l.lessonName)
+  });
+  return response.data;
+};
+
 export const getAvailableCoursesForLearner = async (categoryId?: string): Promise<LearnerCourseDto[]> => {
   const cacheKey = categoryId || 'all';
   
@@ -123,7 +134,8 @@ export const getEnrolledCoursesForLearner = async (): Promise<LearnerCourseDto[]
       console.log('🔍 RAW API Response for Enrolled Courses:', response.data.slice(0, 2).map(course => ({
         title: course.title,
         rawCreator: course.creator,
-        creatorName: course.creator?.name
+        creatorName: course.creator?.name,
+        progressPercentage: course.progressPercentage
       })));
       
       return response.data.map(normalizeLessonCounts);
@@ -131,8 +143,6 @@ export const getEnrolledCoursesForLearner = async (): Promise<LearnerCourseDto[]
     'enrolled courses'
   );
 };
-
-
 
 export const getLearnerCourseDetails = async (courseId: number): Promise<LearnerCourseDto> => {
   if (!cache.courseDetails.has(courseId)) {
@@ -151,7 +161,8 @@ export const getLearnerCourseDetails = async (courseId: number): Promise<Learner
       console.log(`🔍 RAW API Response for Course ${courseId}:`, {
         title: response.data.title,
         rawCreator: response.data.creator,
-        creatorName: response.data.creator?.name
+        creatorName: response.data.creator?.name,
+        progressPercentage: response.data.progressPercentage
       });
       
       return normalizeLessonCounts(response.data);
@@ -160,12 +171,39 @@ export const getLearnerCourseDetails = async (courseId: number): Promise<Learner
   );
 };
 
-export const markDocumentCompleted = async (documentId: number): Promise<void> => {
+// 🔥 FIXED: Enhanced markDocumentCompleted with progress refresh
+export const markDocumentCompleted = async (documentId: number): Promise<{ courseId: number }> => {
   try {
-    await apiClient.post(`/LearnerCourses/documents/${documentId}/complete`);
-    cache.enrolled.data = null; 
-    cache.courseDetails.clear(); 
-    console.log(`Document ${documentId} marked as complete, caches cleared.`);
+    const response = await apiClient.post<{ documentId: number; isCompleted: boolean; courseId: number }>(`/LearnerCourses/documents/${documentId}/complete`);
+    
+    const courseId = response.data.courseId;
+    
+    // Clear caches to force fresh data fetch
+    cache.enrolled.data = null;
+    cache.enrolled.timestamp = 0;
+    cache.courseDetails.delete(courseId);
+    
+    console.log(`✅ Document ${documentId} marked complete for course ${courseId}, caches cleared`);
+    
+    // 🔥 CRITICAL: Trigger immediate refresh of both enrolled courses and course details
+    setTimeout(async () => {
+      try {
+        await Promise.all([
+          getEnrolledCoursesForLearner(),
+          getLearnerCourseDetails(courseId)
+        ]);
+        console.log(`🔄 Course ${courseId} progress refreshed successfully`);
+        
+        // Dispatch custom event to notify components
+        window.dispatchEvent(new CustomEvent('courseProgressUpdated', { 
+          detail: { courseId, documentId } 
+        }));
+      } catch (error) {
+        console.error(`❌ Failed to refresh course ${courseId} progress:`, error);
+      }
+    }, 100);
+    
+    return { courseId };
   } catch (error) {
     console.error(`Error marking document ${documentId} as complete:`, error);
     throw error;
