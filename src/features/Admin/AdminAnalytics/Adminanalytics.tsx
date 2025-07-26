@@ -10,7 +10,7 @@ const AdminAnalytics: React.FC = () => {
   const navigate = useNavigate();
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1B0A3F] to-[#52007C] font-nunito">
+    <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-4 sm:p-6 lg:p-8 flex items-center justify-center">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-8 space-y-8">
         
         {/* --- START: NEW HEADER TO MATCH YOUR IMAGE --- */}
