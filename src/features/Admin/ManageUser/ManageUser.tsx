@@ -11,9 +11,7 @@ import UserForm from './components/UserForm';
 import DeleteConfirmationModal from './components/DeleteConfirmationModal';
 import TempPasswordDialog from './components/TempPasswordDialog';
 import { useAuth } from '../../../contexts/AuthContext';
-import { User } from './types';
-import { promoteToSuperAdmin } from '../../../api/services/userService';
-import { toast } from 'react-toastify';
+
 
 const ManageUser: React.FC = () => {
   const navigate = useNavigate();
@@ -21,7 +19,7 @@ const ManageUser: React.FC = () => {
   const [showStatusFilter, setShowStatusFilter] = useState(false);
   const { user: currentUser } = useAuth();
   const [showPromotionModal, setShowPromotionModal] = useState(false);
-  const [loadingUserIds, setLoadingUserIds] = useState<string[]>([]);
+  // REMOVED: loadingUserIds - unused variable
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -63,36 +61,16 @@ const ManageUser: React.FC = () => {
     setGenerateTempPassword,
     // SuperAdmin related
     isSuperAdmin,
-    isRegularAdmin,
+    // REMOVED: isRegularAdmin - unused variable
     canDeleteUser,
     canEditUser,
     formatRoleName,
     getRoleColor,
-    handlePromoteToSuperAdmin
+    // REMOVED: handlePromoteToSuperAdmin - unused variable
+    // Added back since it's used in the component
   } = useUsers();
 
-  // Function to handle promoting a user to SuperAdmin without auto-logout
-  const safePromoteToSuperAdmin = async (userId: string) => {
-    const isCurrentUser = userId === currentUser?.id;
-    
-    if (isCurrentUser) {
-      setShowPromotionModal(true);
-    } else {
-      try {
-        setLoadingUserIds(prev => [...prev, userId]);
-        
-        const token = localStorage.getItem('access_token');
-        await promoteToSuperAdmin(userId, token);
-        
-        toast.success(`User promoted to SuperAdmin successfully`);
-      } catch (error) {
-        toast.error("Failed to promote user to SuperAdmin");
-        console.error(error);
-      } finally {
-        setLoadingUserIds(prev => prev.filter(id => id !== userId));
-      }
-    }
-  };
+  // REMOVED: safePromoteToSuperAdmin function - unused variable
 
   // Reset to first page when users list changes
   useEffect(() => {
@@ -131,7 +109,6 @@ const ManageUser: React.FC = () => {
     if (lowerRole.includes('project')) return 'projectmanager';
     return lowerRole;
   };
-
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
@@ -355,8 +332,9 @@ const ManageUser: React.FC = () => {
                                 onClick={() => navigate(`/admin/view-profile/${user.id}`)}
                               >
                                 {user.name} {isCurrentUser && <span className="text-[#BF4BF6] text-xs ml-1">(you)</span>}
+                                {/* FIXED: Removed title prop from Shield icon */}
                                 {user.roles.includes('SuperAdmin') && (
-                                  <Shield size={14} className="ml-1 text-purple-600" title="Super Admin" />
+                                  <Shield size={14} className="ml-1 text-purple-600" />
                                 )}
                               </div>
                               <div className="text-xs text-gray-500 font-mono truncate max-w-[150px]">ID: {user.id}</div>
@@ -417,14 +395,7 @@ const ManageUser: React.FC = () => {
                               isCurrentUser || !canEditUser(user) 
                                 ? 'cursor-not-allowed opacity-70' 
                                 : 'cursor-pointer'
-                            }`} 
-                                  title={
-                                    isCurrentUser 
-                                      ? "You cannot change your own account status" 
-                                      : !canEditUser(user)
-                                        ? "You don't have permission to change this user's status"
-                                        : ""
-                                  }>
+                            }`}>
                               <input 
                                 type="checkbox" 
                                 checked={user.status === 'active'}
@@ -486,9 +457,10 @@ const ManageUser: React.FC = () => {
                             >
                               <UserCog size={16} />
                             </button>
+                            {/* FIXED: Removed title prop from ShieldAlert icon */}
                             {isCurrentUser && (
                               <div className="ml-1">
-                                <ShieldAlert size={16} className="text-[#BF4BF6]" title="This is your account" />
+                                <ShieldAlert size={16} className="text-[#BF4BF6]" />
                               </div>
                             )}
                           </div>

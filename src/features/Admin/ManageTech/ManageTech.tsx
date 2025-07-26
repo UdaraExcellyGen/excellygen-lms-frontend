@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
+// FIXED: Removed unused useCallback import
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, Plus, X, AlertCircle, Cpu,
   Pencil, Trash2, Check, ChevronLeft, ChevronRight, Search 

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Book, 
-  Users, 
+import {
+  Book,
+  Users,
   Cpu
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -12,34 +12,35 @@ import Header from './components/Header';
 import StatCard from './components/StatCard';
 import QuickActionsGrid from './components/QuickActionsGrid';
 import { getQuickActions } from './data/dashboardData';
+// FIXED: Import Notification from local types instead of common types
+import { Notification } from './types/types';
+import { User } from '../../../types/auth.types';
 
 // Main AdminDashboard Component
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { user: userDetails, initialized } = useAuth();
-  
+  const { user: userDetails } = useAuth();
+
   // States for dashboard data
   const [stats, setStats] = useState({
     courseCategories: { total: 0, active: 0 },
     users: { total: 0, active: 0 },
     technologies: { total: 0, active: 0 }
   });
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  // FIXED: Restore avatar state management
-  const [userAvatar, setUserAvatar] = useState(null);
-  const [userData, setUserData] = useState(null);
-  
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [userData, setUserData] = useState<User | null>(null);
+
   // Use memoized values for better performance
   const quickActions = useMemo(() => getQuickActions(navigate), [navigate]);
 
-  // FIXED: Restore avatar fetching function
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log(`Fetching user profile for user ${userId} to get avatar...`);
       const userProfile = await getUserProfile(userId);
-      
+
       if (userProfile && userProfile.avatar) {
         console.log(`Found avatar in profile: ${userProfile.avatar}`);
         setUserAvatar(userProfile.avatar);
@@ -58,36 +59,33 @@ const AdminDashboard: React.FC = () => {
     const fetchDashboardData = async () => {
       try {
         console.log('Starting dashboard data fetch...');
-        
-        // FIXED: Restore user data and avatar logic while keeping optimizations
-        let user = userDetails;
-        
+
+        let user: User | null = userDetails;
+
         // Try to get user from localStorage as fallback
         if (!user) {
           try {
-            const userData = localStorage.getItem('user');
-            if (userData) {
-              user = JSON.parse(userData);
+            const storedUserData = localStorage.getItem('user');
+            if (storedUserData) {
+              user = JSON.parse(storedUserData);
               setUserData(user);
             }
           } catch (error) {
             console.error('Error parsing user data from localStorage:', error);
           }
         }
-        
-        // FIXED: Restore avatar fetching logic
+
         if (user && user.id && (!user.avatar || user.avatar === undefined || user.avatar === null)) {
           await fetchUserProfile(user.id);
         }
-        
-        // OPTIMIZATION: Use the new parallel fetch function
+
         const { stats: dashboardStats, notifications: notificationsData } = await getDashboardData();
-        
+
         console.log('Dashboard data fetched successfully');
         setStats(dashboardStats);
         setNotifications(notificationsData);
         setError(null);
-        
+
       } catch (err: any) {
         console.error('Error fetching dashboard data:', err);
         const errorMessage = 'Failed to load dashboard data. Please try again later.';
@@ -99,8 +97,7 @@ const AdminDashboard: React.FC = () => {
     };
 
     fetchDashboardData();
-    
-    // OPTIMIZATION: Set up refresh interval with longer duration
+
     const refreshInterval = setInterval(() => {
       // Background refresh without showing loading
       getDashboardData().then(({ stats: dashboardStats, notifications: notificationsData }) => {
@@ -109,24 +106,22 @@ const AdminDashboard: React.FC = () => {
         setNotifications(notificationsData);
       }).catch(err => {
         console.error('Background refresh failed:', err);
-        // Don't show error for background updates
       });
     }, 300000); // Every 5 minutes
-    
+
     return () => {
       clearInterval(refreshInterval);
     };
-  }, [userDetails]); // Keep userDetails dependency for avatar updates
+  }, [userDetails]);
 
-  // FIXED: Show error state only after initialization
   if (isInitialized && error) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-4 sm:p-6 lg:p-8 flex items-center justify-center">
         <div className="bg-white/90 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg text-red-700 px-6 py-4 max-w-lg">
           <p className="font-semibold text-lg mb-2 text-[#1B0A3F]">Error Loading Dashboard</p>
           <p className="text-gray-700">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="mt-4 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white font-bold py-2 px-4 rounded-lg transition-colors"
           >
             Try Again
@@ -136,7 +131,6 @@ const AdminDashboard: React.FC = () => {
     );
   }
 
-  // FIXED: Show minimal loading state only when not initialized
   if (!isInitialized) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-4 sm:p-6 lg:p-8 flex items-center justify-center">
@@ -147,10 +141,9 @@ const AdminDashboard: React.FC = () => {
     );
   }
 
-  // FIXED: Get current user data with proper avatar handling
   const currentUserData = userDetails || userData;
   const currentAvatar = userAvatar || currentUserData?.avatar;
-  
+
   console.log('Current user data:', currentUserData);
   console.log('Current avatar:', currentAvatar);
 

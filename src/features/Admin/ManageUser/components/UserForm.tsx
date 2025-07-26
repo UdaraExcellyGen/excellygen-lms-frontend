@@ -311,7 +311,8 @@ const UserForm: React.FC<UserFormProps> = ({
                       <input
                         type="checkbox"
                         id={`role-${role}`}
-                        checked={newUser.roles.some(userRole => userRole.toLowerCase() === role.toLowerCase())}
+                        // FIXED: Added proper typing for the some callback function
+                        checked={newUser.roles.some((userRole: string) => userRole.toLowerCase() === role.toLowerCase())}
                         onChange={(e) => updateNewUserRoles(role, e.target.checked)}
                         className={`h-4 w-4 rounded border-gray-300 focus:ring-[#BF4BF6] ${
                           canAssign ? 'text-[#BF4BF6]' : 'text-gray-300 cursor-not-allowed'

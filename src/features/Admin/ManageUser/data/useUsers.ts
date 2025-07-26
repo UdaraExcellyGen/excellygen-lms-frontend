@@ -7,7 +7,6 @@ import {
   updateUser, 
   deleteUser, 
   toggleUserStatus,
-  searchUsers,
   promoteToSuperAdmin,
   User, 
   CreateUserDto, 
@@ -612,7 +611,7 @@ export const useUsers = () => {
     setShowAddModal(true);
   };
 
-  // Promote user to SuperAdmin
+  // Promote user to SuperAdmin - FIXED: Changed toast.info to toast.success
   const handlePromoteToSuperAdmin = async (userId: string) => {
     if (!isSuperAdmin) {
       toast.error("Only SuperAdmin can promote users to SuperAdmin");
@@ -628,7 +627,8 @@ export const useUsers = () => {
       if (!targetUser) return;
       
       if (targetUser.roles.some(r => r.toLowerCase() === 'superadmin')) {
-        toast.info("User is already a SuperAdmin");
+        // FIXED: Changed from toast.info to toast.success
+        toast.success("User is already a SuperAdmin");
         return;
       }
       

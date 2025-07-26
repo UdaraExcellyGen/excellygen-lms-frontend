@@ -3,7 +3,31 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { getUserDistributionAnalytics, UserDistributionItem } from '../../../../api/analyticsApi';
 
-const COLORS = ['#52007C', '#BF4BF6', '#7A00B8', '#D68BF9', '#34137C'];
+// --- START: NEW COLOR & FORMATTING LOGIC ---
+
+// Function to get a specific brand color for each role
+const getRoleColor = (role: string): string => {
+  const lowerCaseRole = role.toLowerCase();
+  
+  if (lowerCaseRole.includes('super')) return '#03045e';      // Federal Blue
+  if (lowerCaseRole.includes('admin')) return '#52007C';     // Indigo
+  if (lowerCaseRole.includes('project')) return '#34137C';   // Persian Indigo
+  if (lowerCaseRole.includes('course')) return '#0609C6';    // Medium Blue
+  if (lowerCaseRole.includes('learner')) return '#BF4BF6';   // Phlox
+  
+  return '#586574'; // Payne's Gray as a fallback
+};
+
+// Function to format role names for display
+const formatRoleName = (role: string): string => {
+    if (role === 'CourseCoordinator') return 'Course Coordinator';
+    if (role === 'ProjectManager') return 'Project Manager';
+    if (role === 'SuperAdmin') return 'Super Admin';
+    return role;
+};
+
+// --- END: NEW COLOR & FORMATTING LOGIC ---
+
 
 const UserDistribution: React.FC = () => {
   const [data, setData] = useState<UserDistributionItem[]>([]);
@@ -30,7 +54,9 @@ const UserDistribution: React.FC = () => {
   const chartData = useMemo(() => {
       return data.map(item => ({
           ...item,
-          total: item.active + item.inactive
+          total: item.active + item.inactive,
+          // Add formatted name for display in table and legend
+          displayName: formatRoleName(item.role)
       }));
   }, [data]);
 
@@ -40,11 +66,11 @@ const UserDistribution: React.FC = () => {
     if (!chartData || chartData.length === 0) return <div className="flex items-center justify-center h-80">No user data available</div>;
 
     return (
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-center">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-center">
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             
-            <PieChart margin={{ right: 40 }}>
+            <PieChart>
               <Pie
                 data={chartData}
                 cx="50%"
@@ -54,11 +80,12 @@ const UserDistribution: React.FC = () => {
                 fill="#8884d8"
                 paddingAngle={5}
                 dataKey="total"
-                nameKey="role"
+                nameKey="displayName" // Use the formatted name
                 labelLine={false}
               >
-                {chartData.map((_entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                {/* Apply colors based on role name */}
+                {chartData.map((entry) => (
+                  <Cell key={`cell-${entry.role}`} fill={getRoleColor(entry.role)} />
                 ))}
               </Pie>
               <Tooltip
@@ -67,9 +94,9 @@ const UserDistribution: React.FC = () => {
                         const item = payload[0].payload;
                         return (
                           <div className="bg-white p-3 rounded-lg shadow-lg border border-[#BF4BF6]/20">
-                            <p className="text-sm font-bold text-[#1B0A3F] mb-2">{item.role}: {item.total} Users</p>
+                            <p className="text-sm font-bold text-[#1B0A3F] mb-2">{item.displayName}: {item.total} Users</p>
                             <p className="text-xs text-green-600">Active: {item.active}</p>
-                            <p className="text-xs text-red-600">Inactive: {item.inactive}</p>
+                            <p className="text-xs text-gray-500">Inactive: {item.inactive}</p>
                           </div>
                         );
                       }
@@ -93,7 +120,7 @@ const UserDistribution: React.FC = () => {
             <tbody>
               {chartData.map((item) => (
                 <tr key={item.role} className="bg-white border-b border-gray-100">
-                  <th scope="row" className="px-4 py-3 font-medium text-[#1B0A3F] whitespace-nowrap">{item.role}</th>
+                  <th scope="row" className="px-4 py-3 font-medium text-[#1B0A3F] whitespace-nowrap">{item.displayName}</th>
                   <td className="px-4 py-3 text-center">{item.active}</td>
                   <td className="px-4 py-3 text-center">{item.inactive}</td>
                   <td className="px-4 py-3 text-center font-bold">{item.total}</td>
