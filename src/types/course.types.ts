@@ -135,7 +135,7 @@ export interface LearnerCourseDto {
     thumbnailUrl: string | null;
     thumbnailImagePath?: string;
     category: CourseCategoryDto;
-    creator: UserDto;
+    creator: UserDto; // This should match your existing interface
     technologies: TechnologyDto[];
     lessons: LearnerLessonDto[];
     enrollmentId: number | null;
@@ -146,8 +146,8 @@ export interface LearnerCourseDto {
     progressPercentage: number;
     totalLessons: number;
     completedLessons: number;
+    activeLearnersCount: number; // ENSURE THIS EXISTS - shows enrolled student count
 }
-
 
 // =================================================================
 // --- Certificate Types ---

@@ -1,6 +1,6 @@
 // src/features/Learner/Certificates/components/ExternalCertificateCard.tsx - Redesigned Layout
 import React from 'react';
-import { ExternalLink, Clock, Edit, Trash2, Award, Eye, Globe } from 'lucide-react';
+import { ExternalLink, Clock, Edit, Trash2, Award, Globe } from 'lucide-react';
 import { ExternalCertificateDto, BRAND_COLORS } from '../../../../types/course.types';
 
 interface ExternalCertificateCardProps {
@@ -16,10 +16,7 @@ export const ExternalCertificateCard: React.FC<ExternalCertificateCardProps> = (
   onDelete,
   onView 
 }) => {
-  const handleViewCertificate = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onView(certificate);
-  };
+  
 
   const handleViewCredential = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -128,19 +125,6 @@ export const ExternalCertificateCard: React.FC<ExternalCertificateCardProps> = (
             </button>
           )}
           
-          <button 
-            className="flex items-center gap-1 px-3 py-2 text-white rounded-lg transition-all duration-200 font-medium text-xs justify-center"
-            style={{ 
-              background: `linear-gradient(135deg, ${BRAND_COLORS.federalBlue}, ${BRAND_COLORS.mediumBlue})`,
-              flex: certificate.credentialUrl ? '1' : '1'
-            }}
-            onClick={handleViewCertificate}
-            aria-label="View certificate"
-            title="View professional certificate"
-          >
-            <Eye className="h-3.5 w-3.5" />
-            <span>View Certificate</span>
-          </button>
         </div>
       </div>
 

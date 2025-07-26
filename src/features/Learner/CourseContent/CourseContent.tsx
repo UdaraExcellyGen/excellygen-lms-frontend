@@ -1,12 +1,12 @@
 // src/features/Learner/CourseContent/CourseContent.tsx
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Info, Loader2 } from 'lucide-react'; // THE FIX IS HERE
+import { ArrowLeft, Info, Loader2 } from 'lucide-react';
 import Layout from '../../../components/Sidebar/Layout';
 import { LearnerCourseDto } from '../../../types/course.types';
 import ConfirmationModal from './components/ConfirmationModal';
 import StatsOverview from './components/StatsOverview';
+import SearchBar from './components/SearchBar';
 import CourseTabs from './components/CourseTabs';
 import CourseGrid from './components/CourseGrid';
 
@@ -31,6 +31,10 @@ const CourseContent: React.FC = () => {
     const [selectedCourseForUnenroll, setSelectedCourseForUnenroll] = useState<LearnerCourseDto | null>(null);
     const [categoryName, setCategoryName] = useState<string>('Loading Category...');
     const [isCategoryInactive, setIsCategoryInactive] = useState(false);
+    
+    // New state for search and filter
+    const [searchQuery, setSearchQuery] = useState('');
+    const [learningFilter, setLearningFilter] = useState<'all' | 'completed' | 'ongoing'>('all');
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -50,19 +54,45 @@ const CourseContent: React.FC = () => {
 
             setCategoryName(categoryDetails.title);
             
+            // 🔥 FIXED: Only fix lesson counts, preserve ALL other data including creator
+            const ensureProperCourseData = (courses: LearnerCourseDto[]): LearnerCourseDto[] => {
+                return courses.map(course => {
+                    const totalLessons = course.lessons?.length || course.totalLessons || 0;
+                    const completedLessons = course.lessons?.filter(lesson => lesson.isCompleted).length || course.completedLessons || 0;
+                    const progressPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+                    
+                    // 🔥 DEBUG: Log what creator data we have
+                    console.log(`🔍 Course "${course.title}" creator data:`, {
+                        originalCreator: course.creator,
+                        creatorName: course.creator?.name,
+                        creatorId: course.creator?.id
+                    });
+                    
+                    return {
+                        ...course,
+                        totalLessons,
+                        completedLessons,
+                        progressPercentage: course.progressPercentage || progressPercentage,
+                        // 🔥 PRESERVE original creator data completely - NO modifications
+                        creator: course.creator,
+                        activeLearnersCount: course.activeLearnersCount || 0
+                    };
+                });
+            };
+            
             if (categoryDetails.status.toLowerCase() === 'inactive') {
                 setIsCategoryInactive(true);
                 const { categoryEnrolled } = await getCoursesForCategory(categoryIdParam);
                 if (isMountedRef.current) {
-                    setEnrolledCourses(categoryEnrolled);
+                    setEnrolledCourses(ensureProperCourseData(categoryEnrolled));
                     setActiveTab('learning');
                 }
             } else {
                 setIsCategoryInactive(false);
                 const { available, categoryEnrolled } = await getCoursesForCategory(categoryIdParam);
                 if (isMountedRef.current) {
-                    setAvailableCourses(available);
-                    setEnrolledCourses(categoryEnrolled);
+                    setAvailableCourses(ensureProperCourseData(available));
+                    setEnrolledCourses(ensureProperCourseData(categoryEnrolled));
                 }
             }
         } catch (err: any) {
@@ -83,19 +113,72 @@ const CourseContent: React.FC = () => {
         fetchData();
     }, [fetchData]);
 
+    // Debug function to log course data
+    useEffect(() => {
+        if (availableCourses.length > 0) {
+            console.log('📚 Available Courses Final Data:', availableCourses.map(course => ({
+                title: course.title,
+                creatorName: course.creator?.name,
+                creatorId: course.creator?.id,
+                fullCreator: course.creator,
+                activeLearnersCount: course.activeLearnersCount,
+                totalLessons: course.totalLessons
+            })));
+        }
+    }, [availableCourses]);
+
     const handleEnroll = useCallback(async (courseId: number) => {
         const courseToEnroll = availableCourses.find(c => c.id === courseId);
         if (!courseToEnroll) return;
 
+        // FIXED: Use existing totalLessons from backend instead of calculating from lessons array
+        const totalLessons = courseToEnroll.totalLessons || 0;
+        const completedLessons = 0; // Always 0 for newly enrolled courses
+
+        // Optimistic UI update - preserve ALL original data
         setAvailableCourses(prev => prev.filter(c => c.id !== courseId));
-        setEnrolledCourses(prev => [...prev, { ...courseToEnroll, isEnrolled: true }]);
-        setActiveTab('learning');
-        const enrollToast = toast.loading(`Enrolling...`);
+        setEnrolledCourses(prev => [...prev, { 
+            ...courseToEnroll, 
+            isEnrolled: true,
+            totalLessons, // FIXED: Use the correct totalLessons from backend
+            completedLessons,
+            progressPercentage: 0,
+            // Preserve all other original data
+            creator: courseToEnroll.creator,
+            activeLearnersCount: courseToEnroll.activeLearnersCount
+        }]);
+        
+        setTimeout(() => {
+            setActiveTab('learning');
+        }, 300);
+
+        const enrollToast = toast.loading(`Enrolling in "${courseToEnroll.title}"...`);
+        
         try {
             const newEnrollment = await createEnrollment(courseId);
-            setEnrolledCourses(prev => prev.map(c => c.id === courseId ? { ...c, enrollmentId: newEnrollment.id } : c));
-            toast.success(`Successfully enrolled!`, { id: enrollToast });
+            
+            setEnrolledCourses(prev => 
+                prev.map(c => {
+                    if (c.id === courseId) {
+                        return { 
+                            ...c, 
+                            enrollmentId: newEnrollment.id, 
+                            isEnrolled: true,
+                            // FIXED: Keep the correct totalLessons, don't recalculate
+                            totalLessons: totalLessons,
+                            completedLessons: 0,
+                            progressPercentage: 0,
+                            creator: c.creator,
+                            activeLearnersCount: c.activeLearnersCount
+                        };
+                    }
+                    return c;
+                })
+            );
+            
+            toast.success(`Successfully enrolled in "${courseToEnroll.title}"!`, { id: enrollToast });
             clearCourseCaches();
+            
         } catch (err: any) {
             toast.error(`Failed to enroll: ${err.response?.data?.message || 'Please try again.'}`, { id: enrollToast });
             setAvailableCourses(prev => [...prev, courseToEnroll]);
@@ -110,7 +193,7 @@ const CourseContent: React.FC = () => {
         try {
             await deleteEnrollment(selectedCourseForUnenroll.enrollmentId);
             toast.success(`Unenrolled successfully!`, { id: unenrollToast });
-            fetchData(); // Refetch data to get the correct state
+            fetchData();
         } catch (err: any) {
             toast.error(err.response?.data?.message || "Failed to unenroll.", { id: unenrollToast });
         } finally {
@@ -123,50 +206,123 @@ const CourseContent: React.FC = () => {
     const handleBack = () => navigate('/learner/course-categories');
     const handleRetry = () => fetchData();
 
+    // Filter functions
+    const getFilteredAvailableCourses = () => {
+        return availableCourses.filter(course =>
+            course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            course.creator?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            course.technologies?.some(tech => tech.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+    };
+
+    const getFilteredEnrolledCourses = () => {
+        let filtered = enrolledCourses.filter(course =>
+            course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            course.creator?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            course.technologies?.some(tech => tech.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+
+        // Apply learning filter
+        if (learningFilter === 'completed') {
+            filtered = filtered.filter(course => (course.progressPercentage || 0) === 100);
+        } else if (learningFilter === 'ongoing') {
+            // Ongoing should show all enrolled courses that are not 100% completed
+            // This includes 0% (not started) and partially completed courses
+            filtered = filtered.filter(course => (course.progressPercentage || 0) !== 100);
+        }
+
+        return filtered;
+    };
+
     return (
         <Layout>
-            <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-3 sm:p-6">
-                <div className="max-w-7xl mx-auto px-3 sm:px-8 space-y-4 sm:space-y-8">
-                    <button onClick={handleBack} className="flex items-center text-[#D68BF9] hover:text-white transition-colors mb-3 sm:mb-6">
-                        <ArrowLeft className="w-5 h-5 mr-2" /> Back to Course Categories
-                    </button>
+            {/* UPDATED: Applied CourseCategories theme - gradient background */}
+            <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-6">
+                <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-8">
+                    {/* UPDATED: Back button with CourseCategories theme */}
+                    <div className="flex items-center space-x-4">
+                        <button onClick={handleBack} className="flex items-center text-[#D68BF9] hover:text-white transition-colors font-nunito">
+                            <ArrowLeft className="w-5 h-5 mr-2" /> Back to Course Categories
+                        </button>
+                    </div>
                     
-                    <div className="text-center mb-6 sm:mb-12">
-                        <h2 className="text-3xl md:text-4xl font-semibold font-unbounded mb-4 text-white">{categoryName}</h2>
-                        <p className="text-[#D68BF9] text-lg max-w-2xl mx-auto">Explore our curated courses and start your learning journey</p>
+                    {/* UPDATED: Header with CourseCategories theme */}
+                    <div className="text-center mb-8">
+                        <h1 className="text-3xl md:text-4xl font-bold font-unbounded mb-4 text-white">{categoryName}</h1>
+                        <p className="text-[#D68BF9] text-lg max-w-2xl mx-auto leading-relaxed font-nunito">Explore our curated courses and start your learning journey</p>
                     </div>
 
+                    {/* UPDATED: Inactive category warning with CourseCategories theme */}
                     {isCategoryInactive && (
-                        <div className="bg-yellow-800/30 border border-yellow-500 text-yellow-200 px-4 py-3 rounded-lg flex items-center gap-3">
-                            <Info className="h-5 w-5"/>
-                            <span>This course category is currently inactive. New enrollments are not available, but you can still access any courses you are already enrolled in.</span>
+                        <div className="bg-yellow-500/20 border border-yellow-500/50 text-yellow-200 px-6 py-4 rounded-xl flex items-center gap-4 shadow-lg backdrop-blur-md">
+                            <Info className="h-6 w-6 flex-shrink-0"/>
+                            <span className="font-medium font-nunito">This course category is currently inactive. New enrollments are not available, but you can still access any courses you are already enrolled in.</span>
                         </div>
                     )}
 
+                    {/* UPDATED: Stats without background wrapper */}
                     <StatsOverview 
                         availableCoursesCount={availableCourses.length}
                         enrolledCoursesCount={enrolledCourses.length}
                         totalCategoryDuration={`${[...availableCourses, ...enrolledCourses].reduce((sum, course) => sum + course.estimatedTime, 0)} h`}
                     />
+
+                    {/* NEW: Search Bar */}
+                    <SearchBar 
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
+                    />
                     
-                    {!isCategoryInactive && <CourseTabs activeTab={activeTab} setActiveTab={setActiveTab} />}
-                    
-                    {loading ? (
-                        <div className="text-center py-20"><Loader2 className="animate-spin h-12 w-12 text-white" /></div>
-                    ) : error ? (
-                        <div className="text-center py-10 text-white"><p>{error}</p><button onClick={handleRetry} className="mt-4 bg-purple-600 px-4 py-2 rounded">Retry</button></div>
-                    ) : (
-                        <CourseGrid
-                            activeTab={activeTab}
-                            availableCourses={availableCourses}
-                            enrolledCourses={enrolledCourses}
-                            onEnroll={handleEnroll}
-                            onUnenroll={(course) => { setSelectedCourseForUnenroll(course); setIsUnenrollModalOpen(true); }}
-                            onContinueLearning={handleContinueLearning}
-                        />
+                    {/* UPDATED: Tabs with filter dropdown */}
+                    {!isCategoryInactive && (
+                        <div className="bg-white/90 backdrop-blur-md rounded-xl p-6 border border-[#BF4BF6]/20 shadow-lg transition-all duration-300 hover:shadow-[0_0_15px_rgba(191,75,246,0.3)]">
+                            <CourseTabs 
+                                activeTab={activeTab} 
+                                setActiveTab={setActiveTab}
+                                learningFilter={learningFilter}
+                                setLearningFilter={setLearningFilter}
+                            />
+                        </div>
                     )}
+                    
+                    {/* UPDATED: Main content area with CourseCategories theme */}
+                    <div className="min-h-[400px]">
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center h-64">
+                                <Loader2 className="animate-spin h-12 w-12 text-white mb-4" />
+                                <p className="text-white text-lg font-nunito">Loading courses...</p>
+                            </div>
+                        ) : error ? (
+                            <div className="flex flex-col items-center justify-center h-64 text-center">
+                                <p className="text-white text-lg mb-6 font-nunito">{error}</p>
+                                <button 
+                                    onClick={handleRetry} 
+                                    className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 font-nunito"
+                                >
+                                    Retry
+                                </button>
+                            </div>
+                        ) : (
+                            <CourseGrid
+                                activeTab={activeTab}
+                                availableCourses={getFilteredAvailableCourses()}
+                                enrolledCourses={getFilteredEnrolledCourses()}
+                                onEnroll={handleEnroll}
+                                onUnenroll={(course) => { setSelectedCourseForUnenroll(course); setIsUnenrollModalOpen(true); }}
+                                onContinueLearning={handleContinueLearning}
+                            />
+                        )}
+                    </div>
                 </div>
-                <ConfirmationModal isOpen={isUnenrollModalOpen} onClose={() => setIsUnenrollModalOpen(false)} onConfirm={handleUnenroll} title="Confirm Unenrollment" courseName={selectedCourseForUnenroll?.title || ''} />
+                
+                {/* UPDATED: Modal with new red and white theme */}
+                <ConfirmationModal 
+                    isOpen={isUnenrollModalOpen} 
+                    onClose={() => setIsUnenrollModalOpen(false)} 
+                    onConfirm={handleUnenroll} 
+                    title="Confirm Unenrollment" 
+                    courseName={selectedCourseForUnenroll?.title || ''} 
+                />
             </div>
         </Layout>
     );

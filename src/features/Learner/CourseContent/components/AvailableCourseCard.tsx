@@ -1,61 +1,63 @@
 // src/features/Learner/CourseContent/components/AvailableCourseCard.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, User, BookOpen } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { Clock, User, BookOpen, Users, ArrowRight } from 'lucide-react';
 import { LearnerCourseDto } from '../../../../types/course.types';
-import { createEnrollment } from '../../../../api/services/Course/enrollmentService';
 
 interface AvailableCourseCardProps {
   course: LearnerCourseDto;
-  onEnrollmentSuccess?: () => void; // Make this callback optional
+  onEnroll: (courseId: number) => void;
 }
 
 const AvailableCourseCard: React.FC<AvailableCourseCardProps> = ({ 
   course, 
-  onEnrollmentSuccess 
+  onEnroll 
 }) => {
   const navigate = useNavigate();
   const [isEnrolling, setIsEnrolling] = useState(false);
   
-  const handleEnrollClick = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click (navigation) when enrolling
+  // 🔥 CRITICAL FIX: Show real creator name from backend - no fallbacks!
+  const getCreatorName = () => {
+    // Debug what we actually have
+    console.log(`🔍 Creator data for "${course.title}":`, {
+      creator: course.creator,
+      name: course.creator?.name,
+      id: course.creator?.id
+    });
     
-    if (isEnrolling) return; // Prevent multiple clicks
+    // Return actual name from backend, or "Unknown" only if truly empty
+    return course.creator?.name || 'Unknown Creator';
+  };
+  
+  const handleEnrollClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isEnrolling) return;
     
     setIsEnrolling(true);
     try {
-      await createEnrollment(course.id);
-      toast.success(`Enrolled in "${course.title}" successfully!`);
-      
-      // Call the callback if provided
-      if (typeof onEnrollmentSuccess === 'function') {
-        onEnrollmentSuccess();
-      }
-      
-      // Refresh the page after a short delay to show the updated enrollment status
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-      
+      await onEnroll(course.id);
     } catch (error) {
       console.error('Enrollment error:', error);
-      toast.error('Failed to enroll in course');
     } finally {
       setIsEnrolling(false);
     }
   };
   
+  const handleViewCourseClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/learner/course-preview/${course.id}`);
+  };
+  
   const handleCardClick = () => {
-    navigate(`/learner/course-view/${course.id}`);
+    navigate(`/learner/course-preview/${course.id}`);
   };
   
   return (
     <div 
-      className="bg-[#1B0A3F]/50 rounded-xl overflow-hidden hover:shadow-lg hover:shadow-[#BF4BF6]/20 transition duration-300 cursor-pointer"
+      className="bg-white/90 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(191,75,246,0.3)] h-full flex flex-col cursor-pointer"
       onClick={handleCardClick}
     >
-      <div className="h-40 overflow-hidden relative">
+      <div className="h-48 overflow-hidden relative">
         {course.thumbnailUrl ? (
           <img 
             src={course.thumbnailUrl} 
@@ -64,52 +66,87 @@ const AvailableCourseCard: React.FC<AvailableCourseCardProps> = ({
           />
         ) : (
           <div className="w-full h-full bg-[#34137C] flex items-center justify-center">
-            <BookOpen className="w-12 h-12 text-[#D68BF9]" />
+            <BookOpen className="w-16 h-16 text-[#D68BF9]" />
           </div>
         )}
-        <div className="absolute top-2 right-2 bg-[#34137C] px-2 py-1 rounded-full text-xs text-white">
-          {course.category?.title}
+        <div className="absolute top-3 right-3 bg-[#BF4BF6]/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-white font-semibold">
+          {course.category?.title || 'General'}
         </div>
       </div>
       
-      <div className="p-4">
-        <h3 className="text-white font-semibold text-lg mb-1 line-clamp-1">{course.title}</h3>
-        <div className="flex items-center text-sm text-gray-400 mb-3">
-          <User className="w-3.5 h-3.5 mr-1.5" />
-          <span>By {course.creator?.name || 'Unknown Creator'}</span>
+      <div className="p-5 flex-1 flex flex-col">
+        <h3 className="text-[#1B0A3F] font-bold text-lg mb-2 line-clamp-2 font-nunito">{course.title}</h3>
+        <div className="flex items-center text-sm text-[#52007C] mb-3">
+          <User className="w-4 h-4 mr-2" />
+          <span className="font-medium font-nunito">By {getCreatorName()}</span>
         </div>
         
-        <div className="mb-3 flex flex-wrap gap-1">
+        <div className="mb-3 flex flex-wrap gap-2">
            {course.technologies?.slice(0, 3).map(tech => (
-            tech && <span key={tech.id} className="bg-[#34137C] text-xs text-white px-2 py-1 rounded-full">
+            tech && <span key={tech.id} className="bg-[#F6E6FF] text-[#52007C] px-3 py-1 rounded-full text-xs font-medium font-nunito">
               {tech.name}
             </span>
           ))}
-          {course.technologies.length > 3 && (
-            <span className="bg-[#34137C] text-xs text-white px-2 py-1 rounded-full">
+          {course.technologies && course.technologies.length > 3 && (
+            <span className="bg-[#F6E6FF] text-[#52007C] px-3 py-1 rounded-full text-xs font-medium font-nunito">
               +{course.technologies.length - 3} more
             </span>
           )}
         </div>
         
-        <div className="flex justify-between items-center text-gray-300 text-xs mb-4">
+        <div className="flex justify-between items-center text-[#52007C] text-sm mb-3">
           <div className="flex items-center">
-            <Clock className="w-3 h-3 mr-1" />
-            <span>{course.estimatedTime} hours</span>
+            <Clock className="w-4 h-4 mr-1.5 text-[#BF4BF6]" />
+            <span className="font-medium font-nunito">{course.estimatedTime} hours</span>
           </div>
           <div className="flex items-center">
-            <User className="w-3 h-3 mr-1" />
-            <span>Active learners: {course.activeLearnersCount || 0}</span>
+            <BookOpen className="w-4 h-4 mr-1.5 text-[#BF4BF6]" />
+            <span className="font-medium font-nunito">Lessons: {course.totalLessons || course.lessons?.length || 0}</span>
           </div>
         </div>
         
-        <button
-          onClick={handleEnrollClick}
-          disabled={isEnrolling}
-          className="w-full bg-[#BF4BF6] hover:bg-[#D68BF9] text-white py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isEnrolling ? 'Enrolling...' : 'Enroll Now'}
-        </button>
+        <div className="flex justify-between items-center text-[#52007C] text-sm mb-4">
+          <div className="flex items-center">
+            <Users className="w-4 h-4 mr-1.5 text-[#BF4BF6]" />
+            <span className="font-medium font-nunito">Enrolled: {course.activeLearnersCount || 0}</span>
+          </div>
+          {course.status && (
+            <div className="flex items-center">
+              <span className="text-green-600 font-semibold text-xs bg-green-100 px-2 py-1 rounded-full font-nunito">Published</span>
+            </div>
+          )}
+        </div>
+        
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-3 mt-auto">
+          {/* View Course Button */}
+          <button
+            onClick={handleViewCourseClick}
+            className="w-full bg-[#F6E6FF] hover:bg-[#E6D0FF] text-[#52007C] py-2.5 rounded-full text-sm flex items-center gap-2 transition-all duration-300 justify-center border border-[#BF4BF6]/20 hover:border-[#BF4BF6]/40 font-nunito font-semibold"
+          >
+            <span>View Course</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+          
+          {/* Enroll Button */}
+          <button
+            onClick={handleEnrollClick}
+            disabled={isEnrolling}
+            className="w-full bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white py-3 rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] font-semibold shadow-lg hover:shadow-xl font-nunito text-sm flex items-center gap-2 justify-center"
+          >
+            {isEnrolling ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Enrolling...
+              </>
+            ) : (
+              <>
+                <span>Enroll Now</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,77 +1,63 @@
 // src/features/Learner/CourseContent/components/EnrolledCourseCard.tsx
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, BookOpen, CheckCircle, XCircle, User } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { Clock, BookOpen, CheckCircle, LogOut, User, ArrowRight } from 'lucide-react';
 import { LearnerCourseDto } from '../../../../types/course.types';
-import { deleteEnrollment } from '../../../../api/services/Course/enrollmentService';
 
 interface EnrolledCourseCardProps {
   course: LearnerCourseDto;
-  onUnenrollSuccess?: () => void; // Optional callback
+  onUnenroll: (course: LearnerCourseDto) => void;
+  onContinueLearning: (courseId: number) => void;
 }
 
-const EnrolledCourseCard: React.FC<EnrolledCourseCardProps> = ({ course, onUnenrollSuccess }) => {
+const EnrolledCourseCard: React.FC<EnrolledCourseCardProps> = ({ 
+  course, 
+  onUnenroll, 
+  onContinueLearning 
+}) => {
   const navigate = useNavigate();
-  const [isUnenrolling, setIsUnenrolling] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
   
   const progressPercentage = course.progressPercentage || 0;
   
+  // Function to get creator name - preserve real data from backend
+  const getCreatorName = () => {
+    // Always use the actual creator name if it exists, only fallback if truly empty/null
+    if (course.creator?.name && course.creator.name.trim() !== '') {
+      return course.creator.name;
+    }
+    return 'ExcellyGen Team'; // Only fallback if no real name available
+  };
+  
   const handleContinueLearning = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate(`/learner/course-view/${course.id}`);
+    onContinueLearning(course.id);
   };
   
   const handleUnenrollClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowConfirmation(true);
-  };
-  
-  const handleConfirmUnenroll = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    if (isUnenrolling || !course.enrollmentId) return;
-    
-    setIsUnenrolling(true);
-    try {
-      await deleteEnrollment(course.enrollmentId);
-      toast.success(`Unenrolled from "${course.title}" successfully!`);
-      
-      // Call the callback if provided
-      if (typeof onUnenrollSuccess === 'function') {
-        onUnenrollSuccess();
-      }
-      
-      // Refresh the page after a short delay
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-      
-    } catch (error) {
-      console.error('Unenrollment error:', error);
-      toast.error('Failed to unenroll from course');
-    } finally {
-      setIsUnenrolling(false);
-      setShowConfirmation(false);
-    }
-  };
-  
-  const handleCancelUnenroll = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowConfirmation(false);
+    onUnenroll(course);
   };
   
   const handleCardClick = () => {
     navigate(`/learner/course-view/${course.id}`);
   };
+
+  // UPDATED: Progress-based button logic
+  const getButtonText = () => {
+    if (progressPercentage === 0) return 'Start Learning';
+    if (progressPercentage === 100) return 'View Course';
+    return 'Continue Learning';
+  };
+
+  // UPDATED: Only show unenroll if progress is 0%
+  const canUnenroll = progressPercentage === 0;
   
   return (
     <div 
-      className="bg-[#1B0A3F]/50 rounded-xl overflow-hidden hover:shadow-lg hover:shadow-[#BF4BF6]/20 transition duration-300 cursor-pointer"
+      className="bg-white/90 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(191,75,246,0.3)] h-full flex flex-col cursor-pointer"
       onClick={handleCardClick}
     >
-      <div className="h-40 overflow-hidden relative">
+      <div className="h-48 overflow-hidden relative">
         {course.thumbnailUrl ? (
           <img 
             src={course.thumbnailUrl} 
@@ -80,104 +66,101 @@ const EnrolledCourseCard: React.FC<EnrolledCourseCardProps> = ({ course, onUnenr
           />
         ) : (
           <div className="w-full h-full bg-[#34137C] flex items-center justify-center">
-            <BookOpen className="w-12 h-12 text-[#D68BF9]" />
+            <BookOpen className="w-16 h-16 text-[#D68BF9]" />
           </div>
         )}
-        <div className="absolute top-2 right-2 flex flex-col items-end gap-2">
-            <span className="bg-[#34137C] px-2 py-1 rounded-full text-xs text-white">
-                {course.category.title}
+        <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
+          <span className="bg-[#BF4BF6]/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-white font-semibold">
+            {course.category?.title || 'General'}
+          </span>
+          {/* Conditionally render the "Inactive" badge */}
+          {course.isInactive && (
+            <span className="bg-red-600/90 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-semibold">
+              Inactive
             </span>
-            {/* THIS IS THE FIX: Conditionally render the "Inactive" badge */}
-            {course.isInactive && (
-                <span className="bg-red-700 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                    Inactive
-                </span>
-            )}
+          )}
         </div>
         
         {/* Progress Indicator */}
-        <div className="absolute bottom-0 left-0 right-0 bg-[#1B0A3F]/80 px-3 py-1.5 flex items-center justify-between">
-          <div className="text-white text-xs font-medium">Progress: {progressPercentage}%</div>
-          <div className="w-20 h-1.5 bg-[#34137C] rounded-full overflow-hidden">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-r from-black/60 to-black/40 backdrop-blur-sm px-4 py-2 flex items-center justify-between">
+          <div className="text-white text-sm font-semibold font-nunito">Progress: {progressPercentage}%</div>
+          <div className="w-24 h-2 bg-white/30 rounded-full overflow-hidden">
             <div 
-              className={`h-full ${progressPercentage === 100 ? 'bg-green-500' : 'bg-[#BF4BF6]'}`}
+              className={`h-full transition-all duration-500 rounded-full ${progressPercentage === 100 ? 'bg-green-400' : 'bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9]'}`}
               style={{ width: `${progressPercentage}%` }}
             ></div>
           </div>
         </div>
       </div>
       
-      <div className="p-4">
-        <h3 className="text-white font-semibold text-lg mb-1 line-clamp-1">{course.title}</h3>
-        <div className="flex items-center text-sm text-gray-400 mb-3">
-          <User className="w-3.5 h-3.5 mr-1.5" />
-          <span>By {course.creator.name}</span>
+      <div className="p-5 flex-1 flex flex-col">
+        <h3 className="text-[#1B0A3F] font-bold text-lg mb-2 line-clamp-2 font-nunito">{course.title}</h3>
+        <div className="flex items-center text-sm text-[#52007C] mb-3">
+          <User className="w-4 h-4 mr-2" />
+          <span className="font-medium font-nunito">By {getCreatorName()}</span>
         </div>
 
-        <div className="mb-3 flex flex-wrap gap-1">
-          {course.technologies.slice(0, 3).map(tech => (
-            <span key={tech.id} className="bg-[#34137C] text-xs text-white px-2 py-1 rounded-full">
+        <div className="mb-3 flex flex-wrap gap-2">
+          {course.technologies?.slice(0, 3).map(tech => (
+            tech && <span key={tech.id} className="bg-[#F6E6FF] text-[#52007C] px-3 py-1 rounded-full text-xs font-medium font-nunito">
               {tech.name}
             </span>
           ))}
-          {course.technologies.length > 3 && (
-            <span className="bg-[#34137C] text-xs text-white px-2 py-1 rounded-full">
-              +{course.technologies.length - 3} more
+          {(course.technologies?.length || 0) > 3 && (
+            <span className="bg-[#F6E6FF] text-[#52007C] px-3 py-1 rounded-full text-xs font-medium font-nunito">
+              +{(course.technologies?.length || 0) - 3} more
             </span>
           )}
         </div>
         
-        <div className="flex justify-between items-center text-gray-300 text-xs mb-4">
+        <div className="flex justify-between items-center text-[#52007C] text-sm mb-4">
           <div className="flex items-center">
-            <Clock className="w-3 h-3 mr-1" />
-            <span>{course.estimatedTime} hours</span>
+            <Clock className="w-4 h-4 mr-1.5 text-[#BF4BF6]" />
+            <span className="font-medium font-nunito">{course.estimatedTime || 0} hours</span>
           </div>
           {progressPercentage === 100 ? (
-            <div className="flex items-center text-green-400">
-              <CheckCircle className="w-3 h-3 mr-1" />
-              <span>Completed</span>
+            <div className="flex items-center text-green-600 bg-green-100 px-3 py-1 rounded-full">
+              <CheckCircle className="w-4 h-4 mr-1.5" />
+              <span className="font-semibold text-xs font-nunito">Completed</span>
             </div>
           ) : (
             <div className="flex items-center">
-              <span>Lessons: {course.completedLessons}/{course.totalLessons}</span>
+              <BookOpen className="w-4 h-4 mr-1.5 text-[#BF4BF6]" />
+              <span className="font-medium font-nunito">Lessons: {course.completedLessons || 0}/{course.totalLessons || course.lessons?.length || 0}</span>
             </div>
           )}
         </div>
         
-        <div className="flex gap-2">
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-3 mt-auto">
+          {/* Continue Learning Button */}
           <button
             onClick={handleContinueLearning}
-            className="flex-1 bg-[#BF4BF6] hover:bg-[#D68BF9] text-white py-2 rounded-lg transition-colors"
+            className="w-full bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white py-3 rounded-full transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] font-semibold shadow-lg hover:shadow-xl font-nunito text-sm flex items-center gap-2 justify-center"
           >
-            {progressPercentage === 0 ? 'Start Learning' : 
-             progressPercentage === 100 ? 'View Course' : 'Continue Learning'}
+            <span>{getButtonText()}</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
           
-          {!showConfirmation ? (
+          {/* Unenroll Button - Only show if progress is 0% */}
+          {canUnenroll && (
             <button
               onClick={handleUnenrollClick}
-              className="px-3 py-2 bg-[#34137C] hover:bg-[#34137C]/80 text-[#D68BF9] rounded-lg transition-colors"
+              className="w-full bg-[#F6E6FF] hover:bg-red-100 text-[#52007C] hover:text-red-600 py-2.5 rounded-full transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] border border-[#BF4BF6]/20 hover:border-red-300 font-nunito font-semibold text-sm flex items-center gap-2 justify-center"
+              title="Unenroll from course"
             >
-              <XCircle className="w-5 h-5" />
+              <LogOut className="w-4 h-4" />
+              <span>Unenroll</span>
             </button>
-          ) : (
-            <div className="flex gap-1">
-              <button
-                onClick={handleConfirmUnenroll}
-                disabled={isUnenrolling}
-                className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors disabled:opacity-50"
-              >
-                {isUnenrolling ? '...' : 'Yes'}
-              </button>
-              <button
-                onClick={handleCancelUnenroll}
-                className="px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors"
-              >
-                No
-              </button>
-            </div>
           )}
         </div>
+
+        {/* Progress-based info message */}
+        {progressPercentage > 0 && progressPercentage < 100 && (
+          <div className="mt-2 text-xs text-[#52007C] text-center opacity-75 font-nunito">
+            Course progress prevents unenrollment
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,8 +1,8 @@
+// src/api/services/Course/learnerCourseService.ts
+
 import apiClient from '../../apiClient';
 import { LearnerCourseDto, LessonProgressDto, MarkLessonCompletedPayload } from '../../../types/course.types';
 
-// NOTE: The complex caching logic here can still conflict with browser and other caching layers.
-// This simplified version relies on deduplication for in-flight requests.
 interface CacheEntry<T> {
   data: T | null;
   timestamp: number;
@@ -56,6 +56,31 @@ async function withCache<T>(
   }
 }
 
+// FIXED: Preserve real creator data - only fix lesson counts, don't touch creator info
+const normalizeLessonCounts = (course: LearnerCourseDto): LearnerCourseDto => {
+  const totalLessons = course.lessons?.length || course.totalLessons || 0;
+  const completedLessons = course.lessons?.filter(lesson => lesson?.isCompleted).length || course.completedLessons || 0;
+  const progressPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : (course.progressPercentage || 0);
+  
+  // 🔥 CRITICAL FIX: Do NOT override creator data - keep original from backend
+  console.log(`🔍 RAW Creator Data for "${course.title}":`, {
+    creatorId: course.creator?.id,
+    creatorName: course.creator?.name,
+    originalCreator: course.creator
+  });
+  
+  return {
+    ...course,
+    totalLessons,
+    completedLessons,
+    progressPercentage,
+    // PRESERVE original creator data completely - no fallbacks!
+    creator: course.creator,
+    // Ensure activeLearnersCount is available
+    activeLearnersCount: course.activeLearnersCount || 0
+  };
+};
+
 export const getAvailableCoursesForLearner = async (categoryId?: string): Promise<LearnerCourseDto[]> => {
   const cacheKey = categoryId || 'all';
   
@@ -69,10 +94,19 @@ export const getAvailableCoursesForLearner = async (categoryId?: string): Promis
     cacheEntry,
     AVAILABLE_COURSES_CACHE_DURATION,
     async () => {
-      // FIX: Removed manual AbortController and timeout to prevent conflict with apiClient.ts
       const params = categoryId ? `?categoryId=${categoryId}` : '';
       const response = await apiClient.get<LearnerCourseDto[]>(`/LearnerCourses/available${params}`);
-      return response.data;
+      
+      // 🔥 DEBUG: Log raw response to see what backend sends
+      console.log('🔍 RAW API Response for Available Courses:', response.data.slice(0, 2).map(course => ({
+        title: course.title,
+        rawCreator: course.creator,
+        creatorName: course.creator?.name,
+        activeLearnersCount: course.activeLearnersCount
+      })));
+      
+      // Only normalize lesson counts, preserve everything else
+      return response.data.map(normalizeLessonCounts);
     },
     `available courses (category: ${cacheKey})`
   );
@@ -83,13 +117,22 @@ export const getEnrolledCoursesForLearner = async (): Promise<LearnerCourseDto[]
     cache.enrolled,
     ENROLLED_COURSES_CACHE_DURATION,
     async () => {
-      // FIX: Removed manual AbortController and timeout to prevent conflict with apiClient.ts
       const response = await apiClient.get<LearnerCourseDto[]>('/LearnerCourses/enrolled');
-      return response.data;
+      
+      // 🔥 DEBUG: Log raw response
+      console.log('🔍 RAW API Response for Enrolled Courses:', response.data.slice(0, 2).map(course => ({
+        title: course.title,
+        rawCreator: course.creator,
+        creatorName: course.creator?.name
+      })));
+      
+      return response.data.map(normalizeLessonCounts);
     },
     'enrolled courses'
   );
 };
+
+
 
 export const getLearnerCourseDetails = async (courseId: number): Promise<LearnerCourseDto> => {
   if (!cache.courseDetails.has(courseId)) {
@@ -102,43 +145,39 @@ export const getLearnerCourseDetails = async (courseId: number): Promise<Learner
     cacheEntry,
     COURSE_DETAILS_CACHE_DURATION,
     async () => {
-       // FIX: Removed manual AbortController and timeout to prevent conflict with apiClient.ts
       const response = await apiClient.get<LearnerCourseDto>(`/LearnerCourses/${courseId}`);
-      return response.data;
+      
+      // 🔥 DEBUG: Log raw response
+      console.log(`🔍 RAW API Response for Course ${courseId}:`, {
+        title: response.data.title,
+        rawCreator: response.data.creator,
+        creatorName: response.data.creator?.name
+      });
+      
+      return normalizeLessonCounts(response.data);
     },
     `course details (${courseId})`
   );
 };
 
-// ==========================================================
-// === START: THIS IS THE CORRECTED FUNCTION              ===
-// ==========================================================
 export const markDocumentCompleted = async (documentId: number): Promise<void> => {
   try {
-    // This now sends a real POST request to your backend controller
     await apiClient.post(`/LearnerCourses/documents/${documentId}/complete`);
-    
-    // Invalidate caches since progress has been updated
     cache.enrolled.data = null; 
     cache.courseDetails.clear(); 
     console.log(`Document ${documentId} marked as complete, caches cleared.`);
-
   } catch (error) {
     console.error(`Error marking document ${documentId} as complete:`, error);
-    throw error; // Re-throw the error so the component can handle it
+    throw error;
   }
 };
-// ==========================================================
-// === END: THIS IS THE CORRECTED FUNCTION                ===
-// ==========================================================
-
 
 export const getCoursesForCategory = async (categoryId: string): Promise<{
   available: LearnerCourseDto[];
   enrolled: LearnerCourseDto[];
   categoryEnrolled: LearnerCourseDto[];
 }> => {
-  console.log(`Batch fetching courses for category: ${categoryId}`);
+  console.log(`🔍 Batch fetching courses for category: ${categoryId}`);
   
   try {
     const [available, enrolled] = await Promise.all([
@@ -146,12 +185,33 @@ export const getCoursesForCategory = async (categoryId: string): Promise<{
       getEnrolledCoursesForLearner()
     ]);
     
-    const categoryEnrolled = enrolled.filter(course => course.category.id === categoryId);
+    // Fix: Handle both string and number category IDs and ensure proper filtering
+    const categoryEnrolled = enrolled.filter(course => {
+      const courseCategory = course.category?.id || course.category;
+      return String(courseCategory) === String(categoryId);
+    });
+    
+    console.log(`📚 Category ${categoryId} Results:`, {
+      available: available.length,
+      enrolled: enrolled.length,
+      categoryEnrolled: categoryEnrolled.length
+    });
+    
+    // 🔥 ENHANCED Debug logging - check what data we're actually returning
+    if (available.length > 0) {
+      console.log('🔍 Final Available Courses Data:', available.slice(0, 3).map(course => ({
+        title: course.title,
+        creatorId: course.creator?.id,
+        creatorName: course.creator?.name,
+        totalLessons: course.totalLessons,
+        activeLearnersCount: course.activeLearnersCount,
+        fullCreatorObject: course.creator
+      })));
+    }
     
     return { available, enrolled, categoryEnrolled };
   } catch (error) {
-    // This will now catch genuine errors from apiClient, not self-cancellations.
-    console.error('Error in batch fetch:', error);
+    console.error('❌ Error in batch fetch:', error);
     return { available: [], enrolled: [], categoryEnrolled: [] };
   }
 };
@@ -160,7 +220,7 @@ export const clearCourseCaches = () => {
   cache.available.clear();
   cache.enrolled = { data: null, timestamp: 0, promise: null };
   cache.courseDetails.clear();
-  console.log('All course caches cleared');
+  console.log('🗑️ All course caches cleared');
 };
 
 export const preloadCoursesForCategory = async (categoryId: string): Promise<void> => {
