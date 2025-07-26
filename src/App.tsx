@@ -70,6 +70,7 @@ const CreateQuiz = lazy(() => import('./features/Coordinator/QuizManagement/Crea
 const EditQuiz = lazy(() => import('./features/Coordinator/QuizManagement/EditQuiz'));
 const QuizList = lazy(() => import('./features/Coordinator/LessonQuizzes/QuizList'));
 const QuizResultsCoordinator = lazy(() => import('./features/Coordinator/LessonQuizzes/QuizResultsCoordinator'));
+const ViewUserProfileC = lazy(() => import('./features/Coordinator/ViewUserProfile-cc/ViewUserProfileC'));
 
 // Project Manager Components
 const ProjectManagerDashboard = lazy(() => import('./features/ProjectManager/ProjectManagerDashboard/ProjectManagerDashboard'));
@@ -266,6 +267,7 @@ function App() {
           <Route path="edit-quiz/:quizId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(EditQuiz)}</ProtectedRoute>} />
           <Route path="quiz-list/:lessonId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(QuizList)}</ProtectedRoute>} />
           <Route path="quiz-results/:quizId" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(QuizResultsCoordinator)}</ProtectedRoute>} />
+          <Route path="view-profile/:id" element={<ProtectedRoute allowedRoles={[UserRole.CourseCoordinator]}>{suspenseWrapper(ViewUserProfileC)}</ProtectedRoute>} />
         </Route>
         
         {/* PROJECT MANAGER ROUTES */}
