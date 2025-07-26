@@ -105,7 +105,7 @@ const QuizResults: React.FC = () => {
   if (!attemptDetails) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-6 flex justify-center items-center">
-        <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-2xl p-6 max-w-md w-full text-center">
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6 max-w-md w-full text-center">
           <XCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <h2 className="text-white text-xl font-bold mb-2">Unable to Load Results</h2>
           <p className="text-white/80 mb-6">We couldn't retrieve your quiz results at this time.</p>
@@ -138,29 +138,31 @@ const QuizResults: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
+      
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center bg-[#1B0A3F]/60 backdrop-blur-md rounded-2xl p-4">
-          <button
+        <button
             onClick={handleBackToCourse}
-            className="flex items-center text-[#D68BF9] hover:text-white transition-colors text-sm bg-[#34137C]/50 px-4 py-2 rounded-xl hover:bg-[#34137C]"
+            className="flex items-center text-[#D68BF9] hover:text-white transition-colors text-sm px-4 py-2 rounded-xl"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Course
           </button>
+        {/* Header */}
+        <div className="flex justify-between items-center bg-white/90 backdrop-blur-md rounded-2xl p-4">
+        
           
-          <h1 className="text-white text-2xl font-bold">Quiz Results</h1>
           
-          <div className="flex items-center text-white/70 text-sm bg-[#34137C]/50 px-4 py-2 rounded-xl">
-            <BookOpen className="w-4 h-4 mr-2 text-[#D68BF9]" />
+          <h1 className="text-[#1B0A3F] text-2xl font-bold">Quiz Results</h1>
+          
+          <div className="flex items-center text-[#1B0A3F] text-sm border border-[#34137C]/50 px-4 py-2 rounded-xl">
             {attemptDetails.quizTitle}
           </div>
         </div>
         
         {/* Score Dashboard */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-2xl p-6">
-            <h2 className="text-white font-semibold mb-6 text-center text-xl">Performance Summary</h2>
+          <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6">
+            <h2 className="text-[#1B0A3F] font-semibold mb-6 text-center text-xl">Performance Summary</h2>
             <div className="w-56 h-56 mx-auto relative flex items-center justify-center">
               <svg className="w-full h-full absolute top-0 left-0 transform -rotate-90" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.1)" strokeWidth="8" fill="transparent" />
@@ -173,18 +175,18 @@ const QuizResults: React.FC = () => {
                   className="transition-stroke-dashoffset duration-1000 ease-out"
                 />
                 <defs>
-                  <linearGradient id="gradient-pass"><stop offset="0%" stopColor="#22c55e" /><stop offset="100%" stopColor="#14b8a6" /></linearGradient>
-                  <linearGradient id="gradient-fail"><stop offset="0%" stopColor="#f87171" /><stop offset="100%" stopColor="#ef4444" /></linearGradient>
+                  <linearGradient id="gradient-pass"><stop offset="0%" stopColor="#00a33cff" /><stop offset="100%" stopColor="#028e7dff" /></linearGradient>
+                  <linearGradient id="gradient-fail"><stop offset="0%" stopColor="#951d1dff" /><stop offset="100%" stopColor="#ef4444" /></linearGradient>
                 </defs>
               </svg>
               <div className="text-center z-10">
-                <div className={`text-6xl font-bold ${isPassing ? 'text-green-400' : 'text-red-400'} drop-shadow-md`}>
+                <div className={`text-5xl font-bold ${isPassing ? 'text-green-400' : 'text-red-400'} drop-shadow-md`}>
                   {animatedScore}%
                 </div>
-                <div className="text-white/80 text-base mt-1">
+                <div className="text-green-400 text-base mt-1">
                   {attemptDetails.correctAnswers} / {attemptDetails.totalQuestions}
                 </div>
-                <div className={`mt-2 inline-flex items-center gap-2 px-4 py-1 rounded-full text-sm font-medium ${isPassing ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
+                <div className={`mt-2 inline-flex items-center gap-2 px-4 py-1 rounded-full text-sm font-medium ${isPassing ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-300'}`}>
                   {isPassing ? <Award className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
                   {isPassing ? 'PASSED' : 'FAILED'}
                 </div>
@@ -193,30 +195,30 @@ const QuizResults: React.FC = () => {
           </div>
           
           <div className="space-y-6">
-            <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-2xl p-6">
-              <h3 className="text-white font-semibold mb-4">Quiz Statistics</h3>
+            <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6">
+              <h3 className="text-[#1B0A3F] font-semibold mb-4">Quiz Statistics</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-[#34137C]/30 p-4 rounded-lg flex items-center">
+                <div className="border border-[#52007C] p-4 rounded-lg flex items-center">
                   <Clock className="w-5 h-5 text-[#D68BF9] mr-3 flex-shrink-0" />
                   <div>
                     <p className="text-[#D68BF9] text-sm font-medium">Time Taken</p>
-                    <p className="text-white text-lg font-mono">{timeTakenFormatted}</p>
+                    <p className="text-[#D68BF9] text-lg font-mono">{timeTakenFormatted}</p>
                   </div>
                 </div>
-                <div className="bg-[#34137C]/30 p-4 rounded-lg flex items-center">
+                <div className="border border-[#52007C] p-4 rounded-lg flex items-center">
                   <CheckCircle className="w-5 h-5 text-[#D68BF9] mr-3 flex-shrink-0" />
                   <div>
                     <p className="text-[#D68BF9] text-sm font-medium">Completed On</p>
-                    <p className="text-white text-lg">
+                    <p className="text-[#D68BF9] text-lg">
                       {new Date(attemptDetails.completionTime || '').toLocaleDateString()}
                     </p>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-2xl p-6">
-              <h3 className="text-white font-semibold mb-2">Summary</h3>
-              <p className="text-white/80 text-sm">
+            <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6">
+              <h3 className="text-[#1B0A3F] font-semibold mb-2">Summary</h3>
+              <p className="text-[#1B0A3F] text-sm">
                 {isPassing 
                   ? "Excellent work! You have a solid grasp of the material. Keep up the great momentum!"
                   : "Learning is a process. Review the answers below to strengthen your understanding and try again."
@@ -227,16 +229,16 @@ const QuizResults: React.FC = () => {
         </div>
         
         {/* Question Review */}
-        <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-2xl p-6">
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6">
           <div className="flex items-center mb-6">
             <BookOpen className="text-[#D68BF9] w-5 h-5 mr-2" />
-            <h2 className="text-white text-lg font-semibold">Detailed Review</h2>
+            <h2 className="text-[#1B0A3F] text-lg font-semibold">Detailed Review</h2>
           </div>
           <div className="space-y-4">
             {attemptDetails.answers.map((answer, index) => (
               <div 
                 key={answer.quizAttemptAnswerId} 
-                className={`bg-[#34137C]/30 rounded-lg p-4 border-l-4 ${
+                className={`rounded-lg p-4 border-l-4 ${
                   answer.isCorrect ? 'border-green-500' : 'border-red-500'
                 }`}
               >
@@ -251,26 +253,30 @@ const QuizResults: React.FC = () => {
                     )}
                   </div>
                   <div className="flex-1">
-                    <p className="text-white mb-4">
-                      <span className="font-bold mr-2 text-white/70">Q{index + 1}:</span> 
+                    <p className="text-[#1B0A3F] mb-4">
+                      <span className="font-bold mr-2 text-[#1B0A3F]">Q{index + 1}:</span> 
                       {answer.questionContent}
                     </p>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="bg-[#34137C]/70 p-4 rounded-lg">
-                        <p className="text-[#D68BF9] text-sm font-bold mb-2">Your Answer:</p>
-                        <p className={`font-medium ${
-                          answer.isCorrect ? 'text-green-400' : 'text-red-300'
-                        }`}>
-                          {answer.selectedOptionText || 'No answer selected'}
+                    {answer.isCorrect ? (
+                    <div className="p-4 rounded-lg border border-green-500">
+                        <p className="text-[#D68BF9] text-sm font-bold mb-2">Correct Answer:</p>
+                        <p className="font-medium text-green-400">
+                          {answer.correctOptionText}
                         </p>
                       </div>
-                      {!answer.isCorrect && (
-                        <div className="bg-[#34137C]/70 p-4 rounded-lg">
-                          <p className="text-[#D68BF9] text-sm font-bold mb-2">Correct Answer:</p>
+                    ) : (<div className="p-4 rounded-lg border border-red-500 grid md:grid-cols-2 gap-4">
+                        <div className="p-4 rounded-lg">
+                          <p className="text-red-400 text-sm font-bold mb-2">Your Answer:</p>
+                          <p className="font-medium text-red-400">
+                            {answer.selectedOptionText || 'No answer selected'}
+                          </p>
+                        </div>
+                      <div className="p-4 rounded-lg">
+                          <p className="text-green-400 text-sm font-bold mb-2">Correct Answer:</p>
                           <p className="text-green-400 font-medium">{answer.correctOptionText}</p>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
