@@ -110,29 +110,28 @@ export const getLearnerCourseDetails = async (courseId: number): Promise<Learner
   );
 };
 
-export const markLessonCompleted = async (lessonId: number): Promise<LessonProgressDto> => {
+// ==========================================================
+// === START: THIS IS THE CORRECTED FUNCTION              ===
+// ==========================================================
+export const markDocumentCompleted = async (documentId: number): Promise<void> => {
   try {
-    // This is a POST/PATCH request, so it doesn't need cancellation logic.
-    const payload: MarkLessonCompletedPayload = { lessonId };
-    const response = await apiClient.patch<LessonProgressDto>(`/LearnerCourses/lessons/${lessonId}/complete`, payload);
+    // This now sends a real POST request to your backend controller
+    await apiClient.post(`/LearnerCourses/documents/${documentId}/complete`);
     
-    // Invalidate cache after mutation
-    cache.enrolled.data = null;
-    cache.enrolled.timestamp = 0;
-    
-    cache.courseDetails.forEach((entry, courseId) => {
-      if (entry.data?.lessons?.some(lesson => lesson.id === lessonId)) {
-        cache.courseDetails.delete(courseId);
-      }
-    });
-    
-    console.log('Lesson completed, relevant caches cleared');
-    return response.data;
+    // Invalidate caches since progress has been updated
+    cache.enrolled.data = null; 
+    cache.courseDetails.clear(); 
+    console.log(`Document ${documentId} marked as complete, caches cleared.`);
+
   } catch (error) {
-    console.error('Error marking lesson as completed:', error);
-    throw error;
+    console.error(`Error marking document ${documentId} as complete:`, error);
+    throw error; // Re-throw the error so the component can handle it
   }
 };
+// ==========================================================
+// === END: THIS IS THE CORRECTED FUNCTION                ===
+// ==========================================================
+
 
 export const getCoursesForCategory = async (categoryId: string): Promise<{
   available: LearnerCourseDto[];

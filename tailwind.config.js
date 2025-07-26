@@ -22,6 +22,21 @@ export default {
           DEFAULT: '#F6E6FF',
           dark: '#1B0A3F',
         },
+
+        'brand-indigo': '#52007C',
+        'brand-indigo-light': '#EBE5F9', // Light tint for the background
+
+        'brand-persian-indigo': '#34137C',
+        'brand-persian-indigo-light': '#EAE7F5',
+
+        'brand-federal-blue': '#03045e',
+        'brand-federal-blue-light': '#E6E6F2',
+
+        'brand-medium-blue': '#0609C6',
+        'brand-medium-blue-light': '#E6E7FA',
+
+        'brand-phlox': '#BF4BF6',
+        'brand-phlox-light': '#F8EAFE',
         
         // Extended color palette
         'russian-violet': '#1B0A3F',

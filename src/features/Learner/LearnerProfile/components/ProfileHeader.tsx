@@ -7,11 +7,17 @@ interface ProfileHeaderProps {
   isEditing: boolean;
   onAvatarUpload: (file: File) => void;
   onAvatarDelete: () => void;
-  // This prop is no longer needed here as the parent controls saving state
-  // isSaving?: boolean;
+  // FIXED: Made setProfileData optional for ViewUserProfile use case
+  setProfileData?: React.Dispatch<React.SetStateAction<ProfileData | null>>;
 }
 
-const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profileData, isEditing, onAvatarUpload, onAvatarDelete }) => {
+const ProfileHeader: React.FC<ProfileHeaderProps> = ({ 
+  profileData, 
+  isEditing, 
+  onAvatarUpload, 
+  onAvatarDelete, 
+  setProfileData 
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -20,11 +26,22 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profileData, isEditing, o
     }
   };
 
+  // Handle role change with safety check for setProfileData
+  const handleRoleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (setProfileData) {
+      setProfileData(p => p ? { ...p, role: e.target.value } : null);
+    }
+  };
+
   return (
     <div className="text-center">
       <div className="relative w-32 h-32 mx-auto mb-4 group">
         {profileData.avatar ? (
-          <img src={profileData.avatar} alt={profileData.name} className="w-full h-full rounded-full object-cover ring-4 ring-indigo-200/50 shadow-md" />
+          <img 
+            src={profileData.avatar} 
+            alt={profileData.name} 
+            className="w-full h-full rounded-full object-cover ring-4 ring-indigo-200/50 shadow-md" 
+          />
         ) : (
           <div className="w-full h-full rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white ring-4 ring-indigo-200/50 shadow-md">
             <UserCircle strokeWidth={1} size={80} />
@@ -63,11 +80,20 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profileData, isEditing, o
       </div>
 
       <h1 className="text-2xl font-bold text-gray-800">{profileData.name}</h1>
-      {isEditing ? (
-        <p className="text-md text-gray-500">{profileData.role || 'Learner'}</p> // Role is not editable in this view
+      
+      {/* Role section with conditional editing */}
+      {isEditing && setProfileData ? (
+        <input
+          type="text"
+          value={profileData.role || ''}
+          onChange={handleRoleChange}
+          className="w-full max-w-[200px] mx-auto text-center text-md p-1 mt-1 border rounded-lg bg-indigo-50/50 border-indigo-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+          placeholder="Enter your job role"
+        />
       ) : (
-        <p className="text-md text-indigo-600 font-medium">{profileData.role || 'Learner'}</p>
+        <p className="text-md text-indigo-600 font-medium">{profileData.role || 'No role assigned'}</p>
       )}
+      
       <p className="text-xs text-gray-400 mt-2 bg-gray-100 px-2 py-0.5 rounded-md inline-block">ID: {profileData.id}</p>
     </div>
   );

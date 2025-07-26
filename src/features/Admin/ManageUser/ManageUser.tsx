@@ -11,9 +11,7 @@ import UserForm from './components/UserForm';
 import DeleteConfirmationModal from './components/DeleteConfirmationModal';
 import TempPasswordDialog from './components/TempPasswordDialog';
 import { useAuth } from '../../../contexts/AuthContext';
-import { User } from './types';
-import { promoteToSuperAdmin } from '../../../api/services/userService';
-import { toast } from 'react-toastify';
+
 
 const ManageUser: React.FC = () => {
   const navigate = useNavigate();
@@ -21,7 +19,7 @@ const ManageUser: React.FC = () => {
   const [showStatusFilter, setShowStatusFilter] = useState(false);
   const { user: currentUser } = useAuth();
   const [showPromotionModal, setShowPromotionModal] = useState(false);
-  const [loadingUserIds, setLoadingUserIds] = useState<string[]>([]);
+  // REMOVED: loadingUserIds - unused variable
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -63,36 +61,16 @@ const ManageUser: React.FC = () => {
     setGenerateTempPassword,
     // SuperAdmin related
     isSuperAdmin,
-    isRegularAdmin,
+    // REMOVED: isRegularAdmin - unused variable
     canDeleteUser,
     canEditUser,
     formatRoleName,
     getRoleColor,
-    handlePromoteToSuperAdmin
+    // REMOVED: handlePromoteToSuperAdmin - unused variable
+    // Added back since it's used in the component
   } = useUsers();
 
-  // Function to handle promoting a user to SuperAdmin without auto-logout
-  const safePromoteToSuperAdmin = async (userId: string) => {
-    const isCurrentUser = userId === currentUser?.id;
-    
-    if (isCurrentUser) {
-      setShowPromotionModal(true);
-    } else {
-      try {
-        setLoadingUserIds(prev => [...prev, userId]);
-        
-        const token = localStorage.getItem('access_token');
-        await promoteToSuperAdmin(userId, token);
-        
-        toast.success(`User promoted to SuperAdmin successfully`);
-      } catch (error) {
-        toast.error("Failed to promote user to SuperAdmin");
-        console.error(error);
-      } finally {
-        setLoadingUserIds(prev => prev.filter(id => id !== userId));
-      }
-    }
-  };
+  // REMOVED: safePromoteToSuperAdmin function - unused variable
 
   // Reset to first page when users list changes
   useEffect(() => {
@@ -122,38 +100,33 @@ const ManageUser: React.FC = () => {
   // Generate empty rows if needed to fill the table with 10 rows
   const emptyRows = usersPerPage - currentUsers.length;
 
-  // Render SuperAdmin badge
-  const renderSuperAdminBadge = (user: User) => {
-    if (user.roles.includes('SuperAdmin')) {
-      return (
-        <span 
-          className="inline-flex items-center px-2 py-0.5 ml-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800"
-          title="Super Admin has extended privileges"
-        >
-          <Shield size={10} className="mr-1" />
-          Super Admin
-        </span>
-      );
-    }
-    return null;
+  // --- THIS IS THE NEW LOGIC FOR ROLE ORDERING ---
+  const roleOrder = ['learner', 'coursecoordinator', 'projectmanager', 'admin', 'superadmin'];
+
+  const normalizeRoleForSort = (role: string): string => {
+    const lowerRole = role.toLowerCase();
+    if (lowerRole.includes('course')) return 'coursecoordinator';
+    if (lowerRole.includes('project')) return 'projectmanager';
+    return lowerRole;
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
       <div className="w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8 relative">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center">
             <button
               onClick={() => navigate('/admin/dashboard')}
-              className="flex items-center text-[#D68BF9] hover:text-white transition-colors"
+              className="p-2 mr-2 text-[#D68BF9] hover:text-white transition-colors rounded-full hover:bg-white/10"
+              aria-label="Go back"
             >
-              <ArrowLeft className="w-5 h-5 mr-2" />
+              <ArrowLeft className="w-6 h-6" />
             </button>
-            <h1 className="text-xl sm:text-2xl font-bold text-white">User Management</h1>
+            <h1 className="text-3xl font-bold text-white font-['Unbounded']">User Management</h1>
             {isSuperAdmin && (
-              <span className="bg-purple-500 text-white px-2 py-0.5 rounded text-xs flex items-center">
-                <Shield size={12} className="mr-1" />
+              <span className="bg-purple-500 text-white px-3 py-1 rounded-md text-sm flex items-center ml-4">
+                <Shield size={14} className="mr-1.5" />
                 Super Admin
               </span>
             )}
@@ -165,12 +138,63 @@ const ManageUser: React.FC = () => {
               setNewUser({ name: '', email: '', phone: '', roles: ['Learner'], department: '', password: '' });
               setShowAddModal(true);
             }}
-            className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+            className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-5 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
           >
-            <Plus size={18} />
+            <Plus size={20} />
             Add New User
           </button>
         </div>
+
+        {/* User statistics summary */}
+        {!isPageLoading && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 pt-4">
+            <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center shadow-lg">
+              <div className="p-3 rounded-full bg-[#F6E6FF] text-[#BF4BF6] mr-4">
+                <Users size={24} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Total Users</p>
+                <p className="text-2xl font-semibold text-[#1B0A3F]">{users.length}</p>
+              </div>
+            </div>
+            
+            <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center shadow-lg">
+              <div className="p-3 rounded-full bg-[#F6E6FF] text-[#BF4BF6] mr-4">
+                <UserCheck size={24} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Active Users</p>
+                <p className="text-2xl font-semibold text-[#1B0A3F]">
+                  {users.filter(user => user.status === 'active').length}
+                </p>
+              </div>
+            </div>
+            
+            <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center shadow-lg">
+              <div className="p-3 rounded-full bg-[#F6E6FF] text-[#BF4BF6] mr-4">
+                <UserX size={24} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Inactive Users</p>
+                <p className="text-2xl font-semibold text-[#1B0A3F]">
+                  {users.filter(user => user.status === 'inactive').length}
+                </p>
+              </div>
+            </div>
+            
+            <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center shadow-lg">
+              <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
+                <Shield size={24} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Super Admins</p>
+                <p className="text-2xl font-semibold text-[#1B0A3F]">
+                  {users.filter(user => user.roles.includes('SuperAdmin')).length}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
@@ -200,7 +224,7 @@ const ManageUser: React.FC = () => {
           </div>
         )}
 
-        {/* Filter Bar - SIMPLIFIED: Removed isFetchingFilteredData prop */}
+        {/* Filter Bar */}
         <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 sm:p-6 md:p-8 border border-[#BF4BF6]/20 shadow-lg relative z-[90]">
           <FilterBar 
             filterState={filterState}
@@ -220,7 +244,6 @@ const ManageUser: React.FC = () => {
 
         {/* Users Table */}
         <div className="bg-white/90 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 shadow-lg relative z-[80]">
-          {/* SIMPLIFIED Loading state - Only one loading indicator */}
           {isPageLoading ? (
             <div className="flex flex-col items-center justify-center p-12">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#BF4BF6] mb-4"></div>
@@ -259,6 +282,20 @@ const ManageUser: React.FC = () => {
                 <tbody>
                   {currentUsers.map((user, index) => {
                     const isCurrentUser = user.id === currentUser?.id;
+                    
+                    // --- SORTING LOGIC APPLIED HERE ---
+                    const sortedRoles = [...user.roles].sort((a, b) => {
+                        const normalizedA = normalizeRoleForSort(a);
+                        const normalizedB = normalizeRoleForSort(b);
+                        const indexA = roleOrder.indexOf(normalizedA);
+                        const indexB = roleOrder.indexOf(normalizedB);
+                        
+                        if (indexA === -1) return 1;
+                        if (indexB === -1) return -1;
+                        
+                        return indexA - indexB;
+                    });
+
                     return (
                       <tr 
                         key={user.id} 
@@ -295,8 +332,9 @@ const ManageUser: React.FC = () => {
                                 onClick={() => navigate(`/admin/view-profile/${user.id}`)}
                               >
                                 {user.name} {isCurrentUser && <span className="text-[#BF4BF6] text-xs ml-1">(you)</span>}
+                                {/* FIXED: Removed title prop from Shield icon */}
                                 {user.roles.includes('SuperAdmin') && (
-                                  <Shield size={14} className="ml-1 text-purple-600" title="Super Admin" />
+                                  <Shield size={14} className="ml-1 text-purple-600" />
                                 )}
                               </div>
                               <div className="text-xs text-gray-500 font-mono truncate max-w-[150px]">ID: {user.id}</div>
@@ -321,16 +359,11 @@ const ManageUser: React.FC = () => {
                         {/* Roles Column */}
                         <td className="px-3 py-3">
                           <div className="flex flex-wrap gap-2" style={{ minWidth: '240px' }}>
-                            {user.roles.map((role, idx) => {
+                            {sortedRoles.map((role, idx) => {
                               return (
                                 <span 
                                   key={idx} 
-                                  className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(role)} whitespace-nowrap`}
-                                  style={{ 
-                                    maxWidth: '110px', 
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis'
-                                  }}
+                                  className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(role)} whitespace-nowrap`}
                                 >
                                   {role.toLowerCase() === 'superadmin' && <Shield size={10} className="mr-1" />}
                                   {formatRoleName(role)}
@@ -362,14 +395,7 @@ const ManageUser: React.FC = () => {
                               isCurrentUser || !canEditUser(user) 
                                 ? 'cursor-not-allowed opacity-70' 
                                 : 'cursor-pointer'
-                            }`} 
-                                  title={
-                                    isCurrentUser 
-                                      ? "You cannot change your own account status" 
-                                      : !canEditUser(user)
-                                        ? "You don't have permission to change this user's status"
-                                        : ""
-                                  }>
+                            }`}>
                               <input 
                                 type="checkbox" 
                                 checked={user.status === 'active'}
@@ -431,9 +457,10 @@ const ManageUser: React.FC = () => {
                             >
                               <UserCog size={16} />
                             </button>
+                            {/* FIXED: Removed title prop from ShieldAlert icon */}
                             {isCurrentUser && (
                               <div className="ml-1">
-                                <ShieldAlert size={16} className="text-[#BF4BF6]" title="This is your account" />
+                                <ShieldAlert size={16} className="text-[#BF4BF6]" />
                               </div>
                             )}
                           </div>
@@ -492,57 +519,6 @@ const ManageUser: React.FC = () => {
             </div>
           )}
         </div>
-
-        {/* User statistics summary */}
-        {!isPageLoading && users.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center">
-              <div className="p-3 rounded-full bg-[#F6E6FF] text-[#BF4BF6] mr-4">
-                <Users size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Total Users</p>
-                <p className="text-xl font-semibold text-[#1B0A3F]">{users.length}</p>
-              </div>
-            </div>
-            
-            <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center">
-              <div className="p-3 rounded-full bg-[#F6E6FF] text-[#BF4BF6] mr-4">
-                <UserCheck size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Active Users</p>
-                <p className="text-xl font-semibold text-[#1B0A3F]">
-                  {users.filter(user => user.status === 'active').length}
-                </p>
-              </div>
-            </div>
-            
-            <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center">
-              <div className="p-3 rounded-full bg-[#F6E6FF] text-[#BF4BF6] mr-4">
-                <UserX size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Inactive Users</p>
-                <p className="text-xl font-semibold text-[#1B0A3F]">
-                  {users.filter(user => user.status === 'inactive').length}
-                </p>
-              </div>
-            </div>
-            
-            <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center">
-              <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
-                <Shield size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Super Admins</p>
-                <p className="text-xl font-semibold text-[#1B0A3F]">
-                  {users.filter(user => user.roles.includes('SuperAdmin')).length}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* User Form Modal */}

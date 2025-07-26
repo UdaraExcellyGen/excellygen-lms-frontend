@@ -3,22 +3,22 @@ import { getKpiSummary, KpiSummaryDto } from '../../../../api/analyticsApi';
 import { Users, BookOpen, BarChart3, Target } from 'lucide-react';
 
 interface KpiCardProps {
-  icon: React.ReactNode;
+
+  icon: React.ElementType;
   title: string;
   value: string;
   subtitle: string;
-  color: string;
 }
 
-const KpiCard: React.FC<KpiCardProps> = ({ icon, title, value, subtitle, color }) => (
-  <div className="bg-white p-4 rounded-lg shadow flex items-start gap-4" style={{ borderLeft: `4px solid ${color}` }}>
-    <div className={`rounded-full p-2`} style={{ backgroundColor: `${color}20` }}>
-      {icon}
+const KpiCard: React.FC<KpiCardProps> = ({ icon: Icon, title, value, subtitle }) => (
+  <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center shadow-lg">
+    <div className="p-3 rounded-full bg-[#F6E6FF] text-[#BF4BF6] mr-4">
+      <Icon size={24} />
     </div>
     <div>
       <p className="text-sm text-gray-500">{title}</p>
-      <p className="text-2xl font-bold text-[#1B0A3F]">{value}</p>
-      <p className="text-xs text-gray-400">{subtitle}</p>
+      <p className="text-2xl font-semibold text-[#1B0A3F]">{value}</p>
+      <p className="text-xs text-gray-500">{subtitle}</p>
     </div>
   </div>
 );
@@ -43,46 +43,42 @@ const KpiCards: React.FC = () => {
   }, []);
 
   if (loading) {
-    return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array(4).fill(0).map((_, i) => (
-            <div key={i} className="h-28 bg-gray-200 rounded-lg animate-pulse"></div>
+            <div key={i} className="h-28 bg-white/20 rounded-xl animate-pulse"></div>
         ))}
     </div>;
   }
 
   if (!summary) {
-    return <div className="text-center text-red-500 py-4">Failed to load performance metrics.</div>;
+    return <div className="text-center text-red-300 py-4 bg-red-500/10 rounded-lg">Failed to load performance metrics.</div>;
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <KpiCard 
-        icon={<Users size={24} className="text-[#BF4BF6]" />} 
+        icon={Users} 
         title="Total Learners" 
         value={summary.totalUsers.toLocaleString()} 
         subtitle={`${summary.activeUsers} active`}
-        color="#BF4BF6"
       />
       <KpiCard 
-        icon={<BookOpen size={24} className="text-[#52007C]" />} 
+        icon={BookOpen}
         title="Total Courses" 
         value={summary.totalCourses.toLocaleString()} 
         subtitle="Across all categories"
-        color="#BF4BF6"
       />
       <KpiCard 
-        icon={<BarChart3 size={24} className="text-[#A063C8]" />} 
+        icon={BarChart3}
         title="Total Enrollments" 
         value={summary.totalEnrollments.toLocaleString()} 
         subtitle={`${summary.completedEnrollments} completed`}
-        color="#BF4BF6"
       />
       <KpiCard 
-        icon={<Target size={24} className="text-[#D68BF9]" />} 
+        icon={Target}
         title="Completion Rate" 
         value={`${summary.completionRate.toFixed(1)}%`} 
         subtitle="Of all enrollments"
-        color="#BF4BF6"
       />
     </div>
   );

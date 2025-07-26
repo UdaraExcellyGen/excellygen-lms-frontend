@@ -10,26 +10,27 @@ const AdminAnalytics: React.FC = () => {
   const navigate = useNavigate();
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-4 sm:p-6 lg:p-8 flex items-center justify-center">
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-8 space-y-8">
+    <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
+      {/* --- START: CONTAINER WITH CONSISTENT PADDING --- */}
+      <div className="w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8 relative">
         
-        {/* --- START: NEW HEADER TO MATCH YOUR IMAGE --- */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-purple-200/30 shadow-lg">
-          <div className="flex items-center gap-4">
+        {/* --- START: ELEGANT & PROFESSIONAL HEADER --- */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center">
             <button
               onClick={() => navigate('/admin/dashboard')}
-              aria-label="Go back to dashboard"
-              className="p-2 hover:bg-[#F6E6FF] rounded-full transition-colors duration-200"
+              className="p-2 mr-2 text-[#D68BF9] hover:text-white transition-colors rounded-full hover:bg-white/10"
+              aria-label="Go back"
             >
-              <ArrowLeft size={24} className="text-[#BF4BF6]" />
+              <ArrowLeft className="w-6 h-6" />
             </button>
             <div>
-              <h1 className="text-2xl text-[#1B0A3F] font-['Unbounded']">Admin Analytics</h1>
-              <p className="text-gray-500 font-['Nunito_Sans']">Gain a Clear View with the Admin Insights Dashboard. </p>
+                <h1 className="text-3xl font-bold text-white font-['Unbounded']">Admin Analytics</h1>
+                <p className="text-white/80 font-['Nunito_Sans'] mt-1">Gain a Clear View with the Admin Insights Dashboard.</p>
             </div>
           </div>
         </div>
-        {/* --- END: NEW HEADER --- */}
+        {/* --- END: ELEGANT & PROFESSIONAL HEADER --- */}
 
         {/* KPI Cards (No changes here) */}
         <KpiCards />
@@ -50,6 +51,7 @@ const AdminAnalytics: React.FC = () => {
         </div>
 
       </div>
+      {/* --- END: CONTAINER --- */}
     </div>
   );
 };

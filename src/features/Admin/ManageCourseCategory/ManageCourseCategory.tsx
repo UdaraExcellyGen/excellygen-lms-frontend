@@ -17,7 +17,7 @@ import { Category, CreateCategoryDto, UpdateCategoryDto } from './types/category
 import useDebounce from './components/useDebounce';
 import IconSelector, { renderIcon } from './components/IconSelector';
 
-// VirtualizedCategoryCard Component (unchanged)
+// VirtualizedCategoryCard Component - UPDATED: Removed ash styling for inactive categories
 const VirtualizedCategoryCard: React.FC<{
   category: Category;
   onEdit: (category: Category) => void;
@@ -62,84 +62,47 @@ const VirtualizedCategoryCard: React.FC<{
     );
   }
 
-  // Active/Inactive category rendering with professional styling
+  // ✅ UPDATED: Same styling for both active and inactive categories
   const isActive = category.status === 'active';
-  
-  // Professional styling for active vs inactive
-  const cardStyle = isActive 
-    ? {
-        background: 'bg-white/90',
-        border: 'border-[#BF4BF6]/20',
-        shadow: 'hover:shadow-[0_0_15px_rgba(191,75,246,0.3)]'
-      }
-    : {
-        background: 'bg-gradient-to-br from-slate-50/95 to-purple-50/90',
-        border: 'border-slate-300/40',
-        shadow: 'hover:shadow-[0_0_12px_rgba(100,116,139,0.2)]'
-      };
-
-  const headerStyle = isActive
-    ? 'bg-[#34137C]'
-    : 'bg-gradient-to-br from-slate-500 to-slate-600';
-
-  const iconStyle = isActive
-    ? 'text-[#D68BF9]'
-    : 'text-slate-300';
-
-  const statusBadge = isActive
-    ? 'bg-emerald-500 text-white shadow-sm'
-    : 'bg-slate-400 text-white shadow-sm border border-slate-500/20';
-
-  const titleStyle = isActive
-    ? 'text-[#1B0A3F]'
-    : 'text-slate-700 font-medium';
-
-  const descriptionStyle = isActive
-    ? 'text-gray-600'
-    : 'text-slate-600';
 
   return (
-    <div 
+    <div
       ref={cardRef}
-      className={`${cardStyle.background} backdrop-blur-md rounded-xl overflow-hidden border ${cardStyle.border} transition-all duration-300 ${cardStyle.shadow} h-full flex flex-col ${!isActive ? 'relative' : ''}`}
+      className="bg-white/90 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(191,75,246,0.3)] h-full flex flex-col"
     >
-      {/* Professional inactive overlay indicator */}
-      {!isActive && (
-        <div className="absolute top-3 left-3 z-10">
-          <div className="flex items-center gap-1.5 bg-slate-600/90 backdrop-blur-sm px-2.5 py-1 rounded-full">
-            <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
-            <span className="text-xs font-medium text-slate-100 tracking-wide">PAUSED</span>
-          </div>
-        </div>
-      )}
-      
-      <div className={`relative h-28 overflow-hidden ${headerStyle} flex items-center justify-center`}>
-        <div className={iconStyle}>
+      {/* ✅ UPDATED: Same header styling for all categories */}
+      <div className="relative h-28 overflow-hidden bg-[#34137C] flex items-center justify-center">
+        <div className="text-[#D68BF9]">
           {renderIcon(category.icon, 40)}
         </div>
+        {/* ✅ UPDATED: Simple status badge in corner */}
         <div className="absolute top-2 right-2">
-          <span className={`text-xs font-medium px-3 py-1.5 rounded-full ${statusBadge}`}>
-            {category.status.charAt(0).toUpperCase() + category.status.slice(1)}
+          <span className={`text-xs font-medium px-3 py-1.5 rounded-full ${
+            isActive 
+              ? 'bg-emerald-500 text-white shadow-sm' 
+              : 'bg-orange-500 text-white shadow-sm'
+          }`}>
+            {isActive ? 'Active' : 'Inactive'}
           </span>
         </div>
       </div>
       
       <div className="p-4 flex-1 flex flex-col">
-        <h3 className={`font-semibold text-lg mb-2 line-clamp-2 ${titleStyle}`}>
+        <h3 className="font-semibold text-[#1B0A3F] text-lg mb-2 line-clamp-2">
           {category.title}
         </h3>
         
-        <div className={`text-sm line-clamp-3 mb-2 min-h-[40px] ${descriptionStyle}`}>
+        <div className="text-gray-600 text-sm line-clamp-3 mb-2 min-h-[40px]">
           {category.description || "No description available"}
         </div>
-        
+
         <div className="mt-auto space-y-2">
           <div className="flex items-center text-xs text-gray-700">
-            <BookOpen className={`w-3.5 h-3.5 mr-1 ${isActive ? 'text-[#BF4BF6]' : 'text-slate-500'}`} />
+            <BookOpen className="w-3.5 h-3.5 mr-1 text-[#BF4BF6]" />
             {category.totalCourses} {category.totalCourses === 1 ? 'Course' : 'Courses'}
           </div>
           
-          {/* NEW: Creator and Date Information */}
+          {/* Creator and Date Information */}
           <div className="text-xs text-gray-500 space-y-1">
             <div className="flex justify-between items-center">
               <span>Created by:</span>
@@ -160,35 +123,23 @@ const VirtualizedCategoryCard: React.FC<{
           <div className="flex justify-between mt-3 pt-3 border-t border-gray-200">
             <button
               onClick={handleViewCourses}
-              className={`${
-                isActive 
-                  ? 'bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white' 
-                  : 'bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 text-white'
-              } px-3 py-1.5 rounded-full text-xs flex items-center transition-colors shadow-sm`}
+              className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-3 py-1.5 rounded-full text-xs flex items-center transition-colors shadow-sm"
               disabled={isLoading}
             >
               View Courses
             </button>
-            
+
             <div className="flex gap-2">
               <button
                 onClick={handleEdit}
-                className={`${
-                  isActive
-                    ? 'border-[#BF4BF6] text-[#BF4BF6] hover:bg-[#BF4BF6] hover:text-white'
-                    : 'border-slate-400 text-slate-600 hover:bg-slate-500 hover:text-white hover:border-slate-500'
-                } border p-1.5 rounded-full text-xs flex items-center transition-colors`}
+                className="border-[#BF4BF6] text-[#BF4BF6] hover:bg-[#BF4BF6] hover:text-white border p-1.5 rounded-full text-xs flex items-center transition-colors"
                 disabled={isLoading}
               >
                 <Pencil size={14} />
               </button>
               <button
                 onClick={handleDelete}
-                className={`${
-                  isActive
-                    ? 'border-red-500 text-red-500 hover:bg-red-500 hover:text-white'
-                    : 'border-red-400 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500'
-                } border p-1.5 rounded-full text-xs flex items-center transition-colors`}
+                className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white border p-1.5 rounded-full text-xs flex items-center transition-colors"
                 disabled={isLoading}
                 title={category.totalCourses > 0 ? "Cannot delete category with courses" : "Delete category"}
               >
@@ -198,7 +149,7 @@ const VirtualizedCategoryCard: React.FC<{
           </div>
           
           <div className="flex items-center justify-between text-sm text-gray-500 pt-2">
-            <span className={isActive ? 'text-gray-500' : 'text-slate-600 font-medium'}>Status:</span>
+            <span>Status:</span>
             <label className="relative inline-flex items-center cursor-pointer">
               <input 
                 type="checkbox" 
@@ -207,14 +158,12 @@ const VirtualizedCategoryCard: React.FC<{
                 className="sr-only peer"
                 disabled={isLoading}
               />
-              <div className={`w-11 h-6 ${
-                isActive ? 'bg-gray-200' : 'bg-slate-300'
-              } peer-focus:outline-none rounded-full peer 
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer 
                   peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full 
                   peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] 
                   after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full 
-                  after:h-5 after:w-5 ${isLoading ? 'after:animate-pulse' : 'after:transition-all'} 
-                  ${isActive ? 'peer-checked:bg-[#BF4BF6]' : 'peer-checked:bg-slate-500'} shadow-inner`}></div>
+                  after:h-5 after:w-5 after:transition-all peer-checked:bg-[#BF4BF6] shadow-inner">
+              </div>
             </label>
           </div>
         </div>
@@ -223,7 +172,7 @@ const VirtualizedCategoryCard: React.FC<{
   );
 });
 
-// FIXED: CategoryFormModal Component - All hooks called unconditionally
+// CategoryFormModal Component
 const CategoryFormModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -233,7 +182,6 @@ const CategoryFormModal: React.FC<{
   isEditing: boolean;
   isSubmitting: boolean;
 }> = ({ isOpen, onClose, onSubmit, category, setCategory, isEditing, isSubmitting }) => {
-  // ✅ ALL HOOKS CALLED UNCONDITIONALLY
   const [showIconDropdown, setShowIconDropdown] = useState(false);
 
   // Reset dropdown when modal closes
@@ -264,13 +212,12 @@ const CategoryFormModal: React.FC<{
     setShowIconDropdown(prev => !prev);
   }, []);
 
-  // ✅ CONDITIONAL RENDERING IN JSX, NOT EARLY RETURN
   if (!isOpen) {
     return null;
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-20">
+   <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-20">
       <div className="bg-white rounded-xl p-6 w-[90%] max-w-md shadow-lg">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-xl font-semibold text-[#1B0A3F]">
@@ -356,7 +303,7 @@ const CategoryFormModal: React.FC<{
   );
 };
 
-// Enhanced ConfirmationDialog (unchanged)
+// ConfirmationDialog Component
 const ConfirmationDialog: React.FC<{
   isOpen: boolean;
   onConfirm: () => void;
@@ -406,7 +353,7 @@ const ConfirmationDialog: React.FC<{
   );
 };
 
-// MAIN COMPONENT - OPTIMIZED
+// MAIN COMPONENT
 const ManageCourseCategory: React.FC = () => {
   const navigate = useNavigate();
   
@@ -416,7 +363,7 @@ const ManageCourseCategory: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingCategoryIds, setLoadingCategoryIds] = useState<Set<string>>(new Set());
-  
+
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -433,7 +380,6 @@ const ManageCourseCategory: React.FC = () => {
   
   const [newCategory, setNewCategory] = useState({ title: '', description: '', icon: 'Code2' });
 
-  // ✅ FIXED: Simple fetch function - no dependencies to avoid re-renders
   const fetchCategories = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -448,12 +394,11 @@ const ManageCourseCategory: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []); // ✅ Empty deps array - no infinite re-renders
+  }, []);
 
-  // ✅ FIXED: useEffect runs only once on mount
   useEffect(() => {
     fetchCategories();
-  }, []); // ✅ Empty deps - fetchCategories is stable
+  }, []);
 
   const filteredCategories = useMemo(() => {
     return categories.filter(category => {
@@ -597,26 +542,32 @@ const ManageCourseCategory: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <button onClick={() => navigate('/admin/dashboard')} className="flex items-center text-[#D68BF9] hover:text-white transition-colors">
-              <ArrowLeft className="w-5 h-5 mr-2" />
+    <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
+      <div className="w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8 relative">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center">
+            <button
+              onClick={() => navigate('/admin/dashboard')}
+              className="p-2 mr-2 text-[#D68BF9] hover:text-white transition-colors rounded-full hover:bg-white/10"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="w-6 h-6" />
             </button>
-            <h1 className="text-xl sm:text-2xl font-bold text-white">Course Categories</h1>
+            <h1 className="text-3xl font-bold text-white font-['Unbounded']">Course Category Management</h1>
           </div>
-          <button 
-            onClick={() => { 
-              setEditingCategory(null); 
-              setNewCategory({ title: '', description: '', icon: 'Code2' }); 
-              setShowAddModal(true); 
-            }} 
-            className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-3 py-2 sm:px-4 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200" 
+          
+          <button
+            onClick={() => {
+              setEditingCategory(null);
+              setNewCategory({ title: '', description: '', icon: 'Code2' });
+              setShowAddModal(true);
+            }}
+            className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-5 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
             disabled={isLoading}
           >
-            <Plus size={18} />
-            <span className="hidden sm:inline">New Category</span>
+            <Plus size={20} />
+            Add New Category
           </button>
         </div>
 

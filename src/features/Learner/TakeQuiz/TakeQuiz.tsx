@@ -13,7 +13,6 @@ import {
   startQuizAttempt,
   submitQuizAnswer,
   completeQuizAttempt,
-  // Using the superior data fetching from Code 2
   getQuizDetails
 } from '../../../api/services/Course/quizService';
 
@@ -30,12 +29,9 @@ const TakeQuiz: React.FC = () => {
   const [quizAttempt, setQuizAttempt] = useState<ActiveQuizState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  
-  // Kept from Code 2: State to handle automatic submission when the timer expires.
   const [isTimeUp, setIsTimeUp] = useState<boolean>(false);
 
-  // Kept from Code 2: This effect is superior because it fetches dynamic quiz details
-  // (like the time limit) and handles resuming a quiz by restoring selected answers.
+  // MODIFIED EFFECT: This effect now uses localStorage to make the timer persistent across page reloads.
   useEffect(() => {
     const initializeQuiz = async () => {
       if (!quizId) {
@@ -49,11 +45,13 @@ const TakeQuiz: React.FC = () => {
         setIsLoading(true);
         const [attemptResponse, quizDetails] = await Promise.all([
           startQuizAttempt(quizId),
-          getQuizDetails(quizId) // Fetch dynamic quiz data
+          getQuizDetails(quizId)
         ]);
         
         if (attemptResponse.isCompleted) {
           toast.error('You have already completed this quiz');
+          const startTimeKey = `quizStartTime_${attemptResponse.quizAttemptId}`;
+          localStorage.removeItem(startTimeKey); // Clean up storage
           navigate(`/learner/quiz-results/${attemptResponse.quizAttemptId}`, {
             state: { courseId }
           });
@@ -67,26 +65,48 @@ const TakeQuiz: React.FC = () => {
           toast.error('No questions found for this quiz');
           return;
         }
+
+        // --- NEW: Timer Persistence Logic ---
+        const attemptId = attemptResponse.quizAttemptId;
+        const startTimeKey = `quizStartTime_${attemptId}`;
+        const storedStartTimeString = localStorage.getItem(startTimeKey);
+
+        let startTime;
+        if (storedStartTimeString) {
+          // If a start time exists in storage, use it (handles refresh)
+          startTime = new Date(storedStartTimeString);
+        } else {
+          // Otherwise, it's a new attempt. Set the start time and store it.
+          startTime = new Date();
+          localStorage.setItem(startTimeKey, startTime.toISOString());
+        }
         
         const timeLimit = quizDetails.timeLimitMinutes;
-        const startTime = new Date(); 
-        const actualRemainingSeconds = timeLimit * 60;
+        const timeLimitInSeconds = timeLimit * 60;
+        const elapsedSeconds = Math.floor((Date.now() - startTime.getTime()) / 1000);
+        // Calculate remaining seconds, ensuring it's not negative.
+        const actualRemainingSeconds = Math.max(0, timeLimitInSeconds - elapsedSeconds);
+        // --- END: Timer Persistence Logic ---
 
         const newQuizAttempt: ActiveQuizState = {
           quizId: quizId,
           quizTitle: quizDetails.quizTitle,
           timeLimitMinutes: timeLimit,
-          attemptId: attemptResponse.quizAttemptId,
+          attemptId: attemptId,
           questions: questions,
           currentQuestionIndex: 0,
-          // Restore previously selected answers if resuming
           selectedAnswers: attemptResponse.selectedAnswers || {},
-          startTime: startTime,
-          timeRemaining: actualRemainingSeconds,
+          startTime: startTime, // Use the persistent start time
+          timeRemaining: actualRemainingSeconds, // Use the calculated remaining time
           isCompleted: false
         };
         
         setQuizAttempt(newQuizAttempt);
+        
+        // Immediately check if time is up upon loading
+        if (actualRemainingSeconds <= 0) {
+          setIsTimeUp(true);
+        }
         
       } catch (error) {
         console.error('Error initializing quiz:', error);
@@ -100,15 +120,16 @@ const TakeQuiz: React.FC = () => {
     initializeQuiz();
   }, [quizId, navigate, courseId]);
 
-  // Kept from Code 2: This robust timer effect is more accurate. It calculates time
-  // based on the start time, avoiding inaccuracies from setInterval alone.
+  // This robust timer effect is accurate. It calculates time based on the start time,
+  // avoiding inaccuracies from setInterval alone. NO CHANGES WERE NEEDED HERE.
   useEffect(() => {
     if (!quizAttempt || quizAttempt.isCompleted || isSubmitting || isTimeUp) {
       return;
     }
 
-    const totalDurationInSeconds = quizAttempt.timeLimitMinutes * 60;
+    // This logic correctly syncs the timer based on the actual start time.
     const startTimeMs = quizAttempt.startTime.getTime();
+    const totalDurationInSeconds = quizAttempt.timeLimitMinutes * 60;
 
     const timer = setInterval(() => {
       const elapsedSeconds = Math.floor((Date.now() - startTimeMs) / 1000);
@@ -116,7 +137,7 @@ const TakeQuiz: React.FC = () => {
 
       if (newTimeRemaining <= 0) {
         setQuizAttempt(prev => prev ? { ...prev, timeRemaining: 0 } : null);
-        setIsTimeUp(true); // Trigger auto-submission
+        setIsTimeUp(true);
         clearInterval(timer);
       } else {
         setQuizAttempt(prev => prev ? { ...prev, timeRemaining: newTimeRemaining } : null);
@@ -125,9 +146,8 @@ const TakeQuiz: React.FC = () => {
 
     return () => clearInterval(timer);
   }, [quizAttempt, isSubmitting, isTimeUp]);
-
-  // MERGED FUNCTION: This combines the auto-submission logic from Code 2
-  // with the manual submission confirmation prompt from Code 1.
+  
+  // MODIFIED FUNCTION: Added cleanup for localStorage on successful submission.
   const handleCompleteQuiz = useCallback(async (isAutoSubmit: boolean = false) => {
     if (!quizAttempt || isSubmitting) return;
 
@@ -135,14 +155,12 @@ const TakeQuiz: React.FC = () => {
       q && q.quizBankQuestionId && !quizAttempt.selectedAnswers[q.quizBankQuestionId]
     ).length;
 
-    // This is the logic from Code 1 for manual submissions.
     if (!isAutoSubmit && unansweredCount > 0) {
       if (!window.confirm(`You have ${unansweredCount} unanswered questions. Are you sure you want to submit?`)) {
-        return; // User clicked "Cancel", so we stop the submission.
+        return;
       }
     }
     
-    // This is the auto-submission notification from Code 2.
     if (isAutoSubmit) {
         toast.error("Time's up! Submitting your quiz automatically.", { icon: '⏰' });
     }
@@ -150,8 +168,11 @@ const TakeQuiz: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      // This is the API call that triggers the "Recent Activity" logging on the backend.
       await completeQuizAttempt(quizAttempt.attemptId);
+
+      // --- NEW: Clean up the stored start time from localStorage ---
+      const startTimeKey = `quizStartTime_${quizAttempt.attemptId}`;
+      localStorage.removeItem(startTimeKey);
       
       navigate(`/learner/quiz-results/${quizAttempt.attemptId}`, {
         state: { courseId }
@@ -159,14 +180,13 @@ const TakeQuiz: React.FC = () => {
     } catch (error) {
       console.error('Error completing quiz:', error);
       toast.error('Failed to submit quiz. Please try again.');
-      setIsSubmitting(false);
+      setIsSubmitting(false); // Allow user to try submitting again on failure
     }
   }, [quizAttempt, isSubmitting, navigate, courseId]);
 
-  // Kept from Code 2: This effect triggers the submission when the timer runs out.
   useEffect(() => {
     if (isTimeUp) {
-      handleCompleteQuiz(true); // Call with isAutoSubmit = true
+      handleCompleteQuiz(true);
     }
   }, [isTimeUp, handleCompleteQuiz]);
 
@@ -200,7 +220,7 @@ const TakeQuiz: React.FC = () => {
       await submitQuizAnswer(quizAttempt.attemptId, questionId, optionId);
     } catch (error) {
       console.error('Error submitting answer:', error);
-      toast.error('Failed to submit answer. Please try again.');
+      toast.error('Failed to save answer. Please check your connection.');
     }
   };
 
@@ -234,6 +254,8 @@ const TakeQuiz: React.FC = () => {
     }
   };
 
+  // --- No changes to the JSX rendering below this line ---
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-6 flex justify-center items-center">
@@ -251,7 +273,7 @@ const TakeQuiz: React.FC = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-6 flex justify-center items-center">
-        <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-2xl p-6 max-w-md w-full text-center">
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6 max-w-md w-full text-center">
           <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <h2 className="text-white text-xl font-bold mb-2">Quiz Error</h2>
           <p className="text-white/80 mb-6">{error}</p>
@@ -295,22 +317,22 @@ const TakeQuiz: React.FC = () => {
             Exit Quiz
           </button>
           <h1 className="text-white text-xl font-bold">{quizAttempt.quizTitle}</h1>
-          <div className={`flex items-center px-4 py-2 rounded-lg ${quizAttempt.timeRemaining < 60 ? 'bg-red-500/30 text-red-400' : 'bg-[#1B0A3F]/60 text-[#D68BF9]'}`}>
+          <div className={`flex items-center px-4 py-2 rounded-lg ${quizAttempt.timeRemaining < 60 ? 'bg-red-500/30 text-red-400' : 'bg-white/90 text-[#D68BF9]'}`}>
             <Clock size={16} className="mr-2" />
             <span className="font-mono font-bold">{formatTimeRemaining(quizAttempt.timeRemaining)}</span>
           </div>
         </div>
 
         {/* Progress */}
-        <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-2xl p-6">
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6">
           <div className="flex justify-between items-center mb-2">
             <div>
-              <h2 className="text-white font-semibold">Quiz Progress</h2>
-              <p className="text-[#D68BF9] text-sm">Question {quizAttempt.currentQuestionIndex + 1} of {totalQuestions}</p>
+              <h2 className="text-[#1B0A3F] font-semibold">Quiz Progress</h2>
+              <p className="text-[#1B0A3F] text-sm">Question {quizAttempt.currentQuestionIndex + 1} of {totalQuestions}</p>
             </div>
-            <span className="text-white">{Math.round(progressPercent)}%</span>
+            <span className="text-[#1B0A3F]">{Math.round(progressPercent)}%</span>
           </div>
-          <div className="w-full bg-[#34137C] rounded-full h-4">
+          <div className="w-full border border-[#34137C] rounded-full h-4">
             <div 
               className="h-4 rounded-full bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9]"
               style={{ width: `${progressPercent}%` }}
@@ -319,8 +341,8 @@ const TakeQuiz: React.FC = () => {
         </div>
         
         {/* Question Navigation */}
-        <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-2xl p-6">
-          <h3 className="text-white font-semibold mb-4">Questions</h3>
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6">
+          <h3 className="text-[#1B0A3F] font-semibold mb-4">Questions</h3>
           <div className="flex flex-wrap gap-3">
             {quizAttempt.questions.map((question, index) => {
               const isAnswered = question && question.quizBankQuestionId && quizAttempt.selectedAnswers[question.quizBankQuestionId];
@@ -349,15 +371,15 @@ const TakeQuiz: React.FC = () => {
         </div>
         
         {/* Question */}
-        <div className="bg-[#1B0A3F]/60 backdrop-blur-md rounded-2xl p-6">
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6">
           <div className="flex items-center mb-4">
             <BookOpen className="text-[#D68BF9] w-5 h-5 mr-2" />
-            <h2 className="text-white text-lg font-semibold">
+            <h2 className="text-[#1B0A3F] text-lg font-semibold">
               Question {quizAttempt.currentQuestionIndex + 1}
             </h2>
           </div>
-          <div className="bg-[#34137C]/30 rounded-lg p-4 mb-6">
-            <p className="text-white text-lg">{currentQuestion.questionContent}</p>
+          <div className="bg-[#34137C]/10 rounded-lg p-4 mb-6">
+            <p className="text-[#1B0A3F] text-lg">{currentQuestion.questionContent}</p>
           </div>
           
           <div className="space-y-3">
@@ -370,13 +392,13 @@ const TakeQuiz: React.FC = () => {
                 <button
                   key={option.mcqOptionId}
                   onClick={() => currentQuestion.quizBankQuestionId && handleSelectAnswer(currentQuestion.quizBankQuestionId, option.mcqOptionId)}
-                  className={`w-full text-left p-4 rounded-lg border transition-colors ${isSelected ? 'bg-[#BF4BF6]/20 border-[#BF4BF6]' : 'bg-[#34137C]/30 border-[#34137C]/30 hover:border-[#BF4BF6]/50'} ${isAnimating ? 'opacity-70' : ''}`}
+                  className={`w-full text-left p-4 rounded-lg border transition-colors ${isSelected ? 'bg-[#BF4BF6]/20 border-[#BF4BF6]' : 'border-[#34137C]/30 hover:border-[#BF4BF6]/50'} ${isAnimating ? 'opacity-70' : ''}`}
                 >
                   <div className="flex items-center">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-medium mr-3 ${isSelected ? 'bg-[#BF4BF6] text-white' : 'bg-[#34137C] text-white/90'}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-medium mr-3 ${isSelected ? 'bg-[#BF4BF6] text-white' : 'bg-[#34137C]/80 text-white/90'}`}>
                       {optionLabels[index]}
                     </div>
-                    <span className={`flex-1 ${isSelected ? 'text-white' : 'text-white/90'}`}>
+                    <span className={`flex-1 ${isSelected ? 'text-[#1B0A3F]' : 'text-[#1B0A3F]'}`}>
                       {option.optionText}
                     </span>
                     {isSelected && <CheckCircle className="w-5 h-5 text-[#BF4BF6]" />}
@@ -408,7 +430,7 @@ const TakeQuiz: React.FC = () => {
             </button>
           ) : (
             <button
-              onClick={() => handleCompleteQuiz(false)} // Call with isAutoSubmit = false
+              onClick={() => handleCompleteQuiz(false)}
               disabled={isSubmitting}
               className="px-6 py-3 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] text-white rounded-lg hover:from-[#A845E8] hover:to-[#BF4BF6] disabled:opacity-50 flex items-center"
             >

@@ -107,8 +107,9 @@ const EnrollmentChart: React.FC = () => {
       <EnrollmentKpiCards />
 
       <div className="bg-white/50 rounded-lg p-4">
-        <div className="mb-6 max-w-lg">
-          <label id="category-select-label" className="block text-sm font-medium text-gray-700 mb-1">
+        {/* --- THIS IS THE MODIFIED SECTION --- */}
+        <div className="mb-6 max-w-2xl mx-auto">
+          <label id="category-select-label" className="block text-sm font-medium text-gray-700 mb-2 text-center">
             Select a Course Category to View Enrollment Details
           </label>
           <Select
