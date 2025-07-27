@@ -1,7 +1,13 @@
 // src/features/Admin/ManageCourseCategory/data/api.ts
-// ENTERPRISE OPTIMIZED: Ultra-fast API service with advanced caching and performance
+// ENTERPRISE OPTIMIZED: Ultra-fast API service with dashboard events
 import { Category, CreateCategoryDto, UpdateCategoryDto } from '../types/category.types';
 import apiClient from '../../../../api/apiClient';
+import { 
+  emitCategoryStatusChanged, 
+  emitCategoryCreated, 
+  emitCategoryDeleted,
+  emitDashboardRefreshNeeded 
+} from '../../../../utils/dashboardEvents';
 
 // ENTERPRISE: Advanced caching system with intelligent invalidation
 interface CacheEntry<T> {
@@ -228,7 +234,7 @@ export const getAllCategories = async (includeDeleted: boolean = false): Promise
   }, 'high');
 };
 
-// ENTERPRISE: Optimistic category creation
+// ENTERPRISE: Optimistic category creation with dashboard events
 export const createCategory = async (category: CreateCategoryDto): Promise<Category> => {
   console.log('🆕 Creating category:', category.title);
   
@@ -243,15 +249,21 @@ export const createCategory = async (category: CreateCategoryDto): Promise<Categ
       }
     });
     
+    // ENTERPRISE: Emit dashboard events for real-time updates
+    emitCategoryCreated(response.data);
+    emitDashboardRefreshNeeded('category-created');
+    
+    console.log(`✅ Category created and events emitted: ${response.data.id}`);
     return response.data;
   } catch (error) {
     // ENTERPRISE: Rollback optimistic updates on error
     cache.invalidate('categories_');
+    console.error('❌ Failed to create category:', error);
     throw error;
   }
 };
 
-// ENTERPRISE: Smart category updates with optimistic UI
+// ENTERPRISE: Smart category updates with optimistic UI and events
 export const updateCategory = async (id: string, category: UpdateCategoryDto): Promise<Category> => {
   console.log('📝 Updating category:', id);
   
@@ -286,17 +298,22 @@ export const updateCategory = async (id: string, category: UpdateCategoryDto): P
       }
     });
     
+    // ENTERPRISE: Emit dashboard events for real-time updates
+    emitDashboardRefreshNeeded('category-updated');
+    
+    console.log(`✅ Category updated and events emitted: ${id}`);
     return response.data;
   } catch (error) {
     // ENTERPRISE: Rollback on error
     originalData.forEach((data, cacheKey) => {
       cache.set(cacheKey, data, 1000); // Short cache for rollback data
     });
+    console.error('❌ Failed to update category:', error);
     throw error;
   }
 };
 
-// ENTERPRISE: Soft delete with optimistic updates
+// ENTERPRISE: Soft delete with optimistic updates and events
 export const deleteCategory = async (id: string): Promise<void> => {
   console.log('🗑️ Soft deleting category:', id);
   
@@ -323,16 +340,23 @@ export const deleteCategory = async (id: string): Promise<void> => {
     
     await apiClient.delete(`/CourseCategories/${id}`);
     
+    // ENTERPRISE: Emit dashboard events for real-time updates
+    emitCategoryDeleted(id);
+    emitDashboardRefreshNeeded('category-deleted');
+    
+    console.log(`✅ Category deleted and events emitted: ${id}`);
+    
   } catch (error) {
     // ENTERPRISE: Rollback on error
     originalData.forEach((data, cacheKey) => {
       cache.set(cacheKey, data, 1000);
     });
+    console.error('❌ Failed to delete category:', error);
     throw error;
   }
 };
 
-// ENTERPRISE: Optimistic restore
+// ENTERPRISE: Optimistic restore with events
 export const restoreCategory = async (id: string): Promise<Category> => {
   console.log('♻️ Restoring category:', id);
   
@@ -350,14 +374,19 @@ export const restoreCategory = async (id: string): Promise<Category> => {
       }
     });
     
+    // ENTERPRISE: Emit dashboard events for real-time updates
+    emitDashboardRefreshNeeded('category-restored');
+    
+    console.log(`✅ Category restored and events emitted: ${id}`);
     return response.data;
   } catch (error) {
     cache.invalidate('categories_');
+    console.error('❌ Failed to restore category:', error);
     throw error;
   }
 };
 
-// ENTERPRISE: Instant status toggle with optimistic updates
+// ENTERPRISE: Instant status toggle with optimistic updates and events
 export const toggleCategoryStatus = async (id: string): Promise<Category> => {
   console.log('🔄 Toggling category status:', id);
   
@@ -395,12 +424,18 @@ export const toggleCategoryStatus = async (id: string): Promise<Category> => {
       }
     });
     
+    // ENTERPRISE: Emit dashboard events for real-time updates
+    emitCategoryStatusChanged(id, response.data.status);
+    emitDashboardRefreshNeeded('category-status-changed');
+    
+    console.log(`✅ Category status toggled and events emitted: ${id} -> ${response.data.status}`);
     return response.data;
   } catch (error) {
     // ENTERPRISE: Rollback optimistic changes
     originalData.forEach((data, cacheKey) => {
       cache.set(cacheKey, data, 1000);
     });
+    console.error('❌ Failed to toggle category status:', error);
     throw error;
   }
 };

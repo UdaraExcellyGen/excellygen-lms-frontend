@@ -1,4 +1,5 @@
 // src/features/Learner/CourseContent/components/CourseGrid.tsx
+// ENTERPRISE OPTIMIZED: Enhanced with processing states and better error handling
 import React from 'react';
 import { LearnerCourseDto } from '../../../../types/course.types';
 import AvailableCourseCard from './AvailableCourseCard';
@@ -11,6 +12,7 @@ interface CourseGridProps {
   onEnroll: (courseId: number) => void;
   onUnenroll: (course: LearnerCourseDto) => void;
   onContinueLearning: (courseId: number) => void;
+  processingEnrollments?: Set<number>; // ENTERPRISE: Added processing states
 }
 
 const CourseGrid: React.FC<CourseGridProps> = ({
@@ -19,7 +21,8 @@ const CourseGrid: React.FC<CourseGridProps> = ({
   enrolledCourses,
   onEnroll,
   onUnenroll,
-  onContinueLearning
+  onContinueLearning,
+  processingEnrollments = new Set() // ENTERPRISE: Default value
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -30,11 +33,19 @@ const CourseGrid: React.FC<CourseGridProps> = ({
               key={course.id}
               course={course}
               onEnroll={onEnroll}
+              isProcessing={processingEnrollments.has(course.id)} // ENTERPRISE: Pass processing state
             />
           ))
         ) : (
-          <div className="col-span-full text-center text-[#D68BF9] text-lg font-nunito py-10">
-            No courses available for this path yet.
+          <div className="col-span-full text-center py-12">
+            <div className="bg-white/90 backdrop-blur-md rounded-xl p-8 border border-[#BF4BF6]/20 shadow-lg">
+              <div className="text-[#52007C] text-lg font-semibold mb-2">
+                No courses available for this category yet
+              </div>
+              <div className="text-[#52007C]/70 text-sm">
+                Check back later or explore other categories
+              </div>
+            </div>
           </div>
         )
       ) : (
@@ -48,8 +59,15 @@ const CourseGrid: React.FC<CourseGridProps> = ({
             />
           ))
         ) : (
-          <div className="col-span-full text-center text-[#D68BF9] text-lg font-nunito py-10">
-            You haven't enrolled in any courses for this path yet.
+          <div className="col-span-full text-center py-12">
+            <div className="bg-white/90 backdrop-blur-md rounded-xl p-8 border border-[#BF4BF6]/20 shadow-lg">
+              <div className="text-[#52007C] text-lg font-semibold mb-2">
+                You haven't enrolled in any courses for this category yet
+              </div>
+              <div className="text-[#52007C]/70 text-sm">
+                Switch to "Available Courses" to start learning
+              </div>
+            </div>
           </div>
         )
       )}

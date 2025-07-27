@@ -1,3 +1,5 @@
+// src/features/Admin/ManageUsers/data/useUsers.ts
+// ENTERPRISE OPTIMIZED: With real-time dashboard event emissions
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../../../contexts/AuthContext';
@@ -13,6 +15,12 @@ import {
   UpdateUserDto 
 } from '../../../../api/services/userService';
 import { FilterState } from '../types';
+import { 
+  emitUserStatusChanged, 
+  emitUserCreated, 
+  emitUserDeleted,
+  emitDashboardRefreshNeeded 
+} from '../../../../utils/dashboardEvents';
 
 export const useDebounce = (value: string, delay: number) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -93,7 +101,7 @@ export const useUsers = () => {
     filterStatus: 'all'
   });
   
-  const debouncedSearchTerm = useDebounce(filterState.searchTerm, 500); // Increased debounce
+  const debouncedSearchTerm = useDebounce(filterState.searchTerm, 500);
 
   // CLIENT-SIDE FILTERING - Primary filtering method
   const filteredUsers = useMemo(() => {
@@ -106,7 +114,7 @@ export const useUsers = () => {
         user.email.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
         user.id.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
       
-      // Role filter - FIXED: Now shows users who have ALL selected roles (AND logic)
+      // Role filter
       const matchesRoles = filterState.selectedRoles.length === 0 || 
         filterState.selectedRoles.every(filterRole => 
           user.roles.some(userRole => 
@@ -155,9 +163,6 @@ export const useUsers = () => {
       fetchController.current = null;
     }
   };
-
-  // REMOVE SERVER-SIDE FILTERING - Use only client-side filtering
-  // This eliminates the need for fetchFilteredUsers and prevents double loading
 
   // Reset generateTempPassword when editing state changes
   useEffect(() => {
@@ -350,6 +355,10 @@ export const useUsers = () => {
           updateUsersOptimistically(prevUsers => 
             prevUsers.map(user => user.id === editingUser.id ? updatedUser : user)
           );
+
+          // ENTERPRISE: Emit dashboard event for real-time updates
+          emitDashboardRefreshNeeded('user-updated');
+          
         } catch (error) {
           updateUsersOptimistically(prevUsers => 
             prevUsers.map(user => user.id === editingUser.id ? editingUser : user)
@@ -387,6 +396,10 @@ export const useUsers = () => {
           updateUsersOptimistically(prevUsers => 
             prevUsers.map(user => user.id === tempId ? createdUser : user)
           );
+
+          // ENTERPRISE: Emit dashboard event for real-time updates
+          emitUserCreated(createdUser);
+          
         } catch (error) {
           updateUsersOptimistically(prevUsers => 
             prevUsers.filter(user => user.id !== tempId)
@@ -526,6 +539,10 @@ export const useUsers = () => {
         try {
           await deleteUser(userToDelete);
           toast.success('User deleted successfully');
+
+          // ENTERPRISE: Emit dashboard event for real-time updates
+          emitUserDeleted(userToDelete);
+          
         } catch (error) {
           if (userToDeleteRecord && userIndex !== -1) {
             setAllUsers(prevUsers => {
@@ -576,6 +593,10 @@ export const useUsers = () => {
         );
         
         toast.success(`User ${updatedUser.status === 'active' ? 'activated' : 'deactivated'}`);
+
+        // ENTERPRISE: Emit dashboard event for real-time updates
+        emitUserStatusChanged(userId, updatedUser.status);
+        
       } catch (error) {
         updateUsersOptimistically(prevUsers => 
           prevUsers.map(user => user.id === userId ? targetUser : user)
@@ -611,7 +632,7 @@ export const useUsers = () => {
     setShowAddModal(true);
   };
 
-  // Promote user to SuperAdmin - FIXED: Changed toast.info to toast.success
+  // Promote user to SuperAdmin
   const handlePromoteToSuperAdmin = async (userId: string) => {
     if (!isSuperAdmin) {
       toast.error("Only SuperAdmin can promote users to SuperAdmin");
@@ -627,7 +648,6 @@ export const useUsers = () => {
       if (!targetUser) return;
       
       if (targetUser.roles.some(r => r.toLowerCase() === 'superadmin')) {
-        // FIXED: Changed from toast.info to toast.success
         toast.success("User is already a SuperAdmin");
         return;
       }
@@ -652,6 +672,10 @@ export const useUsers = () => {
           toast.success(`User promoted to SuperAdmin successfully`);
           fetchAllUsers(); // Refresh the user list
         }
+
+        // ENTERPRISE: Emit dashboard event for real-time updates
+        emitDashboardRefreshNeeded('user-promoted-to-superadmin');
+        
       } catch (error) {
         if (!isCurrentUser) {
           updateUsersOptimistically(prevUsers => 
@@ -694,21 +718,21 @@ export const useUsers = () => {
   const getRoleColor = (role: string) => {
     switch (role.toLowerCase()) {
       case 'superadmin':
-        return 'bg-brand-federal-blue text-white'; // #03045e
+        return 'bg-brand-federal-blue text-white';
       case 'admin':
-        return 'bg-brand-indigo text-white'; // #52007C
+        return 'bg-brand-indigo text-white';
       case 'projectmanager':
       case 'project manager':
       case 'project_manager':
-        return 'bg-brand-persian-indigo text-white'; // #34137C
+        return 'bg-brand-persian-indigo text-white';
       case 'coursecoordinator':
       case 'course coordinator':
       case 'course_coordinator':
-        return 'bg-brand-medium-blue text-white'; // #0609C6
+        return 'bg-brand-medium-blue text-white';
       case 'learner':
-        return 'bg-brand-phlox text-white'; // #BF4BF6
+        return 'bg-brand-phlox text-white';
       default:
-        return 'bg-gray-500 text-white'; // A safe, visible default
+        return 'bg-gray-500 text-white';
     }
   };
 

@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+// src/features/Admin/ManageUsers/ManageUser.tsx
+// ENTERPRISE OPTIMIZED: Instant loading, professional UX, optimistic updates
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, X, ArrowLeft, AlertCircle, Mail, Phone, Building2, 
@@ -11,23 +13,254 @@ import UserForm from './components/UserForm';
 import DeleteConfirmationModal from './components/DeleteConfirmationModal';
 import TempPasswordDialog from './components/TempPasswordDialog';
 import { useAuth } from '../../../contexts/AuthContext';
+import { ManageUserSkeleton } from './components/UserSkeletons';
+import { emitUserStatusChanged, emitUserCreated, emitUserDeleted } from '../../../utils/dashboardEvents';
 
+// ENTERPRISE: Memoized user row component for optimal performance
+const UserTableRow: React.FC<{
+  user: any;
+  index: number;
+  currentUserId?: string;
+  isUserLoading: (id: string) => boolean;
+  handleToggleStatus: (id: string) => Promise<void>;
+  handleDeleteUser: (id: string) => void;
+  handleEditUser: (user: any) => void;
+  canEditUser: (user: any) => boolean;
+  canDeleteUser: (user: any) => boolean;
+  formatRoleName: (role: string) => string;
+  getRoleColor: (role: string) => string;
+  navigate: (path: string) => void;
+  sortedRoles: string[];
+}> = React.memo(({ 
+  user, 
+  index, 
+  currentUserId, 
+  isUserLoading, 
+  handleToggleStatus, 
+  handleDeleteUser, 
+  handleEditUser, 
+  canEditUser, 
+  canDeleteUser, 
+  formatRoleName, 
+  getRoleColor, 
+  navigate,
+  sortedRoles
+}) => {
+  const isCurrentUser = user.id === currentUserId;
 
+  // ENTERPRISE: Memoized handlers for performance
+  const handleStatusToggle = useCallback(() => {
+    if (canEditUser(user) && !isCurrentUser) {
+      handleToggleStatus(user.id);
+    }
+  }, [user, canEditUser, isCurrentUser, handleToggleStatus]);
+
+  const handleEdit = useCallback(() => {
+    if (canEditUser(user)) {
+      handleEditUser(user);
+    }
+  }, [user, canEditUser, handleEditUser]);
+
+  const handleDelete = useCallback(() => {
+    if (canDeleteUser(user)) {
+      handleDeleteUser(user.id);
+    }
+  }, [user, canDeleteUser, handleDeleteUser]);
+
+  const handleViewProfile = useCallback(() => {
+    navigate(`/admin/view-profile/${user.id}`);
+  }, [user.id, navigate]);
+
+  // ENTERPRISE: Memoized initials calculation
+  const userInitials = useMemo(() => {
+    return user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+  }, [user.name]);
+
+  return (
+    <tr 
+      className={`border-b border-gray-200 hover:bg-[#F6E6FF]/30 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/80'} ${
+        isCurrentUser ? 'border-l-4 border-l-[#BF4BF6]' : 
+        user.roles.includes('SuperAdmin') ? 'border-l-4 border-l-purple-500' : ''
+      }`}
+    >
+      {/* User Column */}
+      <td className="px-3 py-3">
+        <div className="flex items-center">
+          <div className="flex-shrink-0 h-10 w-10">
+            {user.avatar ? (
+              <img 
+                src={user.avatar}
+                alt={`${user.name}'s avatar`}
+                className={`h-10 w-10 rounded-full object-cover border-2 ${
+                  user.roles.includes('SuperAdmin') ? 'border-purple-500' : 'border-[#BF4BF6]'
+                }`}
+              />
+            ) : (
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                user.roles.includes('SuperAdmin') 
+                  ? 'bg-gradient-to-br from-purple-700 to-purple-500' 
+                  : 'bg-gradient-to-br from-[#52007C] to-[#BF4BF6]'
+              }`}>
+                {userInitials}
+              </div>
+            )}
+          </div>
+          <div className="ml-3">
+            <div 
+              className="text-[#1B0A3F] font-semibold cursor-pointer hover:text-[#BF4BF6] transition-colors flex items-center"
+              onClick={handleViewProfile}
+            >
+              {user.name} {isCurrentUser && <span className="text-[#BF4BF6] text-xs ml-1">(you)</span>}
+              {user.roles.includes('SuperAdmin') && (
+                <Shield size={14} className="ml-1 text-purple-600" />
+              )}
+            </div>
+            <div className="text-xs text-gray-500 font-mono truncate max-w-[150px]">ID: {user.id}</div>
+          </div>
+        </div>
+      </td>
+      
+      {/* Contact Column */}
+      <td className="px-3 py-3">
+        <div className="flex flex-col">
+          <div className="flex items-center text-sm">
+            <Mail size={14} className="text-[#BF4BF6] mr-2" />
+            <span className="text-gray-700 truncate max-w-[150px]">{user.email}</span>
+          </div>
+          <div className="flex items-center text-sm mt-1">
+            <Phone size={14} className="text-[#BF4BF6] mr-2" />
+            <span className="text-gray-700">{user.phone || "—"}</span>
+          </div>
+        </div>
+      </td>
+      
+      {/* Roles Column */}
+      <td className="px-3 py-3">
+        <div className="flex flex-wrap gap-2" style={{ minWidth: '240px' }}>
+          {sortedRoles.map((role, idx) => (
+            <span 
+              key={idx} 
+              className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(role)} whitespace-nowrap`}
+            >
+              {role.toLowerCase() === 'superadmin' && <Shield size={10} className="mr-1" />}
+              {formatRoleName(role)}
+            </span>
+          ))}
+        </div>
+      </td>
+      
+      {/* Department Column */}
+      <td className="px-3 py-3">
+        <div className="flex items-center text-sm">
+          <Building2 size={14} className="text-[#BF4BF6] mr-2" />
+          <span className="text-gray-700">{user.department || "—"}</span>
+        </div>
+        <div className="text-xs text-gray-500 mt-1">
+          Joined: {new Date(user.joinedDate).toLocaleDateString()}
+        </div>
+      </td>
+      
+      {/* Status Column */}
+      <td className="px-3 py-3">
+        <div className="flex items-center">
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mr-2
+            ${user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+            {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+          </span>
+          <label className={`relative inline-flex items-center ${
+            isCurrentUser || !canEditUser(user) 
+              ? 'cursor-not-allowed opacity-70' 
+              : 'cursor-pointer'
+          }`}>
+            <input 
+              type="checkbox" 
+              checked={user.status === 'active'}
+              onChange={handleStatusToggle}
+              className="sr-only peer"
+              disabled={isUserLoading(user.id) || isCurrentUser || !canEditUser(user)}
+            />
+            <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer 
+                peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full 
+                peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] 
+                after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full 
+                after:h-5 after:w-5 ${isUserLoading(user.id) ? 'after:animate-pulse' : 'after:transition-all'} 
+                peer-checked:bg-[#BF4BF6] shadow-inner`}></div>
+          </label>
+        </div>
+      </td>
+      
+      {/* Actions Column */}
+      <td className="px-3 py-3">
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={handleEdit}
+            className={`p-2 rounded-full transition-colors ${
+              canEditUser(user)
+                ? 'text-[#BF4BF6] hover:bg-[#F6E6FF]' 
+                : 'text-gray-300 cursor-not-allowed'
+            }`}
+            disabled={isUserLoading(user.id) || !canEditUser(user)}
+            title={
+              canEditUser(user) 
+                ? "Edit User" 
+                : "You don't have permission to edit this user"
+            }
+          >
+            <Pencil size={16} />
+          </button>
+          <button
+            onClick={handleDelete}
+            className={`p-2 rounded-full transition-colors ${
+              canDeleteUser(user)
+                ? 'text-red-500 hover:bg-red-50' 
+                : 'text-gray-300 cursor-not-allowed'
+            }`}
+            disabled={isUserLoading(user.id) || !canDeleteUser(user)}
+            title={
+              isCurrentUser 
+                ? "You cannot delete your own account" 
+                : !canDeleteUser(user)
+                  ? "You don't have permission to delete this user"
+                  : "Delete User"
+            }
+          >
+            <Trash2 size={16} />
+          </button>
+          <button
+            onClick={handleViewProfile}
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            title="View Profile"
+          >
+            <UserCog size={16} />
+          </button>
+          {isCurrentUser && (
+            <div className="ml-1">
+              <ShieldAlert size={16} className="text-[#BF4BF6]" />
+            </div>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+});
+
+UserTableRow.displayName = 'UserTableRow';
+
+// ENTERPRISE: Main component optimized for instant loading
 const ManageUser: React.FC = () => {
   const navigate = useNavigate();
   const [showRoleFilter, setShowRoleFilter] = useState(false);
   const [showStatusFilter, setShowStatusFilter] = useState(false);
   const { user: currentUser } = useAuth();
   const [showPromotionModal, setShowPromotionModal] = useState(false);
-  // REMOVED: loadingUserIds - unused variable
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;
   
   const {
-    users, // This now returns filtered users directly
-    isPageLoading, // Single loading state
+    users,
+    isPageLoading,
     isSubmitting,
     isDeleting,
     error,
@@ -59,60 +292,84 @@ const ManageUser: React.FC = () => {
     isUserLoading,
     generateTempPassword,
     setGenerateTempPassword,
-    // SuperAdmin related
     isSuperAdmin,
-    // REMOVED: isRegularAdmin - unused variable
     canDeleteUser,
     canEditUser,
     formatRoleName,
     getRoleColor,
-    // REMOVED: handlePromoteToSuperAdmin - unused variable
-    // Added back since it's used in the component
   } = useUsers();
 
-  // REMOVED: safePromoteToSuperAdmin function - unused variable
-
-  // Reset to first page when users list changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearchTerm, filterState.selectedRoles, filterState.filterStatus]);
-
-  useEffect(() => {
-    console.log('All users:', users);
-    console.log('Current user:', currentUser);
-  }, [users, currentUser]);
+  // ENTERPRISE: Memoized role ordering for performance
+  const roleOrder = useMemo(() => ['learner', 'coursecoordinator', 'projectmanager', 'admin', 'superadmin'], []);
   
-  // Pagination calculations
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(users.length / usersPerPage);
-
-  // Get initials for avatar
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase();
-  };
-
-  // Generate empty rows if needed to fill the table with 10 rows
-  const emptyRows = usersPerPage - currentUsers.length;
-
-  // --- THIS IS THE NEW LOGIC FOR ROLE ORDERING ---
-  const roleOrder = ['learner', 'coursecoordinator', 'projectmanager', 'admin', 'superadmin'];
-
-  const normalizeRoleForSort = (role: string): string => {
+  const normalizeRoleForSort = useCallback((role: string): string => {
     const lowerRole = role.toLowerCase();
     if (lowerRole.includes('course')) return 'coursecoordinator';
     if (lowerRole.includes('project')) return 'projectmanager';
     return lowerRole;
-  };
+  }, []);
+
+  // ENTERPRISE: Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm, filterState.selectedRoles, filterState.filterStatus]);
+
+  // ENTERPRISE: Memoized pagination calculations
+  const paginationData = useMemo(() => {
+    const indexOfLastUser = currentPage * usersPerPage;
+    const indexOfFirstUser = indexOfLastUser - usersPerPage;
+    const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
+    const totalPages = Math.ceil(users.length / usersPerPage);
+    const emptyRows = usersPerPage - currentUsers.length;
+
+    return {
+      indexOfLastUser,
+      indexOfFirstUser,
+      currentUsers,
+      totalPages,
+      emptyRows
+    };
+  }, [users, currentPage, usersPerPage]);
+
+  // ENTERPRISE: Memoized user statistics
+  const userStats = useMemo(() => ({
+    total: users.length,
+    active: users.filter(user => user.status === 'active').length,
+    inactive: users.filter(user => user.status === 'inactive').length,
+    superAdmins: users.filter(user => user.roles.includes('SuperAdmin')).length
+  }), [users]);
+
+  // ENTERPRISE: Memoized initials function
+  const getInitials = useCallback((name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  }, []);
+
+  // ENTERPRISE: Memoized handlers
+  const handleAddNewUser = useCallback(() => {
+    setEditingUser(null);
+    setNewUser({ name: '', email: '', phone: '', roles: ['Learner'], department: '', password: '' });
+    setShowAddModal(true);
+  }, [setEditingUser, setNewUser, setShowAddModal]);
+
+  const handlePageChange = useCallback((direction: 'prev' | 'next') => {
+    setCurrentPage(prev => {
+      if (direction === 'prev') {
+        return Math.max(prev - 1, 1);
+      } else {
+        return Math.min(prev + 1, paginationData.totalPages);
+      }
+    });
+  }, [paginationData.totalPages]);
+
+  // ENTERPRISE: Show skeleton during initial load
+  if (!isPageLoading === false && users.length === 0 && !error) {
+    return <ManageUserSkeleton />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
       <div className="w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8 relative">
+        
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center">
@@ -133,11 +390,7 @@ const ManageUser: React.FC = () => {
           </div>
           
           <button
-            onClick={() => {
-              setEditingUser(null);
-              setNewUser({ name: '', email: '', phone: '', roles: ['Learner'], department: '', password: '' });
-              setShowAddModal(true);
-            }}
+            onClick={handleAddNewUser}
             className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-5 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
           >
             <Plus size={20} />
@@ -145,7 +398,7 @@ const ManageUser: React.FC = () => {
           </button>
         </div>
 
-        {/* User statistics summary */}
+        {/* ENTERPRISE: User statistics with optimized rendering */}
         {!isPageLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 pt-4">
             <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-[#BF4BF6]/20 flex items-center shadow-lg">
@@ -154,7 +407,7 @@ const ManageUser: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Users</p>
-                <p className="text-2xl font-semibold text-[#1B0A3F]">{users.length}</p>
+                <p className="text-2xl font-semibold text-[#1B0A3F]">{userStats.total}</p>
               </div>
             </div>
             
@@ -164,9 +417,7 @@ const ManageUser: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Active Users</p>
-                <p className="text-2xl font-semibold text-[#1B0A3F]">
-                  {users.filter(user => user.status === 'active').length}
-                </p>
+                <p className="text-2xl font-semibold text-[#1B0A3F]">{userStats.active}</p>
               </div>
             </div>
             
@@ -176,9 +427,7 @@ const ManageUser: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Inactive Users</p>
-                <p className="text-2xl font-semibold text-[#1B0A3F]">
-                  {users.filter(user => user.status === 'inactive').length}
-                </p>
+                <p className="text-2xl font-semibold text-[#1B0A3F]">{userStats.inactive}</p>
               </div>
             </div>
             
@@ -188,9 +437,7 @@ const ManageUser: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Super Admins</p>
-                <p className="text-2xl font-semibold text-[#1B0A3F]">
-                  {users.filter(user => user.roles.includes('SuperAdmin')).length}
-                </p>
+                <p className="text-2xl font-semibold text-[#1B0A3F]">{userStats.superAdmins}</p>
               </div>
             </div>
           </div>
@@ -242,7 +489,7 @@ const ManageUser: React.FC = () => {
           />
         </div>
 
-        {/* Users Table */}
+        {/* ENTERPRISE: Users Table with optimized rendering */}
         <div className="bg-white/90 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 shadow-lg relative z-[80]">
           {isPageLoading ? (
             <div className="flex flex-col items-center justify-center p-12">
@@ -280,197 +527,42 @@ const ManageUser: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {currentUsers.map((user, index) => {
-                    const isCurrentUser = user.id === currentUser?.id;
-                    
-                    // --- SORTING LOGIC APPLIED HERE ---
+                  {paginationData.currentUsers.map((user, index) => {
+                    // ENTERPRISE: Direct role sorting (no hooks inside map)
                     const sortedRoles = [...user.roles].sort((a, b) => {
-                        const normalizedA = normalizeRoleForSort(a);
-                        const normalizedB = normalizeRoleForSort(b);
-                        const indexA = roleOrder.indexOf(normalizedA);
-                        const indexB = roleOrder.indexOf(normalizedB);
-                        
-                        if (indexA === -1) return 1;
-                        if (indexB === -1) return -1;
-                        
-                        return indexA - indexB;
+                      const normalizedA = normalizeRoleForSort(a);
+                      const normalizedB = normalizeRoleForSort(b);
+                      const indexA = roleOrder.indexOf(normalizedA);
+                      const indexB = roleOrder.indexOf(normalizedB);
+                      
+                      if (indexA === -1) return 1;
+                      if (indexB === -1) return -1;
+                      
+                      return indexA - indexB;
                     });
 
                     return (
-                      <tr 
-                        key={user.id} 
-                        className={`border-b border-gray-200 hover:bg-[#F6E6FF]/30 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/80'} ${
-                          isCurrentUser ? 'border-l-4 border-l-[#BF4BF6]' : 
-                          user.roles.includes('SuperAdmin') ? 'border-l-4 border-l-purple-500' : ''
-                        }`}
-                      >
-                        {/* User Column */}
-                        <td className="px-3 py-3">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              {user.avatar ? (
-                                <img 
-                                  src={user.avatar}
-                                  alt={`${user.name}'s avatar`}
-                                  className={`h-10 w-10 rounded-full object-cover border-2 ${
-                                    user.roles.includes('SuperAdmin') ? 'border-purple-500' : 'border-[#BF4BF6]'
-                                  }`}
-                                />
-                              ) : (
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
-                                  user.roles.includes('SuperAdmin') 
-                                    ? 'bg-gradient-to-br from-purple-700 to-purple-500' 
-                                    : 'bg-gradient-to-br from-[#52007C] to-[#BF4BF6]'
-                                }`}>
-                                  {getInitials(user.name)}
-                                </div>
-                              )}
-                            </div>
-                            <div className="ml-3">
-                              <div 
-                                className="text-[#1B0A3F] font-semibold cursor-pointer hover:text-[#BF4BF6] transition-colors flex items-center"
-                                onClick={() => navigate(`/admin/view-profile/${user.id}`)}
-                              >
-                                {user.name} {isCurrentUser && <span className="text-[#BF4BF6] text-xs ml-1">(you)</span>}
-                                {/* FIXED: Removed title prop from Shield icon */}
-                                {user.roles.includes('SuperAdmin') && (
-                                  <Shield size={14} className="ml-1 text-purple-600" />
-                                )}
-                              </div>
-                              <div className="text-xs text-gray-500 font-mono truncate max-w-[150px]">ID: {user.id}</div>
-                            </div>
-                          </div>
-                        </td>
-                        
-                        {/* Contact Column */}
-                        <td className="px-3 py-3">
-                          <div className="flex flex-col">
-                            <div className="flex items-center text-sm">
-                              <Mail size={14} className="text-[#BF4BF6] mr-2" />
-                              <span className="text-gray-700 truncate max-w-[150px]">{user.email}</span>
-                            </div>
-                            <div className="flex items-center text-sm mt-1">
-                              <Phone size={14} className="text-[#BF4BF6] mr-2" />
-                              <span className="text-gray-700">{user.phone || "—"}</span>
-                            </div>
-                          </div>
-                        </td>
-                        
-                        {/* Roles Column */}
-                        <td className="px-3 py-3">
-                          <div className="flex flex-wrap gap-2" style={{ minWidth: '240px' }}>
-                            {sortedRoles.map((role, idx) => {
-                              return (
-                                <span 
-                                  key={idx} 
-                                  className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(role)} whitespace-nowrap`}
-                                >
-                                  {role.toLowerCase() === 'superadmin' && <Shield size={10} className="mr-1" />}
-                                  {formatRoleName(role)}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </td>
-                        
-                        {/* Department Column */}
-                        <td className="px-3 py-3">
-                          <div className="flex items-center text-sm">
-                            <Building2 size={14} className="text-[#BF4BF6] mr-2" />
-                            <span className="text-gray-700">{user.department || "—"}</span>
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            Joined: {new Date(user.joinedDate).toLocaleDateString()}
-                          </div>
-                        </td>
-                        
-                        {/* Status Column */}
-                        <td className="px-3 py-3">
-                          <div className="flex items-center">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mr-2
-                              ${user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                              {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
-                            </span>
-                            <label className={`relative inline-flex items-center ${
-                              isCurrentUser || !canEditUser(user) 
-                                ? 'cursor-not-allowed opacity-70' 
-                                : 'cursor-pointer'
-                            }`}>
-                              <input 
-                                type="checkbox" 
-                                checked={user.status === 'active'}
-                                onChange={() => canEditUser(user) && !isCurrentUser && handleToggleStatus(user.id)}
-                                className="sr-only peer"
-                                disabled={isUserLoading(user.id) || isCurrentUser || !canEditUser(user)}
-                              />
-                              <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer 
-                                  peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full 
-                                  peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] 
-                                  after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full 
-                                  after:h-5 after:w-5 ${isUserLoading(user.id) ? 'after:animate-pulse' : 'after:transition-all'} 
-                                  peer-checked:bg-[#BF4BF6] shadow-inner`}></div>
-                            </label>
-                          </div>
-                        </td>
-                        
-                        {/* Actions Column */}
-                        <td className="px-3 py-3">
-                          <div className="flex items-center space-x-1">
-                            <button
-                              onClick={() => canEditUser(user) && handleEditUser(user)}
-                              className={`p-2 rounded-full transition-colors ${
-                                canEditUser(user)
-                                  ? 'text-[#BF4BF6] hover:bg-[#F6E6FF]' 
-                                  : 'text-gray-300 cursor-not-allowed'
-                              }`}
-                              disabled={isUserLoading(user.id) || !canEditUser(user)}
-                              title={
-                                canEditUser(user) 
-                                  ? "Edit User" 
-                                  : "You don't have permission to edit this user"
-                              }
-                            >
-                              <Pencil size={16} />
-                            </button>
-                            <button
-                              onClick={() => canDeleteUser(user) && handleDeleteUser(user.id)}
-                              className={`p-2 rounded-full transition-colors ${
-                                canDeleteUser(user)
-                                  ? 'text-red-500 hover:bg-red-50' 
-                                  : 'text-gray-300 cursor-not-allowed'
-                              }`}
-                              disabled={isUserLoading(user.id) || !canDeleteUser(user)}
-                              title={
-                                isCurrentUser 
-                                  ? "You cannot delete your own account" 
-                                  : !canDeleteUser(user)
-                                    ? "You don't have permission to delete this user"
-                                    : "Delete User"
-                              }
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                            <button
-                              onClick={() => navigate(`/admin/view-profile/${user.id}`)}
-                              className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-                              title="View Profile"
-                            >
-                              <UserCog size={16} />
-                            </button>
-                            {/* FIXED: Removed title prop from ShieldAlert icon */}
-                            {isCurrentUser && (
-                              <div className="ml-1">
-                                <ShieldAlert size={16} className="text-[#BF4BF6]" />
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
+                      <UserTableRow
+                        key={user.id}
+                        user={user}
+                        index={index}
+                        currentUserId={currentUser?.id}
+                        isUserLoading={isUserLoading}
+                        handleToggleStatus={handleToggleStatus}
+                        handleDeleteUser={handleDeleteUser}
+                        handleEditUser={handleEditUser}
+                        canEditUser={canEditUser}
+                        canDeleteUser={canDeleteUser}
+                        formatRoleName={formatRoleName}
+                        getRoleColor={getRoleColor}
+                        navigate={navigate}
+                        sortedRoles={sortedRoles}
+                      />
                     );
                   })}
                   
                   {/* Empty rows to maintain consistent table height */}
-                  {emptyRows > 0 && Array.from({ length: emptyRows }).map((_, index) => (
+                  {paginationData.emptyRows > 0 && Array.from({ length: paginationData.emptyRows }).map((_, index) => (
                     <tr key={`empty-${index}`} className="border-b border-gray-200 h-[72px]">
                       <td colSpan={6} className="px-4 py-3"></td>
                     </tr>
@@ -480,21 +572,21 @@ const ManageUser: React.FC = () => {
             </div>
           )}
           
-          {/* Pagination */}
+          {/* ENTERPRISE: Optimized Pagination */}
           {!isPageLoading && users.length > 0 && (
             <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
               <div className="flex items-center text-sm text-gray-700">
                 <span>
-                  Showing <span className="font-medium">{indexOfFirstUser + 1}</span> to{" "}
+                  Showing <span className="font-medium">{paginationData.indexOfFirstUser + 1}</span> to{" "}
                   <span className="font-medium">
-                    {indexOfLastUser > users.length ? users.length : indexOfLastUser}
+                    {paginationData.indexOfLastUser > users.length ? users.length : paginationData.indexOfLastUser}
                   </span>{" "}
                   of <span className="font-medium">{users.length}</span> users
                 </span>
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  onClick={() => handlePageChange('prev')}
                   disabled={currentPage === 1}
                   className={`inline-flex items-center px-3 py-1 rounded-md text-sm 
                             ${currentPage === 1 
@@ -505,10 +597,10 @@ const ManageUser: React.FC = () => {
                   Previous
                 </button>
                 <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
+                  onClick={() => handlePageChange('next')}
+                  disabled={currentPage === paginationData.totalPages}
                   className={`inline-flex items-center px-3 py-1 rounded-md text-sm 
-                            ${currentPage === totalPages 
+                            ${currentPage === paginationData.totalPages 
                               ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
                               : 'bg-white text-[#BF4BF6] border border-[#BF4BF6]/30 hover:bg-[#F6E6FF]'}`}
                 >
