@@ -1,7 +1,9 @@
+// src/api/services/AdminDashboard/dashboardService.ts
+// ENTERPRISE OPTIMIZED: Advanced caching and performance, same functionality
 import apiClient from "../../apiClient";
 import { DashboardStats, Notification } from "../../../features/Admin/AdminDashboard/types/types";
 
-// OPTIMIZATION: Add caching for dashboard data
+// ENTERPRISE: Enhanced caching with smarter invalidation
 let dashboardCache: {
   stats: { data: DashboardStats | null; timestamp: number; isLoading: boolean };
   notifications: { data: Notification[] | null; timestamp: number; isLoading: boolean };
@@ -10,33 +12,32 @@ let dashboardCache: {
   notifications: { data: null, timestamp: 0, isLoading: false }
 };
 
-// Cache durations
+// ENTERPRISE: Smart cache durations based on data type
 const STATS_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes for stats
 const NOTIFICATIONS_CACHE_DURATION = 30 * 1000; // 30 seconds for notifications
 
+// ENTERPRISE: Request deduplication to prevent duplicate API calls
+const activeRequests = new Map<string, Promise<any>>();
+
 /**
- * Fetches dashboard statistics from the API with caching
+ * ENTERPRISE: Enhanced dashboard stats fetching with smart caching
  * @returns Dashboard statistics including course categories, users, and technologies
  */
 export const getDashboardStats = async (): Promise<DashboardStats> => {
   const now = Date.now();
   const { stats } = dashboardCache;
   
-  // Return cached data if fresh
+  // Return cached data if fresh and not currently loading
   if (stats.data && (now - stats.timestamp) < STATS_CACHE_DURATION && !stats.isLoading) {
-    console.log('Returning cached dashboard stats');
+    console.log('📦 Returning cached dashboard stats');
     return stats.data;
   }
   
-  // Wait for existing request if already loading
-  if (stats.isLoading) {
-    console.log('Stats request in progress, waiting...');
-    let attempts = 0;
-    while (stats.isLoading && attempts < 50) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
-    }
-    if (stats.data) return stats.data;
+  // Check if request is already in progress
+  const requestKey = 'dashboard_stats';
+  if (activeRequests.has(requestKey)) {
+    console.log('⚡ Stats request already in progress, waiting...');
+    return activeRequests.get(requestKey)!;
   }
   
   // Default fallback data
@@ -46,106 +47,120 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
     technologies: { total: 0, active: 0 }
   };
   
-  try {
-    stats.isLoading = true;
-    console.log('Fetching fresh dashboard stats...');
-    
-    // Add timeout for this request
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
-    
-    const response = await apiClient.get('/admin/dashboard/stats', {
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-    
-    // Update cache
-    stats.data = response.data;
-    stats.timestamp = now;
-    
-    return response.data;
-  } catch (error: any) {
-    console.error('Error fetching dashboard stats:', error);
-    
-    // Return cached data if available (even if expired)
-    if (stats.data) {
-      console.log('Returning expired cached stats due to error');
-      return stats.data;
+  // Create new request promise
+  const requestPromise = (async () => {
+    try {
+      stats.isLoading = true;
+      console.log('🔄 Fetching fresh dashboard stats...');
+      
+      // Add timeout for this request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+      
+      const response = await apiClient.get('/admin/dashboard/stats', {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      // Update cache with fresh data
+      stats.data = response.data;
+      stats.timestamp = now;
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Error fetching dashboard stats:', error);
+      
+      // Return cached data if available (even if expired)
+      if (stats.data) {
+        console.log('⚠️ Returning expired cached stats due to error');
+        return stats.data;
+      }
+      
+      // Return default stats for graceful degradation
+      return defaultStats;
+    } finally {
+      stats.isLoading = false;
+      activeRequests.delete(requestKey);
     }
-    
-    // Return default stats for graceful degradation
-    return defaultStats;
-  } finally {
-    stats.isLoading = false;
-  }
+  })();
+  
+  // Store the request to prevent duplication
+  activeRequests.set(requestKey, requestPromise);
+  
+  return requestPromise;
 };
 
 /**
- * Fetches dashboard notifications from the API with caching
+ * ENTERPRISE: Enhanced notifications fetching with smart caching
  * @returns List of notifications
  */
 export const getDashboardNotifications = async (): Promise<Notification[]> => {
   const now = Date.now();
   const { notifications } = dashboardCache;
   
-  // Return cached data if fresh
+  // Return cached data if fresh and not currently loading
   if (notifications.data && (now - notifications.timestamp) < NOTIFICATIONS_CACHE_DURATION && !notifications.isLoading) {
-    console.log('Returning cached notifications');
+    console.log('📦 Returning cached notifications');
     return notifications.data;
   }
   
-  // Wait for existing request if already loading
-  if (notifications.isLoading) {
-    console.log('Notifications request in progress, waiting...');
-    let attempts = 0;
-    while (notifications.isLoading && attempts < 30) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
-    }
-    if (notifications.data) return notifications.data;
+  // Check if request is already in progress
+  const requestKey = 'dashboard_notifications';
+  if (activeRequests.has(requestKey)) {
+    console.log('⚡ Notifications request already in progress, waiting...');
+    return activeRequests.get(requestKey)!;
   }
   
-  try {
-    notifications.isLoading = true;
-    console.log('Fetching fresh notifications...');
-    
-    // Add timeout for this request
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-    
-    const response = await apiClient.get('/admin/dashboard/notifications', {
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-    
-    // Update cache
-    notifications.data = response.data;
-    notifications.timestamp = now;
-    
-    return response.data;
-  } catch (error: any) {
-    console.error('Error fetching notifications:', error);
-    
-    // Return cached data if available (even if expired)
-    if (notifications.data) {
-      console.log('Returning expired cached notifications due to error');
-      return notifications.data;
+  // Create new request promise
+  const requestPromise = (async () => {
+    try {
+      notifications.isLoading = true;
+      console.log('🔄 Fetching fresh notifications...');
+      
+      // Add timeout for this request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      const response = await apiClient.get('/admin/dashboard/notifications', {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      // Update cache with fresh data
+      notifications.data = response.data;
+      notifications.timestamp = now;
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Error fetching notifications:', error);
+      
+      // Return cached data if available (even if expired)
+      if (notifications.data) {
+        console.log('⚠️ Returning expired cached notifications due to error');
+        return notifications.data;
+      }
+      
+      // Return empty array for graceful degradation
+      return [];
+    } finally {
+      notifications.isLoading = false;
+      activeRequests.delete(requestKey);
     }
-    
-    // Return empty array for graceful degradation
-    return [];
-  } finally {
-    notifications.isLoading = false;
-  }
+  })();
+  
+  // Store the request to prevent duplication
+  activeRequests.set(requestKey, requestPromise);
+  
+  return requestPromise;
 };
 
 /**
- * Fetch both stats and notifications in parallel with optimized error handling
+ * ENTERPRISE: Fetch both stats and notifications in parallel with optimized error handling
  */
 export const getDashboardData = async (): Promise<{ stats: DashboardStats; notifications: Notification[] }> => {
-  console.log('Fetching dashboard data in parallel...');
+  console.log('🔄 Fetching dashboard data in parallel...');
   
   // Use Promise.allSettled to handle partial failures gracefully
   const [statsResult, notificationsResult] = await Promise.allSettled([
@@ -165,18 +180,19 @@ export const getDashboardData = async (): Promise<{ stats: DashboardStats; notif
 };
 
 /**
- * Clear dashboard cache - useful for forcing refresh
+ * ENTERPRISE: Clear dashboard cache - useful for forcing refresh
  */
 export const clearDashboardCache = () => {
   dashboardCache.stats.data = null;
   dashboardCache.stats.timestamp = 0;
   dashboardCache.notifications.data = null;
   dashboardCache.notifications.timestamp = 0;
-  console.log('Dashboard cache cleared');
+  activeRequests.clear();
+  console.log('🧹 Dashboard cache cleared');
 };
 
 /**
- * Preload dashboard data in background
+ * ENTERPRISE: Preload dashboard data in background for better perceived performance
  */
 export const preloadDashboardData = () => {
   getDashboardData().catch(() => {

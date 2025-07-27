@@ -1,4 +1,6 @@
-import React from 'react';
+// src/components/common/BookLoader.tsx
+// ENTERPRISE: Google-style progress bar (NO full-page overlay)
+import React, { useEffect, useState } from 'react';
 import { useLoading } from '../../contexts/LoadingContext';
 
 interface BookLoaderProps {
@@ -6,20 +8,49 @@ interface BookLoaderProps {
 }
 
 const BookLoader: React.FC<BookLoaderProps> = ({ 
-  containerClassName = "" 
+  containerClassName = ""
 }) => {
   const { isLoading } = useLoading();
+  const [shouldShow, setShouldShow] = useState(false);
 
-  if (!isLoading) return null;
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
 
+    if (isLoading) {
+      // ENTERPRISE: Only show after 1 second for truly slow operations (like Google)
+      timer = setTimeout(() => {
+        setShouldShow(true);
+      }, 1000); // Increased from 500ms - most operations shouldn't need loading
+    } else {
+      setShouldShow(false);
+    }
+
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
+  // ENTERPRISE: Don't show for quick operations
+  if (!shouldShow) return null;
+
+  // ENTERPRISE: Google-style progress bar (NO overlay, NO blocking)
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/5 backdrop-blur-sm ${containerClassName}`}>
-      <div className="bg-white rounded-lg p-4 shadow-lg border">
-        {/* Pure CSS spinner - 0KB, no external dependencies */}
-        <div className="w-6 h-6 mx-auto mb-2 border-2 border-gray-200 border-t-[#52007C] rounded-full animate-spin"></div>
-        <p className="text-xs text-gray-600 text-center">Loading...</p>
+    <>
+      {/* Top progress bar like Google */}
+      <div className="fixed top-0 left-0 right-0 z-[100] h-1">
+        <div className="h-full bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] animate-pulse">
+          <div className="h-full bg-white/30 animate-shimmer"></div>
+        </div>
       </div>
-    </div>
+      
+      {/* Optional: Small indicator in corner (like Microsoft) */}
+      <div className="fixed top-4 right-4 z-[100]">
+        <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-gray-200">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 border-2 border-[#BF4BF6]/30 border-t-[#BF4BF6] rounded-full animate-spin"></div>
+            <span className="text-xs text-gray-600 font-medium">Loading...</span>
+          </div>
+        </div>
+      </div>
+    </>
   );
 };
 

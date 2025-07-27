@@ -1,4 +1,4 @@
-import React, { useEffect, lazy, Suspense } from 'react';
+import React, { useEffect, lazy, Suspense, memo, useMemo } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { I18nextProvider } from 'react-i18next';
@@ -24,25 +24,53 @@ import { NotificationProvider } from './contexts/NotificationContext';
 // User Roles
 import { UserRole } from './types/auth.types';
 
-// 🚀 LAZY LOADED COMPONENTS - Only load when needed
-const CvPage = lazy(() => import('./features/Learner/LearnerCv/Cv'));
+// Professional loading component - minimal, clean
+const PageLoader: React.FC = () => (
+  <div className="min-h-screen bg-white flex items-center justify-center">
+    <div className="text-center">
+      <div className="w-6 h-6 mx-auto mb-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+      <p className="text-gray-500 text-sm">Loading</p>
+    </div>
+  </div>
+);
 
-// Learner Components
-const CoursePreview = lazy(() => import('./features/Learner/CoursePreview/CoursePreview'));
+// OPTIMIZATION: Smart preloading for critical components
+const preloadCritical = () => {
+  const criticalComponents = [
+    () => import('./features/Learner/LearnerDashboard/LearnerDashboard'),
+    () => import('./features/Learner/CourseCategories/CourseCategories'),
+    () => import('./features/Learner/LearnerProfile/LearnerProfile'),
+  ];
+  
+  criticalComponents.forEach(importFunc => {
+    importFunc().catch(() => {}); // Silent preload
+  });
+};
+
+// Lazy loaded components - organized by frequency
+// Critical (preloaded)
 const LearnerDashboard = lazy(() => import('./features/Learner/LearnerDashboard/LearnerDashboard'));
+const CourseCategories = lazy(() => import('./features/Learner/CourseCategories/CourseCategories'));
 const LearnerProfile = lazy(() => import('./features/Learner/LearnerProfile/LearnerProfile'));
+
+// High frequency
+const CourseContent = lazy(() => import('./features/Learner/CourseContent/CourseContent'));
+const LearnerCourseOverview = lazy(() => import('./features/Learner/CourseContent/LearnerCourseOverview'));
+const CoursePreview = lazy(() => import('./features/Learner/CoursePreview/CoursePreview'));
+
+// Medium frequency  
+const TakeQuiz = lazy(() => import('./features/Learner/TakeQuiz/TakeQuiz'));
+const QuizResults = lazy(() => import('./features/Learner/QuizResults/QuizResults'));
+const LearnerNotifications = lazy(() => import('./features/Learner/LearnerNotifications/LearnerNotification'));
+
+// Low frequency
+const CvPage = lazy(() => import('./features/Learner/LearnerCv/Cv'));
 const BadgesAndRewards = lazy(() => import('./features/Learner/BadgesAndRewards/BadgesAndRewards'));
 const LearnerProjects = lazy(() => import('./features/Learner/LearnerProjects/LearnerProjects'));
 const CertificatesPage = lazy(() => import('./features/Learner/Certificates/CertificatePage'));
 const DiscussionForum = lazy(() => import('./features/Learner/DiscussionForum/DiscussionForum'));
 const SingleThreadView = lazy(() => import('./features/Learner/DiscussionForum/SingleThreadView'));
-const LearnerNotifications = lazy(() => import('./features/Learner/LearnerNotifications/LearnerNotification'));
 const Leaderboard = lazy(() => import('./features/Learner/Leaderboard/Leaderboard'));
-const CourseCategories = lazy(() => import('./features/Learner/CourseCategories/CourseCategories'));
-const CourseContent = lazy(() => import('./features/Learner/CourseContent/CourseContent'));
-const LearnerCourseOverview = lazy(() => import('./features/Learner/CourseContent/LearnerCourseOverview'));
-const TakeQuiz = lazy(() => import('./features/Learner/TakeQuiz/TakeQuiz'));
-const QuizResults = lazy(() => import('./features/Learner/QuizResults/QuizResults'));
 
 // Admin Components
 const AdminDashboard = lazy(() => import('./features/Admin/AdminDashboard/AdminDashboard'));
@@ -81,22 +109,12 @@ const ProjectCruds = lazy(() => import('./features/ProjectManager/ProjectCruds/P
 // Search Components
 const SearchResults = lazy(() => import('./components/Sidebar/SearchResults'));
 
-// Landing and Auth (keep these loaded immediately as they're entry points)
+// Landing and Auth (keep these loaded immediately)
 import LandingPage from './features/landing/AnimatedLandingPage';
 import RoleSelection from './features/auth/RoleSelection';
 
-// 🎨 Enhanced Loading Component
-const PageLoader: React.FC = () => (
-  <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] flex items-center justify-center">
-    <div className="text-center">
-      <BookLoader />
-      <p className="text-white mt-4 text-lg">Loading...</p>
-    </div>
-  </div>
-);
-
 // API Loading Interceptor Component
-const ApiLoadingInterceptor: React.FC = () => {
+const ApiLoadingInterceptor: React.FC = memo(() => {
   const { startLoading, stopLoading } = useLoading();
   
   useEffect(() => {
@@ -104,33 +122,32 @@ const ApiLoadingInterceptor: React.FC = () => {
   }, [startLoading, stopLoading]);
   
   return null; 
-};
+});
 
-// ENTERPRISE APPROACH: Simple cleanup on logout
-const AuthCleanup: React.FC = () => {
+// Auth cleanup component
+const AuthCleanup: React.FC = memo(() => {
   const { user } = useAuth();
 
   useEffect(() => {
     if (!user) {
-      console.log('User logged out, clearing session data...');
       try {
-        sessionStorage.removeItem('course_categories');
-        console.log('Session data cleared');
+        sessionStorage.clear();
+        const keysToRemove = ['course_categories', 'recentlyAccessedCourses'];
+        keysToRemove.forEach(key => localStorage.removeItem(key));
       } catch (error) {
-        console.log('Session cleanup failed:', error);
+        console.warn('Session cleanup failed:', error);
       }
     }
   }, [user]);
 
   return null;
-};
+});
 
-// OPTIMIZATION: Role-based NotificationProvider wrapper
-const ConditionalNotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentRole } = useAuth();
+// Professional NotificationProvider wrapper
+const ConditionalNotificationProvider: React.FC<{ children: React.ReactNode }> = memo(({ children }) => {
+  const { currentRole, initialized } = useAuth();
   
-  // Only wrap with NotificationProvider for Learners
-  if (currentRole === UserRole.Learner) {
+  if (initialized && currentRole === UserRole.Learner) {
     return (
       <NotificationProvider>
         {children}
@@ -138,55 +155,78 @@ const ConditionalNotificationProvider: React.FC<{ children: React.ReactNode }> =
     );
   }
   
-  // For all other roles, render children directly
   return <>{children}</>;
-};
+});
+
+// Memoized provider tree
+const ProviderTree: React.FC<{ children: React.ReactNode }> = memo(({ children }) => {
+  return (
+    <LoadingProvider>
+      <AuthProvider>
+        <ConditionalNotificationProvider>
+          <SidebarProvider>
+            <SearchProvider>
+              {children}
+            </SearchProvider>
+          </SidebarProvider>
+        </ConditionalNotificationProvider>
+      </AuthProvider>
+    </LoadingProvider>
+  );
+});
 
 function AppWrapper() {
+  // Preload critical components
+  useEffect(() => {
+    const timer = setTimeout(preloadCritical, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <I18nextProvider i18n={i18n}>
       <BrowserRouter>
-        <LoadingProvider>
-          <AuthProvider>
-            <ConditionalNotificationProvider>
-              <SidebarProvider>
-                <SearchProvider>
-                  <ApiLoadingInterceptor />
-                  <AuthCleanup />
-                  <BookLoader />
-                  <App />
-                  <Toaster position="top-right" />
-                </SearchProvider>
-              </SidebarProvider>
-            </ConditionalNotificationProvider>
-          </AuthProvider>
-        </LoadingProvider>
+        <ProviderTree>
+          <ApiLoadingInterceptor />
+          <AuthCleanup />
+          <BookLoader />
+          <App />
+          <Toaster 
+            position="top-right" 
+            toastOptions={{
+              duration: 3000,
+              style: {
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              },
+            }}
+          />
+        </ProviderTree>
       </BrowserRouter>
     </I18nextProvider>
   );
 }
 
 function App() {
-  // Helper function to wrap component with CourseProvider
-  const withCourseContext = (Component: React.ComponentType) => (
+  // Professional suspense wrapper - instant, clean
+  const suspenseWrapper = useMemo(() => (Component: React.ComponentType) => (
+    <Suspense fallback={<PageLoader />}>
+      <Component />
+    </Suspense>
+  ), []);
+
+  // Course context wrapper
+  const withCourseContext = useMemo(() => (Component: React.ComponentType) => (
     <CourseProvider>
       <Suspense fallback={<PageLoader />}>
         <Component />
       </Suspense>
     </CourseProvider>
-  );
+  ), []);
 
-  // Re-usable suspense wrapper
-  const suspenseWrapper = (Component: React.ComponentType) => (
-    <Suspense fallback={<PageLoader />}>
-      <Component />
-    </Suspense>
-  );
-
-  const CourseAssignLearners = () => {
+  const CourseAssignLearners = useMemo(() => () => {
     const { courseData } = useCourseContext();
     return <AssignLearners courseName={courseData.basicDetails.title} />;
-  };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -215,6 +255,7 @@ function App() {
           } 
         />
 
+        {/* LEARNER ROUTES */}
         <Route path="/learner">
           <Route path="dashboard" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(LearnerDashboard)}</ProtectedRoute>} />
           <Route path="profile" element={<ProtectedRoute>{suspenseWrapper(LearnerProfile)}</ProtectedRoute>} />

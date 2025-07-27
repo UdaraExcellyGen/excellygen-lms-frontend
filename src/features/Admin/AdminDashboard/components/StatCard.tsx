@@ -1,7 +1,9 @@
-import React from 'react';
+// src/features/Admin/AdminDashboard/components/StatCard.tsx
+// ENTERPRISE OPTIMIZED: Performance optimizations only, same functionality
+import React, { useCallback } from 'react';
 import { StatCardProps } from '../types/types';
 
-const StatCard: React.FC<StatCardProps> = ({
+const StatCard: React.FC<StatCardProps> = React.memo(({
   icon: Icon,
   title,
   stats,
@@ -9,10 +11,17 @@ const StatCard: React.FC<StatCardProps> = ({
   activeLabel,
   onClick
 }) => {
+  // ENTERPRISE: Memoized click handler for performance
+  const handleClick = useCallback(() => {
+    if (onClick) {
+      onClick();
+    }
+  }, [onClick]);
+
   return (
     <div
       className="bg-white/90 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg p-6 transition-all duration-300 hover:shadow-xl cursor-pointer"
-      onClick={onClick}
+      onClick={handleClick}
     >
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2 rounded-lg bg-[#F6E6FF]">
@@ -33,6 +42,8 @@ const StatCard: React.FC<StatCardProps> = ({
       </div>
     </div>
   );
-};
+});
+
+StatCard.displayName = 'StatCard';
 
 export default StatCard;
