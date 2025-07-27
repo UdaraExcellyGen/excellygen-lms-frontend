@@ -126,9 +126,11 @@ const CourseContent: React.FC = () => {
   const [isUnenrollModalOpen, setIsUnenrollModalOpen] = useState(false);
   const [selectedCourseForUnenroll, setSelectedCourseForUnenroll] = useState<LearnerCourseDto | null>(null);
   
+  // UX FIX: Add dedicated processing state for the unenroll action
+  const [isUnenrolling, setIsUnenrolling] = useState(false);
+
   // ENTERPRISE: Optimistic updates tracking
   const [processingEnrollments, setProcessingEnrollments] = useState<Set<number>>(new Set());
-  const [optimisticUpdates, setOptimisticUpdates] = useState<Map<number, 'enrolling' | 'unenrolling'>>(new Map());
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -308,7 +310,9 @@ const CourseContent: React.FC = () => {
   // ENTERPRISE: Listen for external enrollment changes (fixes CoursePreview enrollment issue)
   useEffect(() => {
     const handleEnrollmentChange = () => {
-      console.log('🔄 External enrollment change detected, refreshing data...');
+      console.log('🔄 External enrollment change detected, refreshing data and switching tab...');
+      // UX IMPROVEMENT: Switch tab to 'learning' to show the newly enrolled course
+      setActiveTab('learning'); 
       fetchData(true); // Force refresh with cache clear
     };
 
@@ -326,6 +330,10 @@ const CourseContent: React.FC = () => {
       const { eventType } = event.detail;
       if (eventType === 'enrollment-change' || eventType === 'course-progress-update' || eventType === 'enrollment-created') {
         console.log(`🔄 Dashboard refresh needed: ${eventType}`);
+        // UX IMPROVEMENT: Switch tab if a new enrollment was created
+        if (eventType === 'enrollment-created') {
+            setActiveTab('learning');
+        }
         fetchData(true);
       }
     };
@@ -374,7 +382,6 @@ const CourseContent: React.FC = () => {
 
     // ENTERPRISE: Optimistic UI update with tracking
     setProcessingEnrollments(prev => new Set(prev).add(courseId));
-    setOptimisticUpdates(prev => new Map(prev).set(courseId, 'enrolling'));
     
     const optimisticEnrolledCourse = { 
       ...courseToEnroll, 
@@ -450,47 +457,54 @@ const CourseContent: React.FC = () => {
         newSet.delete(courseId);
         return newSet;
       });
-      setOptimisticUpdates(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(courseId);
-        return newMap;
-      });
     }
-  }, [availableCourses, processingEnrollments]);
+  }, [availableCourses, processingEnrollments, categoryIdParam]);
 
-  // ENTERPRISE: Enhanced unenrollment with optimistic updates
+  // UX FIX: Enhanced unenrollment logic for a professional experience
   const handleUnenroll = useCallback(async () => {
     if (!selectedCourseForUnenroll?.enrollmentId) return;
-    
-    const courseId = selectedCourseForUnenroll.id;
-    setOptimisticUpdates(prev => new Map(prev).set(courseId, 'unenrolling'));
-    
-    const unenrollToast = toast.loading("Unenrolling...");
+
+    const courseToUnenroll = selectedCourseForUnenroll;
+
+    setIsUnenrolling(true);
+    const unenrollToast = toast.loading(`Unenrolling from "${courseToUnenroll.title}"...`);
+
     try {
-      await deleteEnrollment(selectedCourseForUnenroll.enrollmentId);
-      toast.success(`Unenrolled successfully!`, { id: unenrollToast });
-      
-      // ENTERPRISE: Emit unenrollment event
-      window.dispatchEvent(new CustomEvent('enrollment-deleted', { 
-        detail: { courseId, enrollmentId: selectedCourseForUnenroll.enrollmentId }
-      }));
-      
-      // ENTERPRISE: Refresh data and clear caches
-      clearCourseCaches();
-      clearEnrollmentCaches();
-      await fetchData(true);
-      
+        await deleteEnrollment(courseToUnenroll.enrollmentId);
+
+        // --- OPTIMISTIC UI FIX: Immediately update the local state ---
+        setEnrolledCourses(prev => prev.filter(c => c.id !== courseToUnenroll.id));
+        setAvailableCourses(prev => [...prev, { ...courseToUnenroll, isEnrolled: false, progressPercentage: 0 }].sort((a, b) => a.title.localeCompare(b.title)));
+
+        // --- UX Enhancement: Success Path ---
+        // 1. Close the modal and reset the selected course state ATOMICALLY
+        setIsUnenrollModalOpen(false);
+        setSelectedCourseForUnenroll(null);
+        
+        // 2. Update toast to show success AFTER the modal is gone
+        toast.success(`Successfully unenrolled!`, { id: unenrollToast });
+
+        // 3. Emit event for other potential listeners
+        window.dispatchEvent(new CustomEvent('enrollment-deleted', {
+            detail: { courseId: courseToUnenroll.id, enrollmentId: courseToUnenroll.enrollmentId }
+        }));
+        
+        // 4. Silently refresh data in the background to ensure consistency.
+        fetchData(true);
+
     } catch (err: any) {
-      console.error('Unenrollment failed:', err);
-      toast.error(err.response?.data?.message || "Failed to unenroll.", { id: unenrollToast });
+        // --- UX Enhancement: Error Path with Rollback ---
+        console.error('Unenrollment failed:', err);
+        // 1. Update toast to show the specific error
+        toast.error(err.response?.data?.message || "Failed to unenroll. Please try again.", { id: unenrollToast });
+
+        // 2. Rollback the optimistic UI update if the API call fails
+        setEnrolledCourses(prev => [...prev, courseToUnenroll].sort((a, b) => a.title.localeCompare(b.title)));
+        setAvailableCourses(prev => prev.filter(c => c.id !== courseToUnenroll.id));
+        
     } finally {
-      setIsUnenrollModalOpen(false);
-      setSelectedCourseForUnenroll(null);
-      setOptimisticUpdates(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(courseId);
-        return newMap;
-      });
+        // 5. Always reset the processing state when the operation is complete
+        setIsUnenrolling(false);
     }
   }, [selectedCourseForUnenroll, fetchData]);
 
@@ -570,6 +584,14 @@ const CourseContent: React.FC = () => {
   const handleFilterChange = useCallback((filter: 'all' | 'completed' | 'ongoing') => {
     setLearningFilter(filter);
   }, []);
+  
+  // UX FIX: Create a guarded close function for the modal
+  const handleCloseUnenrollModal = useCallback(() => {
+    // Prevent the user from closing the modal while the unenroll action is processing
+    if (isUnenrolling) return;
+    setIsUnenrollModalOpen(false);
+    setSelectedCourseForUnenroll(null);
+  }, [isUnenrolling]);
 
   const handleUnenrollClick = useCallback((course: LearnerCourseDto) => {
     setSelectedCourseForUnenroll(course);
@@ -713,13 +735,16 @@ const CourseContent: React.FC = () => {
           </div>
         </div>
         
-        {/* ENTERPRISE: Professional modal */}
+        {/* ENTERPRISE: Professional modal with corrected state management */}
         <ConfirmationModal 
           isOpen={isUnenrollModalOpen} 
-          onClose={() => setIsUnenrollModalOpen(false)} 
+          onClose={handleCloseUnenrollModal} 
           onConfirm={handleUnenroll} 
           title="Confirm Unenrollment" 
-          courseName={selectedCourseForUnenroll?.title || ''} 
+          courseName={selectedCourseForUnenroll?.title || ''}
+          isProcessing={isUnenrolling} // Pass the dedicated processing state
+          confirmButtonText="Unenroll" // Use more specific button text
+          isDestructive={true} // Ensure destructive (red) styling
         />
       </div>
     </Layout>

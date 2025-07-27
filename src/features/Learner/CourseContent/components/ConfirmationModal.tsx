@@ -72,7 +72,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   const defaultMessage = isDestructive 
     ? `Are you sure you want to unenroll from "${courseName}"? This action cannot be undone.`
-    : `Are you sure you want to proceed with "${courseName}"?`;
+    : `Are you sure you want to proceed with this action?`;
 
   return (
     <div 
@@ -133,7 +133,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               <div className="flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
                 <div className="text-sm text-red-700 font-nunito">
-                  <strong>Warning:</strong> Unenrolling will remove your progress and access to this course.
+                  <strong>Warning:</strong> Unenrolling will remove your access to this course. This action cannot be undone.
                 </div>
               </div>
             </div>
