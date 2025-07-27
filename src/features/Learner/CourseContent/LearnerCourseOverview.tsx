@@ -32,30 +32,30 @@ const LoadingStates = {
 
 type LoadingState = typeof LoadingStates[keyof typeof LoadingStates];
 
-// ENTERPRISE: Skeleton components for instant loading experience
+// ENTERPRISE: Professional skeleton components for instant loading experience
 const CourseHeaderSkeleton: React.FC = React.memo(() => (
   <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6 animate-pulse">
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div className="md:col-span-1">
-        <div className="w-24 h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded mb-2 shimmer"></div>
-        <div className="w-full h-48 bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl shimmer"></div>
+        <div className="w-24 h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded mb-2"></div>
+        <div className="w-full h-48 bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl"></div>
       </div>
       <div className="md:col-span-2 space-y-4">
-        <div className="h-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-3/4 shimmer"></div>
-        <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-1/2 shimmer"></div>
+        <div className="h-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-3/4"></div>
+        <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-1/2"></div>
         <div className="flex gap-2">
-          <div className="h-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full w-20 shimmer"></div>
-          <div className="h-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full w-24 shimmer"></div>
-          <div className="h-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full w-16 shimmer"></div>
+          <div className="h-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full w-20"></div>
+          <div className="h-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full w-24"></div>
+          <div className="h-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full w-16"></div>
         </div>
         <div className="space-y-2">
-          <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded shimmer"></div>
-          <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-4/5 shimmer"></div>
+          <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded"></div>
+          <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-4/5"></div>
         </div>
         <div className="flex gap-4">
-          <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-24 shimmer"></div>
-          <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-20 shimmer"></div>
-          <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-32 shimmer"></div>
+          <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-24"></div>
+          <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-20"></div>
+          <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-32"></div>
         </div>
       </div>
     </div>
@@ -65,10 +65,10 @@ const CourseHeaderSkeleton: React.FC = React.memo(() => (
 const ProgressSkeleton: React.FC = React.memo(() => (
   <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6 animate-pulse">
     <div className="flex justify-between items-center mb-2">
-      <div className="h-5 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-24 shimmer"></div>
-      <div className="h-5 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-12 shimmer"></div>
+      <div className="h-5 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-24"></div>
+      <div className="h-5 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-12"></div>
     </div>
-    <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full shimmer"></div>
+    <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full"></div>
   </div>
 ));
 
@@ -76,8 +76,8 @@ const LessonSkeleton: React.FC = React.memo(() => (
   <div className="border border-[#52007C] rounded-lg overflow-hidden animate-pulse">
     <div className="p-4 flex justify-between items-center">
       <div className="flex items-center space-x-3 flex-1">
-        <div className="w-5 h-5 bg-gradient-to-r from-gray-200 to-gray-300 rounded shimmer"></div>
-        <div className="h-5 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-1/3 shimmer"></div>
+        <div className="w-5 h-5 bg-gradient-to-r from-gray-200 to-gray-300 rounded"></div>
+        <div className="h-5 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-1/3"></div>
       </div>
     </div>
   </div>
@@ -85,7 +85,7 @@ const LessonSkeleton: React.FC = React.memo(() => (
 
 const CourseContentSkeleton: React.FC = React.memo(() => (
   <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6 animate-pulse">
-    <div className="h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-32 mb-6 shimmer"></div>
+    <div className="h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-32 mb-6"></div>
     <div className="space-y-4">
       {Array(4).fill(0).map((_, index) => (
         <LessonSkeleton key={`lesson-skeleton-${index}`} />
@@ -583,11 +583,11 @@ const LearnerCourseOverview: React.FC = () => {
   }, []);
 
   // ENTERPRISE: Enhanced loading states
-  const isLoading = loadingState === LoadingStates.INITIAL || loadingState === LoadingStates.LOADING;
+  const isInitialLoading = loadingState === LoadingStates.INITIAL || loadingState === LoadingStates.LOADING;
   const isRefreshing = loadingState === LoadingStates.REFRESHING;
 
-  // ENTERPRISE: Loading display with professional skeletons
-  if (isLoading) {
+  // ENTERPRISE: Instant loading display with professional skeletons
+  if (isInitialLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] font-nunito">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">

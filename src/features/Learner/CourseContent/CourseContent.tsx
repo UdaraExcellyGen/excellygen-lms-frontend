@@ -1,5 +1,5 @@
 // src/features/Learner/CourseContent/CourseContent.tsx
-// ENTERPRISE OPTIMIZED: Ultra-fast loading, professional UX like Google/Microsoft
+// ENTERPRISE OPTIMIZED: Ultra-fast loading, professional UX with fixed cache invalidation
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Info, Loader2, BookOpen, Users, Clock, RefreshCw, X, AlertCircle } from 'lucide-react';
@@ -21,10 +21,10 @@ import toast from 'react-hot-toast';
 const StatsCardSkeleton: React.FC = React.memo(() => (
   <div className="bg-white/90 backdrop-blur-md rounded-xl p-6 border border-[#BF4BF6]/20 animate-pulse">
     <div className="flex items-center">
-      <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl mr-5 shimmer"></div>
+      <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl mr-5"></div>
       <div className="flex-1">
-        <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-24 mb-2 shimmer"></div>
-        <div className="h-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-16 shimmer"></div>
+        <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-24 mb-2"></div>
+        <div className="h-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-16"></div>
       </div>
     </div>
   </div>
@@ -32,22 +32,22 @@ const StatsCardSkeleton: React.FC = React.memo(() => (
 
 const CourseCardSkeleton: React.FC = React.memo(() => (
   <div className="bg-white/90 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 h-full flex flex-col animate-pulse">
-    <div className="h-48 bg-gradient-to-br from-gray-200 to-gray-300 shimmer"></div>
+    <div className="h-48 bg-gradient-to-br from-gray-200 to-gray-300"></div>
     <div className="p-6 flex-1 flex flex-col space-y-3">
-      <div className="h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-3/4 shimmer"></div>
-      <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-1/2 shimmer"></div>
+      <div className="h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-3/4"></div>
+      <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-1/2"></div>
       <div className="space-y-2">
-        <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded shimmer"></div>
-        <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-2/3 shimmer"></div>
+        <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded"></div>
+        <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-2/3"></div>
       </div>
       <div className="mt-auto space-y-3">
         <div className="flex gap-3">
-          <div className="h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full w-20 shimmer"></div>
-          <div className="h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full w-24 shimmer"></div>
-          <div className="h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full w-16 shimmer"></div>
+          <div className="h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full w-20"></div>
+          <div className="h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full w-24"></div>
+          <div className="h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full w-16"></div>
         </div>
-        <div className="h-12 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full shimmer"></div>
-        <div className="h-10 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full shimmer"></div>
+        <div className="h-12 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full"></div>
+        <div className="h-10 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full"></div>
       </div>
     </div>
   </div>
@@ -145,8 +145,8 @@ const CourseContent: React.FC = () => {
     };
   }, []);
 
-  // ENTERPRISE: Enhanced data validation with fallbacks
-  const ensureProperCourseData = useCallback((courses: LearnerCourseDto[]): LearnerCourseDto[] => {
+  // ENTERPRISE: Enhanced data validation with fallbacks and deduplication
+  const ensureProperCourseData = useCallback((courses: LearnerCourseDto[], isEnrolled: boolean = false): LearnerCourseDto[] => {
     return courses.map(course => {
       const totalLessons = course.lessons?.length || course.totalLessons || 0;
       const completedLessons = course.lessons?.filter(lesson => lesson.isCompleted).length || course.completedLessons || 0;
@@ -156,7 +156,7 @@ const CourseContent: React.FC = () => {
         id: course.id || 0,
         title: course.title || 'Untitled Course',
         description: course.description || '',
-        isEnrolled: Boolean(course.isEnrolled),
+        isEnrolled: isEnrolled || Boolean(course.isEnrolled),
         progressPercentage: Number(course.progressPercentage) || progressPercentage,
         totalLessons,
         completedLessons,
@@ -174,13 +174,32 @@ const CourseContent: React.FC = () => {
     });
   }, [categoryIdParam]);
 
+  // ENTERPRISE: Smart data deduplication to prevent key conflicts
+  const deduplicateCourses = useCallback((available: LearnerCourseDto[], enrolled: LearnerCourseDto[]) => {
+    const enrolledIds = new Set(enrolled.map(course => course.id));
+    
+    // Remove any courses from available that are already enrolled
+    const cleanAvailable = available.filter(course => !enrolledIds.has(course.id));
+    
+    console.log('🔧 Deduplicated courses:', {
+      originalAvailable: available.length,
+      cleanedAvailable: cleanAvailable.length,
+      enrolled: enrolled.length,
+      removedDuplicates: available.length - cleanAvailable.length
+    });
+    
+    return {
+      available: cleanAvailable,
+      enrolled: enrolled
+    };
+  }, []);
+
   // ENTERPRISE: Smart prefetching strategy
   const prefetchRelatedData = useCallback(async (categoryId: string) => {
     try {
       // Prefetch other categories for faster navigation
       const prefetchPromises = [
         preloadCoursesForCategory(categoryId),
-        // Could add more prefetch operations here
       ];
       
       await Promise.allSettled(prefetchPromises);
@@ -205,6 +224,7 @@ const CourseContent: React.FC = () => {
       setError(null);
 
       if (forceRefresh) {
+        console.log('🧹 Force refresh: clearing all caches');
         clearCourseCaches();
         clearEnrollmentCaches();
         invalidateCategoryCache(categoryIdParam);
@@ -237,8 +257,17 @@ const CourseContent: React.FC = () => {
 
       const { coursesData } = result;
       
-      setAvailableCourses(ensureProperCourseData(coursesData.available));
-      setEnrolledCourses(ensureProperCourseData(coursesData.categoryEnrolled));
+      // ENTERPRISE: Process and deduplicate courses
+      const processedAvailable = ensureProperCourseData(coursesData.available, false);
+      const processedEnrolled = ensureProperCourseData(coursesData.categoryEnrolled, true);
+      
+      const { available: cleanAvailable, enrolled: cleanEnrolled } = deduplicateCourses(
+        processedAvailable,
+        processedEnrolled
+      );
+      
+      setAvailableCourses(cleanAvailable);
+      setEnrolledCourses(cleanEnrolled);
       setLoadingState(LoadingStates.SUCCESS);
       
       // ENTERPRISE: Background prefetching for better UX
@@ -252,13 +281,11 @@ const CourseContent: React.FC = () => {
       
       // ENTERPRISE: Enhanced 404 error handling
       if (err.response?.status === 404) {
-        // Check if it's a category not found vs courses not found
         if (err.config?.url?.includes('/CourseCategories/')) {
           toast.error('Category not found');
           navigate('/learner/course-categories', { replace: true });
           return;
         } else {
-          // Courses endpoint not found - this is OK, just means no courses
           console.log('No courses endpoint found for category, showing empty state');
           setAvailableCourses([]);
           setEnrolledCourses([]);
@@ -271,11 +298,73 @@ const CourseContent: React.FC = () => {
       setLoadingState(LoadingStates.ERROR);
       toast.error(errorMessage);
     }
-  }, [user?.id, categoryIdParam, navigate, ensureProperCourseData, prefetchRelatedData]);
+  }, [user?.id, categoryIdParam, navigate, ensureProperCourseData, prefetchRelatedData, deduplicateCourses]);
 
   // ENTERPRISE: Initial load effect
   useEffect(() => {
     fetchData();
+  }, [fetchData]);
+
+  // ENTERPRISE: Listen for external enrollment changes (fixes CoursePreview enrollment issue)
+  useEffect(() => {
+    const handleEnrollmentChange = () => {
+      console.log('🔄 External enrollment change detected, refreshing data...');
+      fetchData(true); // Force refresh with cache clear
+    };
+
+    const handleProgressUpdate = (event: CustomEvent) => {
+      const { courseId } = event.detail;
+      console.log(`🔄 Received progress update for course ${courseId}`);
+      
+      // ENTERPRISE: Smart refresh only for affected course
+      refreshCourseData(categoryIdParam, courseId).catch(err => {
+        console.warn('Failed to refresh course data:', err);
+      });
+    };
+
+    const handleDashboardRefresh = (event: CustomEvent) => {
+      const { eventType } = event.detail;
+      if (eventType === 'enrollment-change' || eventType === 'course-progress-update' || eventType === 'enrollment-created') {
+        console.log(`🔄 Dashboard refresh needed: ${eventType}`);
+        fetchData(true);
+      }
+    };
+
+    // ENTERPRISE: Listen for enrollment events from other components
+    window.addEventListener('enrollment-created', handleEnrollmentChange);
+    window.addEventListener('enrollment-deleted', handleEnrollmentChange);
+    window.addEventListener('courseProgressUpdated', handleProgressUpdate as EventListener);
+    window.addEventListener('dashboard-refresh-needed', handleDashboardRefresh as EventListener);
+    
+    return () => {
+      window.removeEventListener('enrollment-created', handleEnrollmentChange);
+      window.removeEventListener('enrollment-deleted', handleEnrollmentChange);
+      window.removeEventListener('courseProgressUpdated', handleProgressUpdate as EventListener);
+      window.removeEventListener('dashboard-refresh-needed', handleDashboardRefresh as EventListener);
+    };
+  }, [categoryIdParam, fetchData]);
+
+  // ENTERPRISE: Focus event handler to refresh data when user returns to tab
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('🔄 Window focused, checking for data updates...');
+      fetchData(true);
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('🔄 Tab became visible, checking for data updates...');
+        fetchData(true);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [fetchData]);
 
   // ENTERPRISE: Enhanced optimistic enrollment with rollback
@@ -311,7 +400,7 @@ const CourseContent: React.FC = () => {
     try {
       const newEnrollment = await createEnrollment(courseId);
       
-      // ENTERPRISE: Update with real enrollment data
+      // ENTERPRISE: Update with real enrollment data and emit event
       if (isMountedRef.current) {
         setEnrolledCourses(prev => 
           prev.map(c => {
@@ -327,6 +416,15 @@ const CourseContent: React.FC = () => {
         );
         
         toast.success(`Successfully enrolled in "${courseToEnroll.title}"!`, { id: enrollToast });
+        
+        // ENTERPRISE: Emit enrollment event for other components
+        window.dispatchEvent(new CustomEvent('enrollment-created', { 
+          detail: { courseId, enrollmentId: newEnrollment.id, categoryId: categoryIdParam }
+        }));
+        
+        window.dispatchEvent(new CustomEvent('dashboard-refresh-needed', { 
+          detail: { eventType: 'enrollment-created' }
+        }));
         
         // ENTERPRISE: Clear caches for fresh data
         clearCourseCaches();
@@ -360,35 +458,6 @@ const CourseContent: React.FC = () => {
     }
   }, [availableCourses, processingEnrollments]);
 
-  // ENTERPRISE: Listen for external course progress updates
-  useEffect(() => {
-    const handleProgressUpdate = (event: CustomEvent) => {
-      const { courseId } = event.detail;
-      console.log(`🔄 Received progress update for course ${courseId}`);
-      
-      // ENTERPRISE: Smart refresh only for affected course
-      refreshCourseData(categoryIdParam, courseId).catch(err => {
-        console.warn('Failed to refresh course data:', err);
-      });
-    };
-
-    const handleDashboardRefresh = (event: CustomEvent) => {
-      const { eventType } = event.detail;
-      if (eventType === 'enrollment-change' || eventType === 'course-progress-update') {
-        console.log(`🔄 Dashboard refresh needed: ${eventType}`);
-        fetchData(true);
-      }
-    };
-
-    window.addEventListener('courseProgressUpdated', handleProgressUpdate as EventListener);
-    window.addEventListener('dashboard-refresh-needed', handleDashboardRefresh as EventListener);
-    
-    return () => {
-      window.removeEventListener('courseProgressUpdated', handleProgressUpdate as EventListener);
-      window.removeEventListener('dashboard-refresh-needed', handleDashboardRefresh as EventListener);
-    };
-  }, [categoryIdParam, fetchData]);
-
   // ENTERPRISE: Enhanced unenrollment with optimistic updates
   const handleUnenroll = useCallback(async () => {
     if (!selectedCourseForUnenroll?.enrollmentId) return;
@@ -400,6 +469,11 @@ const CourseContent: React.FC = () => {
     try {
       await deleteEnrollment(selectedCourseForUnenroll.enrollmentId);
       toast.success(`Unenrolled successfully!`, { id: unenrollToast });
+      
+      // ENTERPRISE: Emit unenrollment event
+      window.dispatchEvent(new CustomEvent('enrollment-deleted', { 
+        detail: { courseId, enrollmentId: selectedCourseForUnenroll.enrollmentId }
+      }));
       
       // ENTERPRISE: Refresh data and clear caches
       clearCourseCaches();
@@ -502,7 +576,7 @@ const CourseContent: React.FC = () => {
     setIsUnenrollModalOpen(true);
   }, []);
 
-  // ENTERPRISE: Enhanced grid component with processing states
+  // ENTERPRISE: Enhanced grid component with processing states and unique keys
   const CourseGridWithProcessing = useMemo(() => (
     <CourseGrid
       activeTab={activeTab}

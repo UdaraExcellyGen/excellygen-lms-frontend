@@ -103,6 +103,12 @@ class EnterpriseCourseCache {
     return entry.data as T;
   }
 
+  // ENTERPRISE: Get expired cache data for fallback
+  getExpired<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    return entry ? entry.data as T : null;
+  }
+
   invalidate(pattern: string): void {
     const keysToDelete: string[] = [];
     for (const [key] of this.cache) {
@@ -255,10 +261,10 @@ export const getCoursesForCategory = async (categoryId: string): Promise<{
     console.log(`🔄 Fetching courses for category: ${categoryId}`);
     
     try {
-      // ENTERPRISE: Call existing endpoints if category endpoint doesn't exist
+      // ENTERPRISE: Call existing endpoints if category endpoint doesn't exist - INCREASED TIMEOUT
       const [availableResponse, enrolledResponse] = await Promise.all([
-        apiClient.get(`/LearnerCourses/available?categoryId=${categoryId}`, { timeout: 15000 }),
-        apiClient.get(`/LearnerCourses/enrolled`, { timeout: 15000 })
+        apiClient.get(`/LearnerCourses/available?categoryId=${categoryId}`, { timeout: 20000 }),
+        apiClient.get(`/LearnerCourses/enrolled`, { timeout: 20000 })
       ]);
       
       // Filter enrolled courses by category
@@ -303,6 +309,16 @@ export const getCoursesForCategory = async (categoryId: string): Promise<{
       
     } catch (error: any) {
       console.error(`❌ Error fetching courses for category ${categoryId}:`, error);
+      
+      // ENTERPRISE: Handle CanceledError specifically
+      if (error.name === 'CanceledError' || error.code === 'ECONNABORTED') {
+        console.warn('🕐 Request was cancelled/timed out, using fallback');
+        const expiredData = cache.getExpired<{ available: LearnerCourseDto[]; categoryEnrolled: LearnerCourseDto[] }>(cacheKey);
+        if (expiredData) {
+          console.log('🔄 Using expired cache due to timeout');
+          return expiredData;
+        }
+      }
       
       // ENTERPRISE: Graceful fallback with empty data
       if (error.response?.status === 404) {
@@ -352,7 +368,7 @@ export const getEnrolledCoursesForLearner = async (): Promise<LearnerCourseDto[]
     
     try {
       const response = await apiClient.get('/LearnerCourses/enrolled', {
-        timeout: 15000 // 15 second timeout
+        timeout: 20000 // INCREASED timeout from 15s to 20s
       });
       
       if (!Array.isArray(response.data)) {
@@ -374,6 +390,16 @@ export const getEnrolledCoursesForLearner = async (): Promise<LearnerCourseDto[]
       
     } catch (error: any) {
       console.error('❌ Error fetching enrolled courses:', error);
+      
+      // ENTERPRISE: Handle CanceledError specifically
+      if (error.name === 'CanceledError' || error.code === 'ECONNABORTED') {
+        console.warn('🕐 Request was cancelled/timed out, using fallback');
+        const expiredData = cache.getExpired<LearnerCourseDto[]>(cacheKey);
+        if (expiredData) {
+          console.log('🔄 Using expired cache due to timeout');
+          return expiredData;
+        }
+      }
       
       // ENTERPRISE: Graceful fallback with empty data
       if (error.response?.status === 404) {
@@ -417,7 +443,7 @@ export const getLearnerCourseDetails = async (courseId: number): Promise<Learner
     
     try {
       const response = await apiClient.get(`/LearnerCourses/${courseId}`, {
-        timeout: 10000 // 10 second timeout
+        timeout: 15000 // INCREASED timeout from 10s to 15s
       });
       
       if (!response.data || typeof response.data !== 'object') {
@@ -435,6 +461,16 @@ export const getLearnerCourseDetails = async (courseId: number): Promise<Learner
       
     } catch (error: any) {
       console.error(`❌ Error fetching course details ${courseId}:`, error);
+      
+      // ENTERPRISE: Handle CanceledError specifically
+      if (error.name === 'CanceledError' || error.code === 'ECONNABORTED') {
+        console.warn('🕐 Request was cancelled/timed out, using fallback');
+        const expiredData = cache.getExpired<LearnerCourseDto>(cacheKey);
+        if (expiredData) {
+          console.log('🔄 Using expired cache due to timeout');
+          return expiredData;
+        }
+      }
       
       // ENTERPRISE: Try to return cached data on error
       const keys = Array.from(cache['cache'].keys());
@@ -476,7 +512,7 @@ export const getLearnerCourseStats = async (): Promise<{
     
     try {
       const response = await apiClient.get('/LearnerCourses/stats', {
-        timeout: 10000
+        timeout: 15000 // INCREASED timeout
       });
       
       const stats = {
@@ -494,6 +530,16 @@ export const getLearnerCourseStats = async (): Promise<{
       
     } catch (error: any) {
       console.error('❌ Error fetching course stats:', error);
+      
+      // ENTERPRISE: Handle CanceledError specifically
+      if (error.name === 'CanceledError' || error.code === 'ECONNABORTED') {
+        console.warn('🕐 Request was cancelled/timed out, using fallback');
+        const expiredData = cache.getExpired<any>(cacheKey);
+        if (expiredData) {
+          console.log('🔄 Using expired cache due to timeout');
+          return expiredData;
+        }
+      }
       
       // ENTERPRISE: Fallback to calculating from enrolled courses
       try {
@@ -622,7 +668,7 @@ export const getCoursePreview = async (courseId: number): Promise<LearnerCourseD
     
     try {
       const response = await apiClient.get(`/LearnerCourses/preview/${courseId}`, {
-        timeout: 10000 // 10 second timeout
+        timeout: 15000 // INCREASED timeout
       });
       
       if (!response.data || typeof response.data !== 'object') {
@@ -640,6 +686,16 @@ export const getCoursePreview = async (courseId: number): Promise<LearnerCourseD
       
     } catch (error: any) {
       console.error(`❌ Error fetching course preview ${courseId}:`, error);
+      
+      // ENTERPRISE: Handle CanceledError specifically
+      if (error.name === 'CanceledError' || error.code === 'ECONNABORTED') {
+        console.warn('🕐 Request was cancelled/timed out, using fallback');
+        const expiredData = cache.getExpired<LearnerCourseDto>(cacheKey);
+        if (expiredData) {
+          console.log('🔄 Using expired cache due to timeout');
+          return expiredData;
+        }
+      }
       
       // ENTERPRISE: Try to return cached data on error
       const keys = Array.from(cache['cache'].keys());
