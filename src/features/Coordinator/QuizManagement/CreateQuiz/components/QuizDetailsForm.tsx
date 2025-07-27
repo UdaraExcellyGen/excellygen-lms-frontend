@@ -39,7 +39,7 @@ export const QuizDetailsForm: React.FC<QuizDetailsFormProps> = ({ quizState, err
       <p className="text-sm mt-2"><strong>Note:</strong> You must create exactly the number of questions specified in the "Question Bank Size" field.</p>
     </div>
     <div className="flex justify-end mt-4">
-      <button onClick={onContinue} className="px-5 py-2 border border-[#52007C] hover:bg-[#BF4BF6]/10 text-[#1B0A3F] rounded-lg transition-colors">Continue to Questions</button>
+      <button onClick={onContinue} className="px-5 py-2 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white rounded-lg transition-colors">Continue to Questions</button>
     </div>
   </div>
 );

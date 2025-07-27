@@ -275,8 +275,8 @@ const TakeQuiz: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-6 flex justify-center items-center">
         <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6 max-w-md w-full text-center">
           <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <h2 className="text-white text-xl font-bold mb-2">Quiz Error</h2>
-          <p className="text-white/80 mb-6">{error}</p>
+          <h2 className="text-[#52007C] text-xl font-bold mb-2">Quiz Error</h2>
+          <p className="text-gray/500 mb-6">{error}</p>
           <button onClick={() => navigate(-1)} className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-6 py-3 rounded-lg font-medium">
             Go Back
           </button>

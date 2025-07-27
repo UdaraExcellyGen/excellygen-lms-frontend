@@ -21,7 +21,6 @@ interface QuestionListProps {
 const QuestionList: React.FC<QuestionListProps> = ({
     questions,
     expandedQuestions,
-    activeQuestionIndex,
     isQuestionValid,
     onAddQuestion,
     onToggleQuestionExpansion,

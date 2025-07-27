@@ -19,9 +19,11 @@ export interface StatCardProps {
   stats: {
     total: number;
     active: number;
+    inactive?: number;
   };
   totalLabel: string;
   activeLabel: string;
+   inactiveLabel?: string;
   onClick?: () => void;
 }
 

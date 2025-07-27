@@ -19,7 +19,7 @@ const CourseCoordinatorDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [courseStats, setCourseStats] = useState<{ total: number; active: number }>({ total: 0, active: 0 });
+  const [courseStats, setCourseStats] = useState<{ total: number; active: number; inactive: number }>({ total: 0, active: 0, inactive: 0 });
   const [studentStats, setStudentStats] = useState<{ total: number; active: number }>({ total: 0, active: 0 });
   const [avatar, setAvatar] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,7 +51,8 @@ const CourseCoordinatorDashboard: React.FC = () => {
 
         setCourseStats({
           total: coordinatorCourses.length,
-          active: coordinatorCourses.filter(c => c.status === 'Published').length,
+          active: coordinatorCourses.filter(c => c.status === 'Published' && !c.isInactive).length,
+          inactive: coordinatorCourses.filter(c => c.isInactive).length,
         });
 
         const coordinatorCourseIds = coordinatorCourses.map(course => course.id);
@@ -75,7 +76,7 @@ const CourseCoordinatorDashboard: React.FC = () => {
             errorMessage = `Failed to load dashboard data: ${err.message}.`;
         }
         setError(errorMessage);
-        setCourseStats({ total: 0, active: 0 });
+        setCourseStats({ total: 0, active: 0, inactive: 0 });
         setStudentStats({ total: 0, active: 0 });
       } finally {
         setIsLoading(false);
@@ -142,6 +143,7 @@ const CourseCoordinatorDashboard: React.FC = () => {
             stats={courseStats}
             totalLabel="Total Created Courses"
             activeLabel="My Published Courses"
+            inactiveLabel="Inactive Courses"
             onClick={() => navigate('/coordinator/course-display-page')}
           />
           <StatCard

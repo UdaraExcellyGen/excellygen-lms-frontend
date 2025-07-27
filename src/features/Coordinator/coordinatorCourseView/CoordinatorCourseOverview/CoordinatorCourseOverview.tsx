@@ -1,17 +1,14 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, Plus, Edit, Trash2, CheckCircle, BookOpen, Clock, Award, Eye, AlertTriangle, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, CheckCircle, BookOpen, Clock,  AlertTriangle, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 
 import {
     CourseDto,
-    LessonDto,
-    CreateLessonPayload,
     CategoryDto,
     TechnologyDto,
     UpdateCourseCoordinatorDtoFE,
-    UpdateLessonPayload,
     CourseStatus
 } from '../../../../types/course.types';
 
@@ -27,8 +24,7 @@ import {
     deleteLesson,
     publishCourse,
     deactivateCourse,
-    reactivateCourse,
-    hardDeleteCourse
+    reactivateCourse
 } from '../../../../api/services/Course/courseService';
 
 import { getQuizzesByLessonId, deleteQuiz } from '../../../../api/services/Course/quizService';
@@ -58,19 +54,10 @@ const CoordinatorCourseOverview: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [expandedSubtopics, setExpandedSubtopics] = useState<Record<number, boolean>>({});
-    const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [materialToDelete, setMaterialToDelete] = useState<{ documentId: number; lessonId: number; name: string } | null>(null);
     const [newDocumentFiles, setNewDocumentFiles] = useState<Record<number, File | null>>({});
     const [uploadingDocId, setUploadingDocId] = useState<number | null>(null);
     const [isEditMode, setIsEditMode] = useState(false);
     const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
-    const [dialogConfig, setDialogConfig] = useState<{
-        isOpen: boolean;
-        message: string;
-        title: string;
-        confirmText: string;
-        onConfirm: () => void;
-    } | null>(null);
     const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
 
     const [editCourseDetails, setEditCourseDetails] = useState<(UpdateCourseCoordinatorDtoFE & { thumbnail: File | null }) | null>(null);
@@ -206,7 +193,16 @@ useEffect(() => {
         });
     };
      const handlePublishCourse = () => {
-        if (!courseId) return;
+        if (!courseId || !courseData) return;
+    
+        const emptyLesson = courseData.lessons.find(lesson => 
+            lesson.documents.length === 0 && (!lesson.quizzes || lesson.quizzes.length === 0)
+        );
+    
+        if (emptyLesson) {
+            toast.error(`Cannot publish: The lesson "${emptyLesson.lessonName}" is empty. Please add materials or a quiz.`);
+            return;
+        }
         showConfirmation({
             title: "Publish Course?",
             message: "Once a course is published, its lessons and materials cannot be edited. Are you sure you want to publish?",
@@ -219,9 +215,12 @@ useEffect(() => {
                 try {
                     await publishCourse(courseId);
                     toast.success("Course published!", { id: toastId });
-                    setTimeout(() => navigate("/coordinator/course-display-page"), 1500);
+                    setLastRefresh(Date.now()); // Refresh data to show new "Published" state
+                    setIsEditMode(false);
                 } catch (error) {
                     toast.error((error as any).response?.data?.message || "Failed to publish.", { id: toastId });
+                    setIsSaving(false);
+                } finally {
                     setIsSaving(false);
                 }
             }
@@ -249,17 +248,23 @@ useEffect(() => {
                 const initialEditSubtopics: Record<number, EditSubtopicData> = {};
                 courseData.lessons.forEach(l => { initialEditSubtopics[l.id] = { lessonName: l.lessonName, lessonPoints: l.lessonPoints }; });
                 setEditSubtopicsData(initialEditSubtopics);
-                toast.success("Edit mode activated", { icon: '✏️', id: 'edit-mode-toast' });
             } else {
                 setEditCourseDetails(null);
                 setEditSubtopicsData({});
                 setThumbnailPreview(null);
-                toast("Edit mode cancelled.", { id: 'edit-mode-toast' });
             }
             
             return newIsEditMode;
         });
     }, [courseData, thumbnailPreview]);
+    useEffect(() => {
+    // Only show toast if isEditMode changed (not on initial mount)
+    if (isEditMode) {
+        toast.success("Edit mode activated", { icon: '✏️', id: 'edit-mode-toast' });
+    } else if (courseData) { // Only show cancel toast if we have courseData (not initial load)
+        toast("Edit mode cancelled.", { id: 'edit-mode-toast' });
+    }
+}, [isEditMode]);
 
     // This is the new function
 const handleEditCourseInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -423,9 +428,6 @@ const handleSaveCourse = async () => {
         });
     };
 
-
-    
-    const handleCancelDelete = useCallback(() => { setDeleteDialogOpen(false); setMaterialToDelete(null); }, []);
     const handleAddVideoMaterial = useCallback(() => toast("Video functionality is not implemented."), []);
     const handleCreateQuiz = useCallback((lessonId: number) => { if (courseId) navigate(`/coordinator/create-quiz/${lessonId}?courseId=${courseId}&source=course-view`); }, [navigate, courseId]);
     
@@ -482,12 +484,6 @@ const handleSaveCourse = async () => {
            toast.error("Failed to refresh data.", { id: toastId });
         }
     };
-
-    const calculateTotalCoursePoints = useMemo(() => {
-        if (!courseData || courseData.lessons.length === 0) return 0;
-        const total = courseData.lessons.reduce((sum, lesson) => sum + (editSubtopicsData[lesson.id]?.lessonPoints ?? lesson.lessonPoints), 0);
-        return Math.round(total / courseData.lessons.length);
-    }, [courseData, editSubtopicsData]);
 
     const lessonPointsDisplay = useMemo(() => {
         const pointsMap: Record<number, number> = {};
@@ -565,6 +561,9 @@ const handleSaveCourse = async () => {
                 )}
 
                 <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6 shadow-lg">
+                <div className="flex flex-wrap gap-2 mb-4">
+                <span className="bg-[#34137C]/90 text-white px-3 py-1 rounded-lg text-sm">{courseData.category.title}</span>
+                </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="md:col-span-1">
                             {isEditMode ? (
@@ -638,11 +637,11 @@ const handleSaveCourse = async () => {
                                             ) : (
                                                 <>
                                                     {courseData.status === 'Draft' && (
-                                                        <button onClick={handlePublishCourse} disabled={isSaving} className="bg-[#34137C] hover:bg-[#34137C]/90 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                                                        <button onClick={handlePublishCourse} disabled={isSaving} className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
                                                             Publish
                                                         </button>
                                                     )}
-                                                    <button onClick={handleToggleEditMode} disabled={isSaving || isInactive} className="bg-[#34137C] hover:bg-[#34137C]/90 text-white px-4 py-2 rounded-lg flex items-center gap-1 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                                                    <button onClick={handleToggleEditMode} disabled={isSaving || isInactive} className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-4 py-2 rounded-lg flex items-center gap-1 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
                                                         <Edit size={16} /> Edit
                                                     </button>
                                                     {courseData.status === 'Published' && (
@@ -652,20 +651,19 @@ const handleSaveCourse = async () => {
                                                     )}
                                                 </>
                                             )}
-                                            <button onClick={refreshAllQuizData} title="Refresh course data" className="bg-[#34137C] hover:bg-[#4A1F95] text-white p-2 rounded-lg transition-colors shadow-lg">
+                                            <button onClick={refreshAllQuizData} title="Refresh course data" className="bg-[#34137C]/30 hover:bg-[#4A1F95]/30 text-white p-2 rounded-lg transition-colors shadow-lg">
                                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                                             </button>
                                         </div>
                                     </div>
                                     <div className="flex flex-wrap gap-2 mb-4">
-                                        <span className="bg-[#34137C]/60 text-white px-3 py-1 rounded-full text-sm">{courseData.category.title}</span>
+                                        
                                         {courseData.technologies.map(t => <span key={t.id} className="bg-[#34137C]/60 text-white px-3 py-1 rounded-full text-sm">{t.name}</span>)}
                                     </div>
                                     <p className="text-gray-500 mb-4">{courseData.description}</p>
                                     <div className="flex flex-wrap gap-4 text-sm text-[#1B0A3F]/60">
                                         <div className="flex items-center"><Clock className="w-4 h-4 mr-2 text-[#D68BF9]" />Estimated time: {courseData.estimatedTime} hours</div>
                                         <div className="flex items-center"><BookOpen className="w-4 h-4 mr-2 text-[#D68BF9]" />Lessons: {courseData.lessons.length}</div>
-                                        {/* <div className="flex items-center"><Award className="w-4 h-4 mr-2 text-[#D68BF9]" />Average Points: {calculateTotalCoursePoints}/100</div> */}
                                     </div>
                                 </>
                             )}
@@ -674,7 +672,7 @@ const handleSaveCourse = async () => {
                     {isEditMode && (
                         <div className="mt-6 flex justify-end gap-3">
                             <button onClick={handleToggleEditMode} disabled={isSaving} className="bg-gray-500 hover:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors">Cancel</button>
-                            <button onClick={handleSaveCourse} disabled={isSaving} className="bg-[#34137C] hover:bg-[#34137C]/90 text-white px-6 py-2 rounded-lg flex items-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                            <button onClick={handleSaveCourse} disabled={isSaving} className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-6 py-2 rounded-lg flex items-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                                 {isSaving ? (<><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Saving...</>) : (<><CheckCircle className="w-4 h-4 mr-2" />Save Changes</>)}
                             </button>
                         </div>

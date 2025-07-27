@@ -1,6 +1,6 @@
 // src/features/Coordinator/coordinatorCourseView/CoordinatorCourseOverview/components/SubtopicItem.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Edit, Trash, Download, Plus, Video, FileText, List } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash, Download, Plus, Video, FileText, List } from 'lucide-react';
 import { LessonDto, CourseDocumentDto } from '../../../../../types/course.types';
 import { getQuizzesByLessonId } from '../../../../../api/services/Course/quizService';
 import QuizList from './QuizList';
@@ -38,7 +38,6 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
   isPublished,
   editData,
   onEditNameChange,
-  onEditPointsChange,
   onRemoveSubtopic,
   isExpanded,
   toggleExpand,
@@ -55,7 +54,6 @@ const SubtopicItem: React.FC<SubtopicItemProps> = ({
   onEditQuiz,
   onRemoveQuiz,
   isSaving,
-  lessonPointsDisplay,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [actualQuizzes, setActualQuizzes] = useState<QuizDto[]>([]);

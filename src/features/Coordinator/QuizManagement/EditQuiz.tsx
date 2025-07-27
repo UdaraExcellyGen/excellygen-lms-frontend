@@ -387,12 +387,12 @@ className = "p-2 rounded-lg transition-colors h-10 w-10 flex items-center justif
             <div className = "flex items-center mb-1" >
             <button onClick = {() => setStep('details')
             }
-            className = { `px-4 py-2 rounded-tl-lg rounded-tr-lg  ${step === 'details' ? 'bg-white/90 text-[#1B0A3F]' : 'bg-[#34137C] text-white/90'}`
+            className = { `px-4 py-2 rounded-tl-lg rounded-tr-lg  ${step === 'details' ? 'bg-white/90 text-[#1B0A3F]' : 'bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white/90'}`
         } >
         Quiz Details 
         </button> 
         <button onClick = { handleContinueToQuestions}
-        className = { `px-4 py-2 rounded-tl-lg rounded-tr-lg ${step === 'questions' ? 'bg-white/90 text-[#1B0A3F]' : 'bg-[#34137C] text-white/90'}`
+        className = { `px-4 py-2 rounded-tl-lg rounded-tr-lg ${step === 'questions' ? 'bg-white/90 text-[#1B0A3F]' : 'bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white/90'}`
     } >
     Questions({ quizState.questions.length } / { quizState.quizBankSize }) 
     </button> 
@@ -412,7 +412,7 @@ className = "p-2 rounded-lg transition-colors h-10 w-10 flex items-center justif
             <p className = "text-sm text-yellow-400 mt-2" > Note: This quiz is in view - only mode.You cannot edit details or add / remove questions. </p> 
             </div> 
             <div className = "flex justify-end pt-4" > < button onClick = { handleContinueToQuestions}
-            className = "px-5 py-2.5 border border-[#52007C] text-[#1B0A3F] rounded-lg hover:bg-[#BF4BF6]/10 rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" > View Questions </button></div >
+            className = "px-5 py-2.5 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" > View Questions </button></div >
             </div>
         ) : ( 
         <div className = "space-y-6" >
@@ -448,7 +448,7 @@ className = "p-2 rounded-lg transition-colors h-10 w-10 flex items-center justif
     )
 } 
 <div className = "flex justify-between items-center pt-4" > < button onClick = { handleBackToDetails}
-className = "px-5 py-2.5 border border-[#52007C] text-[#1B0A3F] rounded-lg hover:bg-[#BF4BF6]/10 rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" > Back to Details </button></div >
+className = "px-5 py-2.5 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" > Back to Details </button></div >
     </div>
 )
 } 
@@ -479,14 +479,14 @@ disabled = { isSaving } > {
 </div> 
 </div> 
 <div className = "flex mb-4" >
-<button className = { `px-4 py-2 rounded-tl-lg rounded-tr-lg ${step === 'details' ? 'bg-white/90 text-[#1B0A3F]' : 'bg-[#34137C] text-white/90'}`
+<button className = { `px-4 py-2 rounded-tl-lg rounded-tr-lg ${step === 'details' ? 'bg-white/90 text-[#1B0A3F]' : 'bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white/90'}`
 }
 onClick = {
     () => setStep('details')
 } >
 Quiz Details 
 </button> 
-<button className = { `px-4 py-2 rounded-tl-lg rounded-tr-lg ${step === 'questions' ? 'bg-white/90 text-[#1B0A3F]' : 'bg-[#34137C] text-white/90'}`
+<button className = { `px-4 py-2 rounded-tl-lg rounded-tr-lg ${step === 'questions' ? 'bg-white/90 text-[#1B0A3F]' : 'bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white/90'}`
 }
 onClick = { handleContinueToQuestions} >
 Questions ({quizState.questions.length}) 
@@ -513,7 +513,7 @@ step === 'details' ? (
                 </div> 
                 <div className = "bg-[#34137C]/70 rounded-lg p-4 border border-[#BF4BF6]/30 text-white" > < h3 className = "text-[#D68BF9] font-semibold mb-2" > About Quiz Banks </h3><p className="text-sm">The quiz bank lets you create a larger set of questions, from which a random subset will be chosen each time a learner takes the quiz. This helps prevent memorization and encourages deeper understanding of the material.</p > </div> 
                 <div className = "flex justify-end mt-4" > < button onClick = { handleContinueToQuestions}
-                className = "px-5 py-2.5 border border-[#52007C] text-[#1B0A3F] rounded-lg hover:bg-[#BF4BF6]/10 rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" > Continue to Questions < ArrowLeft className = "transform rotate-180 w-4 h-4"/> </button></div >
+                className = "px-5 py-2.5 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" > Continue to Questions < ArrowLeft className = "transform rotate-180 w-4 h-4"/> </button></div >
                 </div>
             ) : ( 
             <div >
@@ -539,7 +539,7 @@ step === 'details' ? (
             )
         } 
         <div className = "flex justify-between mt-6" > < button onClick = { handleBackToDetails}
-        className = "px-5 py-2.5 border border-[#52007C] text-[#1B0A3F] rounded-lg hover:bg-[#BF4BF6]/10 transition-colors flex items-center gap-2" > < ArrowLeft className = "w-4 h-4"/> Back to Quiz Details </button> <button onClick={handleSaveQuiz} className="px-5 py-2.5 bg-[#52007C] hover:bg-[#D68BF9] text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" disabled={isSaving}>{isSaving ? 'Saving...' : <><Save size={16}/> Save Quiz</>}</button > </div> 
+        className = "px-5 py-2.5 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white transition-colors flex items-center gap-2" > < ArrowLeft className = "w-4 h-4"/> Back to Quiz Details </button> <button onClick={handleSaveQuiz} className="px-5 py-2.5 bg-[#52007C] hover:bg-[#D68BF9] text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" disabled={isSaving}>{isSaving ? 'Saving...' : <><Save size={16}/> Save Quiz</>}</button > </div> 
         </div>
     )
 } 

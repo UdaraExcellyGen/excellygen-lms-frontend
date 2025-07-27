@@ -6,11 +6,11 @@ import Header from './components/Header';
 import SearchBar from './components/SearchBar';
 import CourseFilter from './components/CourseFilter';
 import CourseList from './components/CourseList';
-import { Course, Student } from './types/index';
+import { Course } from './types/index';
 import { getAllCourses } from '../../../api/services/Course/courseService';
 import { getAllEnrollmentsAdminView } from '../../../api/services/Course/enrollmentService';
 import { CourseDto, EnrollmentDto, CourseStatus } from '../../../types/course.types';
-import { BookOpen, AlertCircle, RefreshCw, Users } from 'lucide-react';
+import { AlertCircle, RefreshCw, Users } from 'lucide-react';
 
 const getCurrentUserId = (): string | null => {
     const userJson = localStorage.getItem('user');
