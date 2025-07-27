@@ -28,6 +28,7 @@ import { UserRole } from './types/auth.types';
 const CvPage = lazy(() => import('./features/Learner/LearnerCv/Cv'));
 
 // Learner Components
+const CoursePreview = lazy(() => import('./features/Learner/CoursePreview/CoursePreview'));
 const LearnerDashboard = lazy(() => import('./features/Learner/LearnerDashboard/LearnerDashboard'));
 const LearnerProfile = lazy(() => import('./features/Learner/LearnerProfile/LearnerProfile'));
 const BadgesAndRewards = lazy(() => import('./features/Learner/BadgesAndRewards/BadgesAndRewards'));
@@ -215,7 +216,6 @@ function App() {
           } 
         />
 
-        {/* LEARNER ROUTES */}
         <Route path="/learner">
           <Route path="dashboard" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(LearnerDashboard)}</ProtectedRoute>} />
           <Route path="profile" element={<ProtectedRoute>{suspenseWrapper(LearnerProfile)}</ProtectedRoute>} />
@@ -229,6 +229,7 @@ function App() {
           <Route path="leaderboard" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(Leaderboard)}</ProtectedRoute>} />
           <Route path="course-categories" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(CourseCategories)}</ProtectedRoute>} />
           <Route path="courses/:categoryId" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(CourseContent)}</ProtectedRoute>} />
+          <Route path="course-preview/:courseId" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(CoursePreview)}</ProtectedRoute>} />
           <Route path="course-view/:courseId" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(LearnerCourseOverview)}</ProtectedRoute>} />
           <Route path="take-quiz/:quizId" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(TakeQuiz)}</ProtectedRoute>} />
           <Route path="quiz-results/:attemptId" element={<ProtectedRoute allowedRoles={[UserRole.Learner]}>{suspenseWrapper(QuizResults)}</ProtectedRoute>} />

@@ -147,42 +147,48 @@ const TakeQuiz: React.FC = () => {
     return () => clearInterval(timer);
   }, [quizAttempt, isSubmitting, isTimeUp]);
   
-  // MODIFIED FUNCTION: Added cleanup for localStorage on successful submission.
-  const handleCompleteQuiz = useCallback(async (isAutoSubmit: boolean = false) => {
-    if (!quizAttempt || isSubmitting) return;
+// Only showing the modified function - rest of the file stays exactly the same
 
-    const unansweredCount = quizAttempt.questions.filter(q => 
-      q && q.quizBankQuestionId && !quizAttempt.selectedAnswers[q.quizBankQuestionId]
-    ).length;
+const handleCompleteQuiz = useCallback(async (isAutoSubmit: boolean = false) => {
+  if (!quizAttempt || isSubmitting) return;
 
-    if (!isAutoSubmit && unansweredCount > 0) {
-      if (!window.confirm(`You have ${unansweredCount} unanswered questions. Are you sure you want to submit?`)) {
-        return;
+  const unansweredCount = quizAttempt.questions.filter(q => 
+    q && q.quizBankQuestionId && !quizAttempt.selectedAnswers[q.quizBankQuestionId]
+  ).length;
+
+  if (!isAutoSubmit && unansweredCount > 0) {
+    if (!window.confirm(`You have ${unansweredCount} unanswered questions. Are you sure you want to submit?`)) {
+      return;
+    }
+  }
+  
+  if (isAutoSubmit) {
+      toast.error("Time's up! Submitting your quiz automatically.", { icon: '⏰' });
+  }
+
+  setIsSubmitting(true);
+  
+  try {
+    await completeQuizAttempt(quizAttempt.attemptId);
+
+    // Clean up the stored start time from localStorage
+    const startTimeKey = `quizStartTime_${quizAttempt.attemptId}`;
+    localStorage.removeItem(startTimeKey);
+    
+    // ONLY CHANGE: Pass additional state to indicate quiz completion
+    navigate(`/learner/quiz-results/${quizAttempt.attemptId}`, {
+      state: { 
+        courseId,
+        quizCompleted: true,
+        quizId: quizAttempt.quizId
       }
-    }
-    
-    if (isAutoSubmit) {
-        toast.error("Time's up! Submitting your quiz automatically.", { icon: '⏰' });
-    }
-
-    setIsSubmitting(true);
-    
-    try {
-      await completeQuizAttempt(quizAttempt.attemptId);
-
-      // --- NEW: Clean up the stored start time from localStorage ---
-      const startTimeKey = `quizStartTime_${quizAttempt.attemptId}`;
-      localStorage.removeItem(startTimeKey);
-      
-      navigate(`/learner/quiz-results/${quizAttempt.attemptId}`, {
-        state: { courseId }
-      });
-    } catch (error) {
-      console.error('Error completing quiz:', error);
-      toast.error('Failed to submit quiz. Please try again.');
-      setIsSubmitting(false); // Allow user to try submitting again on failure
-    }
-  }, [quizAttempt, isSubmitting, navigate, courseId]);
+    });
+  } catch (error) {
+    console.error('Error completing quiz:', error);
+    toast.error('Failed to submit quiz. Please try again.');
+    setIsSubmitting(false);
+  }
+}, [quizAttempt, isSubmitting, navigate, courseId]);
 
   useEffect(() => {
     if (isTimeUp) {
