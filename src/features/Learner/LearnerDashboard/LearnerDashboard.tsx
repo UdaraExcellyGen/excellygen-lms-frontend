@@ -11,11 +11,12 @@ import {
   RecentActivities, 
   LearningActivityChart 
 } from './components/Sections';
-import { getEnrolledCoursesForLearner, getLearnerCourseDetails } from '../../../api/services/Course/learnerCourseService';
+import { getLearnerCourseDetails } from '../../../api/services/Course/learnerCourseService';
 import { getRecentlyAccessedCourseIds } from '../../../api/services/Course/courseAccessService';
 import { getRecentActivities } from '../../../api/services/LearnerDashboard/learnerActivitiesService';
-import { getWeeklyActivity } from '../../../api/services/LearnerDashboard/learnerOverallStatsService';
+import { getWeeklyActivity, dashboardCache } from '../../../api/services/LearnerDashboard/learnerOverallStatsService';
 import { getUserProfile } from '../../../api/services/LearnerProfile/userProfileService';
+import { addLearnerDashboardRefreshListener, LearnerDashboardEvent } from '../../../utils/learnerDashboardEvents';
 
 // ENTERPRISE: Professional skeleton loaders for instant perceived performance
 const WelcomeSkeleton: React.FC = React.memo(() => (
@@ -44,78 +45,15 @@ const WelcomeSkeleton: React.FC = React.memo(() => (
   </div>
 ));
 
-// ENTERPRISE: Smart caching and request deduplication
-class DashboardCache {
-  private cache = new Map<string, { data: any; timestamp: number; expiry: number }>();
-  private readonly DEFAULT_TTL = 2 * 60 * 1000; // 2 minutes
-
-  set<T>(key: string, data: T, customTTL?: number): void {
-    const ttl = customTTL || this.DEFAULT_TTL;
-    this.cache.set(key, {
-      data,
-      timestamp: Date.now(),
-      expiry: Date.now() + ttl
-    });
-  }
-
-  get<T>(key: string): T | null {
-    const entry = this.cache.get(key);
-    if (!entry) return null;
-
-    if (Date.now() > entry.expiry) {
-      this.cache.delete(key);
-      return null;
-    }
-
-    return entry.data as T;
-  }
-
-  invalidate(pattern: string): void {
-    for (const [key] of this.cache) {
-      if (key.includes(pattern)) {
-        this.cache.delete(key);
-      }
-    }
-  }
-
-  clear(): void {
-    this.cache.clear();
-  }
-}
-
-const dashboardCache = new DashboardCache();
-const activeRequests = new Map<string, Promise<any>>();
-
-// ENTERPRISE: Professional request deduplication
-function dedupedRequest<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
-  if (activeRequests.has(key)) {
-    console.log(`⚡ Deduped dashboard request: ${key}`);
-    return activeRequests.get(key)!;
-  }
-
-  const promise = requestFn().finally(() => {
-    setTimeout(() => {
-      activeRequests.delete(key);
-    }, 1000);
-  });
-
-  activeRequests.set(key, promise);
-  return promise;
-}
-
-// ENTERPRISE: Optimized main component with instant loading
+// ENTERPRISE: Optimized main component with instant loading and real-time updates
 const LearnerDashboard: React.FC = () => {
   const { user, currentRole, selectRole, navigateToRoleSelection } = useAuth();
   
-  // ENTERPRISE: Date state optimization
   const [currentDate, setCurrentDate] = useState('');
   const [currentDay, setCurrentDay] = useState('');
-  
-  // ENTERPRISE: Dropdown state optimization
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
-  // ENTERPRISE: Replace blocking loading with instant loading pattern
   const [activeCourses, setActiveCourses] = useState<Course[]>([]);
   const [coursesInitialLoadComplete, setCoursesInitialLoadComplete] = useState(false);
 
@@ -128,200 +66,158 @@ const LearnerDashboard: React.FC = () => {
   const [userJobRole, setUserJobRole] = useState<string>('Learner');
   const [roleInitialLoadComplete, setRoleInitialLoadComplete] = useState(false);
 
-  // ENTERPRISE: Header initial load state
   const [headerInitialLoadComplete, setHeaderInitialLoadComplete] = useState(false);
 
-  // ENTERPRISE: Optimized user profile fetching with smart caching
   const fetchUserProfile = useCallback(async () => {
     if (!user?.id) return;
-    
     const cacheKey = `user_profile_${user.id}`;
-    const cachedProfile = dashboardCache.get(cacheKey);
-    
+    const cachedProfile = dashboardCache.get<{ jobRole: string }>(cacheKey);
     if (cachedProfile) {
       setUserJobRole(cachedProfile.jobRole || 'Learner');
       setRoleInitialLoadComplete(true);
       return;
     }
-
-    return dedupedRequest(cacheKey, async () => {
-      try {
-        const profile = await getUserProfile(user.id);
-        if (profile && profile.jobRole) {
-          setUserJobRole(profile.jobRole);
-          dashboardCache.set(cacheKey, profile);
-        }
-      } catch (error) {
-        console.error("Failed to fetch user job role for dashboard:", error);
-        // Keep default 'Learner' role on error
-      } finally {
-        setRoleInitialLoadComplete(true);
+    try {
+      const profile = await getUserProfile(user.id);
+      if (profile && profile.jobRole) {
+        setUserJobRole(profile.jobRole);
+        dashboardCache.set(cacheKey, { jobRole: profile.jobRole });
       }
-    });
+    } catch (error) {
+      console.error("Failed to fetch user job role for dashboard:", error);
+    } finally {
+      setRoleInitialLoadComplete(true);
+    }
   }, [user?.id]);
 
-  // ENTERPRISE: Optimized active courses fetching with smart caching
+  // --- FINAL FIX ---
+  // This logic is now foolproof. It uses the recently accessed IDs as the single
+  // source of truth for what to display, eliminating all race conditions.
   const fetchActiveCourses = useCallback(async () => {
-    const cacheKey = `active_courses_${user?.id}`;
-    const cachedCourses = dashboardCache.get<Course[]>(cacheKey);
-    
-    if (cachedCourses) {
-      setActiveCourses(cachedCourses);
-      setCoursesInitialLoadComplete(true);
-      return;
-    }
+    if (!user?.id) return;
 
-    return dedupedRequest(cacheKey, async () => {
-      try {
-        const allEnrolledCourses = await getEnrolledCoursesForLearner();
-        
-        if (!allEnrolledCourses || allEnrolledCourses.length === 0) {
+    setCoursesInitialLoadComplete(false);
+    console.log('[Dashboard] Fetching active courses...');
+
+    try {
+      // 1. Get the ground truth: the list of recently accessed course IDs.
+      const recentIds = getRecentlyAccessedCourseIds();
+      console.log('[Dashboard] Recently accessed course IDs:', recentIds);
+
+      // 2. Take the top 3, or fewer if the user hasn't accessed 3 yet.
+      const topThreeIds = recentIds.slice(0, 3);
+      
+      if (topThreeIds.length === 0) {
+          console.log('[Dashboard] No recent courses found. Displaying empty.');
           setActiveCourses([]);
-          dashboardCache.set(cacheKey, [], 1 * 60 * 1000); // 1 minute cache for empty results
           setCoursesInitialLoadComplete(true);
           return;
-        }
-
-        const recentIds = getRecentlyAccessedCourseIds();
-
-        const sortedCourses = [...allEnrolledCourses].sort((a, b) => {
-          const indexA = recentIds.indexOf(a.id);
-          const indexB = recentIds.indexOf(b.id);
-          const sortA = indexA === -1 ? Infinity : indexA;
-          const sortB = indexB === -1 ? Infinity : indexB;
-          return sortA - sortB;
-        });
-        
-        const topThreeCourses = sortedCourses.slice(0, 3);
-
-        const detailedCoursePromises = topThreeCourses.map(course =>
-          getLearnerCourseDetails(course.id)
-        );
-
-        const detailedCourses = await Promise.all(detailedCoursePromises);
-
-        const formattedActiveCourses: Course[] = detailedCourses.map(course => ({
-          id: course.id,
-          title: course.title,
-          progress: course.progressPercentage,
-        }));
-
-        setActiveCourses(formattedActiveCourses);
-        dashboardCache.set(cacheKey, formattedActiveCourses);
-      } catch (error: any) {
-        if (error.name !== 'CanceledError') {
-          console.error("Failed to fetch active courses:", error);
-          setActiveCourses([]);
-        }
-      } finally {
-        setCoursesInitialLoadComplete(true);
       }
-    });
-  }, [user?.id]);
-
-  // ENTERPRISE: Optimized learning activity fetching with smart caching
-  const fetchLearningActivity = useCallback(async () => {
-    const cacheKey = `learning_activity_${user?.id}`;
-    const cachedActivity = dashboardCache.get<DailyLearningTime[]>(cacheKey);
-    
-    if (cachedActivity) {
-      setLearningActivity(cachedActivity);
-      setActivityInitialLoadComplete(true);
-      return;
-    }
-
-    return dedupedRequest(cacheKey, async () => {
-      try {
-        const weeklyData = await getWeeklyActivity();
-        setLearningActivity(weeklyData);
-        dashboardCache.set(cacheKey, weeklyData, 1 * 60 * 1000); // 1 minute cache for activity data
-      } catch (error) {
-        console.error("Failed to fetch learning activity", error);
-        setLearningActivity([]);
-      } finally {
-        setActivityInitialLoadComplete(true);
-      }
-    });
-  }, [user?.id]);
-
-  // ENTERPRISE: Optimized recent activities fetching with smart caching
-  const fetchRecentActivities = useCallback(async () => {
-    const cacheKey = `recent_activities_${user?.id}`;
-    const cachedActivities = dashboardCache.get<Activity[]>(cacheKey);
-    
-    if (cachedActivities) {
-      setRecentActivities(cachedActivities);
-      setActivitiesInitialLoadComplete(true);
-      return;
-    }
-
-    return dedupedRequest(cacheKey, async () => {
-      try {
-        const activities = await getRecentActivities();
-        setRecentActivities(activities);
-        dashboardCache.set(cacheKey, activities, 30 * 1000); // 30 seconds cache for recent activities
-      } catch (error: any) {
-        if (error.name !== 'CanceledError') {
-          console.error("Failed to fetch recent activities:", error);
-          setRecentActivities([]);
-        }
-      } finally {
-        setActivitiesInitialLoadComplete(true);
-      }
-    });
-  }, [user?.id]);
-
-  // ENTERPRISE: Optimized main data fetching effect
-  useEffect(() => {
-    const controller = new AbortController();
-
-    if (user?.id) {
-      // ENTERPRISE: Instant header load
-      setHeaderInitialLoadComplete(true);
       
-      // ENTERPRISE: Parallel data fetching for better performance
-      Promise.all([
-        fetchUserProfile(),
-        fetchActiveCourses(),
-        fetchLearningActivity(),
-        fetchRecentActivities()
-      ]).catch(error => {
-        console.warn('Some dashboard data failed to load:', error);
-      });
+      console.log('[Dashboard] Fetching details for top 3 IDs:', topThreeIds);
+
+      // 3. Fetch details for ONLY these top 3 courses.
+      const courseDetailPromises = topThreeIds.map(id => 
+        getLearnerCourseDetails(id) // This service uses its own cache, which is efficient.
+      );
+      
+      // 4. Wait for all details to be fetched.
+      const detailedCourses = await Promise.all(courseDetailPromises);
+
+      const formattedActiveCourses: Course[] = detailedCourses.map(course => ({
+        id: course.id,
+        title: course.title,
+        progress: course.progressPercentage,
+      }));
+
+      // 5. Set the final, correctly ordered state.
+      setActiveCourses(formattedActiveCourses);
+      console.log('[Dashboard] Successfully set active courses:', formattedActiveCourses);
+
+    } catch (error: any) {
+      // This will catch errors if fetching details fails, etc.
+      if (error.name !== 'CanceledError') {
+        console.error("Failed to fetch active courses details:", error);
+        setActiveCourses([]); // Show empty state on error
+      }
+    } finally {
+      setCoursesInitialLoadComplete(true);
     }
+  }, [user?.id]);
 
-    return () => {
-      controller.abort();
-    };
-  }, [user, fetchUserProfile, fetchActiveCourses, fetchLearningActivity, fetchRecentActivities]);
-
-  // ENTERPRISE: Optimized date effect with memoization
-  useEffect(() => {
-    const now = new Date();
-    const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
-    const formattedDate = now.toLocaleDateString('en-US', options);
-    const day = now.toLocaleDateString('en-US', { weekday: 'long' });
-    
-    setCurrentDate(formattedDate);
-    setCurrentDay(day);
+  const fetchLearningActivity = useCallback(async () => {
+    setActivityInitialLoadComplete(false);
+    try {
+      const weeklyData = await getWeeklyActivity();
+      setLearningActivity(weeklyData);
+    } catch (error) {
+      console.error("Failed to fetch learning activity", error);
+    } finally {
+      setActivityInitialLoadComplete(true);
+    }
   }, []);
 
-  // ENTERPRISE: Optimized dropdown click outside handler
+  const fetchRecentActivities = useCallback(async () => {
+    setActivitiesInitialLoadComplete(false);
+    try {
+      const activities = await getRecentActivities();
+      setRecentActivities(activities);
+    } catch (error: any) {
+      if (error.name !== 'CanceledError') {
+        console.error("Failed to fetch recent activities:", error);
+      }
+    } finally {
+      setActivitiesInitialLoadComplete(true);
+    }
+  }, []);
+  
+  // This listener now correctly triggers the new fetch logic.
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    const handleRefresh = (event: CustomEvent<LearnerDashboardEvent>) => {
+      const reason = event.detail;
+      console.log(`[LearnerDashboard] Received refresh event for: ${reason}`);
+      
+      if (reason === 'active-courses-updated') {
+        fetchActiveCourses(); // Re-run the foolproof fetch logic
+      }
+      if (reason === 'recent-activities-updated') {
+        fetchRecentActivities();
+      }
+    };
+    
+    const unsubscribe = addLearnerDashboardRefreshListener(handleRefresh);
+    return () => unsubscribe();
+  }, [fetchActiveCourses, fetchRecentActivities]);
+
+  // Main data fetching effect on initial load and user change.
+  useEffect(() => {
+    if (user?.id) {
+      setHeaderInitialLoadComplete(true);
+      fetchUserProfile();
+      fetchActiveCourses();
+      fetchLearningActivity();
+      fetchRecentActivities();
+    }
+  }, [user?.id, fetchUserProfile, fetchActiveCourses, fetchLearningActivity, fetchRecentActivities]);
+
+  // UI and helper effects (no changes needed below)
+  useEffect(() => {
+    const now = new Date();
+    setCurrentDate(now.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }));
+    setCurrentDay(now.toLocaleDateString('en-US', { weekday: 'long' }));
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);
       }
-    }
-    
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [dropdownRef]);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-  // ENTERPRISE: Optimized callbacks with useCallback
-  const toggleDropdown = useCallback(() => setDropdownOpen(!dropdownOpen), [dropdownOpen]);
+  const toggleDropdown = useCallback(() => setDropdownOpen(prev => !prev), []);
 
   const formatRoleName = useCallback((role: string) => {
     if (role === 'CourseCoordinator') return 'Course Coordinator';
@@ -330,14 +226,10 @@ const LearnerDashboard: React.FC = () => {
   }, []);
 
   const handleSwitchRole = useCallback(async (role: UserRole) => {
-    if (role === currentRole) {
-      setDropdownOpen(false);
-      return;
-    }
     setDropdownOpen(false);
+    if (role === currentRole) return;
     try {
       await selectRole(role);
-      // ENTERPRISE: Invalidate cache on role switch
       dashboardCache.clear();
     } catch (error) {
       console.error('Error switching role:', error);
@@ -349,8 +241,7 @@ const LearnerDashboard: React.FC = () => {
     navigateToRoleSelection();
   }, [navigateToRoleSelection]);
 
-  // ENTERPRISE: Memoized role icons for performance
-  const roleIcons: Record<string, React.ReactNode> = useMemo(() => ({
+  const roleIcons = useMemo(() => ({
     Admin: <Users size={16} />,
     Learner: <FileText size={16} />,
     CourseCoordinator: <Calendar size={16} />,
@@ -363,7 +254,6 @@ const LearnerDashboard: React.FC = () => {
         <div className="w-full px-4 sm:px-6 lg:px-8 space-y-6 flex-grow">
           <div className="mb-2">
             <div className="p-2">
-              {/* ENTERPRISE: Instant header display */}
               {!headerInitialLoadComplete ? (
                 <WelcomeSkeleton />
               ) : (
@@ -392,7 +282,7 @@ const LearnerDashboard: React.FC = () => {
                           />
                         </button>
                         {dropdownOpen && (
-                          <div className="fixed right-auto mt-1 w-48 rounded-md shadow-xl bg-[#1B0A3F]/90 backdrop-blur-lg border border-[#BF4BF6]/40 overflow-hidden" style={{ zIndex: 9999 }}>
+                          <div className="absolute right-0 mt-1 w-48 rounded-md shadow-xl bg-[#1B0A3F]/90 backdrop-blur-lg border border-[#BF4BF6]/40 overflow-hidden" style={{ zIndex: 9999 }}>
                             <div className="text-xs text-white/80 px-3 py-1.5 border-b border-white/10 bg-[#BF4BF6]/20">Switch Role</div>
                             <div className="py-1">
                               {user.roles.map((role) => (
@@ -403,7 +293,7 @@ const LearnerDashboard: React.FC = () => {
                                 >
                                   <div className="flex items-center justify-between w-full">
                                     <div className="flex items-center space-x-1.5">
-                                      <span className="w-4 h-4 flex items-center justify-center">{roleIcons[role] || <Users size={12} />}</span>
+                                      <span className="w-4 h-4 flex items-center justify-center">{roleIcons[role as keyof typeof roleIcons] || <Users size={12} />}</span>
                                       <span>{formatRoleName(role)}</span>
                                     </div>
                                     {role === currentRole && <Check size={12} className="text-white" />}
@@ -437,7 +327,6 @@ const LearnerDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* ENTERPRISE: Instant grid display with selective loading for individual components */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <ActiveCourses 
               courses={activeCourses} 

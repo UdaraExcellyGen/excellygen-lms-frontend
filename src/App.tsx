@@ -1,3 +1,5 @@
+// src/App.tsx
+// THIS FILE CONTAINS THE FINAL FIX
 import React, { useEffect, lazy, Suspense, memo, useMemo } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
@@ -124,21 +126,31 @@ const ApiLoadingInterceptor: React.FC = memo(() => {
   return null; 
 });
 
-// Auth cleanup component
+// --- THE FINAL FIX ---
+// This component now waits for authentication to be initialized before clearing data.
+// This prevents it from wiping localStorage on every page refresh.
 const AuthCleanup: React.FC = memo(() => {
-  const { user } = useAuth();
+  // Get both `user` and the `initialized` flag from the AuthContext.
+  const { user, initialized } = useAuth();
 
   useEffect(() => {
-    if (!user) {
+    // ONLY run the cleanup logic if auth has finished initializing AND there is no user.
+    // This correctly handles logout without breaking the initial page load.
+    if (initialized && !user) {
+      console.log('Auth Initialized and no user found. Cleaning up storage...');
       try {
         sessionStorage.clear();
-        const keysToRemove = ['course_categories', 'recentlyAccessedCourses'];
-        keysToRemove.forEach(key => localStorage.removeItem(key));
+        // This is the key that was being deleted incorrectly.
+        const keysToRemove = ['course_categories', 'recentlyAccessedCourses']; 
+        keysToRemove.forEach(key => {
+            console.log(`Removing ${key} from localStorage.`);
+            localStorage.removeItem(key)
+        });
       } catch (error) {
         console.warn('Session cleanup failed:', error);
       }
     }
-  }, [user]);
+  }, [user, initialized]); // Run this effect when user or initialized status changes.
 
   return null;
 });

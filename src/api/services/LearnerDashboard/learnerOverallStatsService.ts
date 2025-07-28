@@ -3,9 +3,7 @@
 import apiClient from "../../apiClient";
 import { OverallLmsStatsDto } from "../../../types/course.types"; 
 import { DailyLearningTime } from "../../../features/Learner/LearnerDashboard/types/types";
-import { 
-  emitDashboardRefreshNeeded 
-} from "../../../utils/dashboardEvents";
+import { emitLearnerDashboardRefreshNeeded } from "../../../utils/learnerDashboardEvents";
 
 // ENTERPRISE: Advanced caching system with intelligent invalidation
 interface CacheEntry<T> {
@@ -33,18 +31,15 @@ class EnterpriseStatsCache {
     errorCount: 0
   };
   
-  // ENTERPRISE: Smart TTL based on data type and user activity
   private readonly STATS_TTL = 5 * 60 * 1000; // 5 minutes for stats
   private readonly ACTIVITY_TTL = 2 * 60 * 1000; // 2 minutes for activity data
   private readonly ERROR_RETRY_TTL = 30 * 1000; // 30 seconds before retry on error
 
-  // ENTERPRISE: Performance monitoring
   private updateMetrics(responseTime: number, fromCache: boolean, isError: boolean = false): void {
     this.metrics.requestCount++;
     if (fromCache) this.metrics.cacheHits++;
     if (isError) this.metrics.errorCount++;
     
-    // Rolling average calculation
     this.metrics.averageResponseTime = 
       (this.metrics.averageResponseTime * (this.metrics.requestCount - 1) + responseTime) 
       / this.metrics.requestCount;
@@ -54,15 +49,12 @@ class EnterpriseStatsCache {
 
   set<T>(key: string, data: T, customTTL?: number): void {
     const ttl = customTTL || this.STATS_TTL;
-    
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
       expiry: Date.now() + ttl,
       requestId: `${key}_${Date.now()}`
     });
-
-    // ENTERPRISE: Automatic memory management
     this.cleanupExpiredEntries();
   }
 
@@ -79,8 +71,11 @@ class EnterpriseStatsCache {
     this.updateMetrics(0, true);
     return entry.data as T;
   }
+  
+  public delete(key: string): boolean {
+    return this.cache.delete(key);
+  }
 
-  // ENTERPRISE: Smart cache cleanup
   private cleanupExpiredEntries(): void {
     const now = Date.now();
     const keysToDelete: string[] = [];
@@ -93,11 +88,10 @@ class EnterpriseStatsCache {
     
     keysToDelete.forEach(key => this.cache.delete(key));
     
-    // ENTERPRISE: Memory pressure management
-    if (this.cache.size > 20) { // Keep stats cache small
+    if (this.cache.size > 20) {
       const oldestEntries = Array.from(this.cache.entries())
         .sort(([,a], [,b]) => a.timestamp - b.timestamp)
-        .slice(0, 5); // Remove oldest 5 entries
+        .slice(0, 5);
       
       oldestEntries.forEach(([key]) => this.cache.delete(key));
     }
@@ -107,7 +101,6 @@ class EnterpriseStatsCache {
     this.cache.clear();
   }
 
-  // ENTERPRISE: Performance diagnostics
   getMetrics(): RequestMetrics & { cacheSize: number; hitRate: number; errorRate: number } {
     return {
       ...this.metrics,
@@ -118,10 +111,9 @@ class EnterpriseStatsCache {
   }
 }
 
-const cache = new EnterpriseStatsCache();
+export const dashboardCache = new EnterpriseStatsCache();
 const activeRequests = new Map<string, Promise<any>>();
 
-// ENTERPRISE: Advanced request deduplication
 function dedupedRequest<T>(
   key: string, 
   requestFn: () => Promise<T>, 
@@ -140,7 +132,6 @@ function dedupedRequest<T>(
       return result;
     })
     .finally(() => {
-      // ENTERPRISE: Smart cleanup timing based on priority
       const cleanupDelay = priority === 'high' ? 500 : priority === 'normal' ? 1000 : 2000;
       setTimeout(() => {
         activeRequests.delete(key);
@@ -151,7 +142,6 @@ function dedupedRequest<T>(
   return promise;
 }
 
-// ENTERPRISE: Robust default stats with validation
 const createDefaultStats = (): OverallLmsStatsDto => ({
   totalCategories: 0,
   totalPublishedCourses: 0,
@@ -161,7 +151,6 @@ const createDefaultStats = (): OverallLmsStatsDto => ({
   averageCourseDurationOverall: 'N/A'
 });
 
-// ENTERPRISE: Enhanced stats validation
 const validateStatsResponse = (data: any): OverallLmsStatsDto => {
   if (!data || typeof data !== 'object') {
     console.warn('Invalid stats response format, using defaults');
@@ -178,16 +167,10 @@ const validateStatsResponse = (data: any): OverallLmsStatsDto => {
   };
 };
 
-/**
- * ENTERPRISE: Enhanced overall LMS statistics fetching with smart caching and graceful degradation
- * Includes caching and graceful error handling for better performance.
- * @returns Overall LMS statistics including total published courses, active learners, etc.
- */
 export const getOverallLmsStatsForLearner = async (): Promise<OverallLmsStatsDto> => {
   const cacheKey = 'learner_overall_stats';
   
-  // ENTERPRISE: Smart cache check with validation
-  const cachedData = cache.get<OverallLmsStatsDto>(cacheKey);
+  const cachedData = dashboardCache.get<OverallLmsStatsDto>(cacheKey);
   if (cachedData) {
     console.log('📊 Stats served from cache');
     return cachedData;
@@ -197,9 +180,8 @@ export const getOverallLmsStatsForLearner = async (): Promise<OverallLmsStatsDto
     console.log('🔄 Fetching fresh stats data from API...');
     
     try {
-      // ENTERPRISE: Request with timeout and abort controller
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       
       const response = await apiClient.get<OverallLmsStatsDto>('/learner/stats/overall', {
         signal: controller.signal
@@ -208,29 +190,29 @@ export const getOverallLmsStatsForLearner = async (): Promise<OverallLmsStatsDto
       clearTimeout(timeoutId);
       
       console.log('📈 Overall LMS stats response received');
-      
-      // ENTERPRISE: Validate and transform response
       const validatedStats = validateStatsResponse(response.data);
-      
-      // ENTERPRISE: Cache validated data
-      cache.set(cacheKey, validatedStats);
-      
-      // ENTERPRISE: Emit dashboard events for real-time updates
-      emitDashboardRefreshNeeded('stats-updated');
+      dashboardCache.set(cacheKey, validatedStats);
+      emitLearnerDashboardRefreshNeeded('stats-updated');
       
       return validatedStats;
       
     } catch (error: any) {
+      // *** THIS IS THE FIX ***
+      // Silently handle cancellation errors, as they are expected during navigation.
+      if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+        console.log(`↩️ API request for overall stats was canceled. This is normal.`);
+        return createDefaultStats(); // Return default data without logging a scary error.
+      }
+      
+      // For all other actual errors, log them and handle gracefully.
       console.error('❌ Error fetching overall LMS stats for learner:', error);
       
-      // ENTERPRISE: Try to return cached data on error (even if expired)
-      const expiredCache = cache.get<OverallLmsStatsDto>(cacheKey);
+      const expiredCache = dashboardCache.get<OverallLmsStatsDto>(cacheKey);
       if (expiredCache) {
         console.log('🔄 Returning expired cached stats due to error');
         return expiredCache;
       }
       
-      // ENTERPRISE: Graceful error handling with different error types
       const defaultStats = createDefaultStats();
       
       if (error.name === 'AbortError') {
@@ -245,25 +227,17 @@ export const getOverallLmsStatsForLearner = async (): Promise<OverallLmsStatsDto
         console.warn('❓ Unknown error fetching stats:', error.response?.status, error.response?.data);
       }
       
-      // ENTERPRISE: Cache default stats with short TTL to prevent repeated failures
-      cache.set(cacheKey, defaultStats, 30000); // 30 seconds cache for defaults
+      dashboardCache.set(cacheKey, defaultStats, 30000);
       
       return defaultStats;
     }
   }, 'normal');
 };
 
-/**
- * ENTERPRISE: Enhanced weekly activity fetching with smart caching
- * Fetches the current week's learning activity from the API.
- * The backend handles calculating the days from Monday to the current day.
- * @returns A promise that resolves to an array of daily learning time objects.
- */
 export const getWeeklyActivity = async (): Promise<DailyLearningTime[]> => {
   const cacheKey = 'learner_weekly_activity';
   
-  // ENTERPRISE: Smart cache check
-  const cachedData = cache.get<DailyLearningTime[]>(cacheKey);
+  const cachedData = dashboardCache.get<DailyLearningTime[]>(cacheKey);
   if (cachedData) {
     console.log('📊 Weekly activity served from cache');
     return cachedData;
@@ -273,9 +247,8 @@ export const getWeeklyActivity = async (): Promise<DailyLearningTime[]> => {
     console.log('🔄 Fetching weekly activity from API...');
     
     try {
-      // ENTERPRISE: Request with timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
       
       const response = await apiClient.get<DailyLearningTime[]>('/learner/stats/weekly-activity', {
         signal: controller.signal
@@ -283,80 +256,60 @@ export const getWeeklyActivity = async (): Promise<DailyLearningTime[]> => {
       
       clearTimeout(timeoutId);
       
-      // ENTERPRISE: Validate response
       const validatedData = Array.isArray(response.data) ? response.data : [];
-      
-      // ENTERPRISE: Cache with shorter TTL for activity data
-      cache.set(cacheKey, validatedData, 2 * 60 * 1000); // 2 minutes
+      dashboardCache.set(cacheKey, validatedData, 2 * 60 * 1000);
       
       console.log(`✅ Weekly activity cached (${validatedData.length} days)`);
       return validatedData;
       
     } catch (error: any) {
+      // Silently handle cancellation errors
+      if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+        console.log(`↩️ API request for weekly activity was canceled. This is normal.`);
+        return [];
+      }
+
       console.error("❌ Error fetching weekly learning activity:", error);
       
-      // ENTERPRISE: Try to return cached data on error
-      const expiredCache = cache.get<DailyLearningTime[]>(cacheKey);
+      const expiredCache = dashboardCache.get<DailyLearningTime[]>(cacheKey);
       if (expiredCache) {
         console.log('🔄 Returning expired cached activity due to error');
         return expiredCache;
       }
       
-      // Return empty array to prevent UI crashes
       return [];
     }
   }, 'low');
 };
 
-/**
- * ENTERPRISE: Enhanced cache management
- * Clear the stats cache - useful for forcing a refresh
- */
 export const clearStatsCache = (): void => {
-  cache.clear();
+  dashboardCache.clear();
   activeRequests.clear();
   console.log('🧹 Stats cache cleared');
-  
-  // ENTERPRISE: Emit cache clear event
-  emitDashboardRefreshNeeded('stats-cache-cleared');
+  emitLearnerDashboardRefreshNeeded('stats-updated');
 };
 
-/**
- * ENTERPRISE: Background preloading for better perceived performance
- * Preload stats data in the background
- */
-export const preloadStats = async (): Promise<void> => {
+export async function preloadStats(): Promise<void> {
   try {
-    // ENTERPRISE: Preload both stats and activity in parallel
     await Promise.all([
       getOverallLmsStatsForLearner(),
       getWeeklyActivity()
     ]);
     console.log('⚡ Stats data preloaded successfully');
   } catch (error) {
-    // Silently handle errors for preload
     console.warn('Failed to preload stats:', error);
   }
 };
 
-/**
- * ENTERPRISE: Performance monitoring and diagnostics
- */
-export const getStatsMetrics = () => cache.getMetrics();
+export const getStatsMetrics = () => dashboardCache.getMetrics();
 
-/**
- * ENTERPRISE: Smart cache invalidation
- */
 export const invalidateStatsCache = (type?: 'stats' | 'activity' | 'all'): void => {
-  switch (type) {
-    case 'stats':
-      cache.get('learner_overall_stats') && cache.clear();
-      break;
-    case 'activity':
-      cache.get('learner_weekly_activity') && cache.clear();
-      break;
-    default:
-      cache.clear();
+  if (type === 'stats') {
+    dashboardCache.delete('learner_overall_stats');
+  } else if (type === 'activity') {
+    dashboardCache.delete('learner_weekly_activity');
+  } else {
+    dashboardCache.clear();
   }
   console.log(`🧹 Stats cache invalidated: ${type || 'all'}`);
 };

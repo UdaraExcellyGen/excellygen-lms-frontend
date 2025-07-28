@@ -11,6 +11,7 @@ import { getLearnerCourseDetails, markDocumentCompleted, clearCourseCaches } fro
 import { logCourseAccess } from '../../../api/services/Course/courseAccessService';
 import { useBadgeChecker } from '../../../hooks/useBadgeChecker';
 import { AxiosError } from 'axios';
+import { emitLearnerDashboardRefreshNeeded } from '../../../utils/learnerDashboardEvents';
 
 const CERTIFICATE_GEN_STORAGE_KEY = 'recentCertificateGens';
 
@@ -216,19 +217,16 @@ const LearnerCourseOverview: React.FC = () => {
       setQuizProgress(initialQuizzes);
       setLoadingState(LoadingStates.SUCCESS);
 
-      // ENTERPRISE: Background task - log course access with safe error handling
+      // ENTERPRISE: Background task - log course access and notify dashboard
       try {
         if (typeof logCourseAccess === 'function') {
-          const logResult = logCourseAccess(courseId);
-          // Check if it returns a Promise
-          if (logResult && typeof logResult.catch === 'function') {
-            logResult.catch(err => {
-              console.warn('Failed to log course access:', err);
-            });
-          }
+          logCourseAccess(courseId);
+          // MODIFIED: Emit an event to notify the dashboard to refresh its active courses
+          emitLearnerDashboardRefreshNeeded('active-courses-updated');
+          console.log('✅ Emitted event: active-courses-updated');
         }
       } catch (err) {
-        console.warn('Failed to log course access:', err);
+        console.warn('Failed to log course access or emit refresh event:', err);
       }
 
     } catch (error) {
@@ -243,7 +241,7 @@ const LearnerCourseOverview: React.FC = () => {
 
   // ENTERPRISE: Initial load effect
   useEffect(() => {
-    const certificateGeneratedForCourse = sessionStorage.getItem(`certificateGenerated_${courseId}`);
+    const certificateGeneratedForCourse = localStorage.getItem(`certificateGenerated_${courseId}`);
     if (certificateGeneratedForCourse) {
       setIsCertificateGenerated(true);
     }
@@ -346,7 +344,7 @@ const LearnerCourseOverview: React.FC = () => {
           console.log(`📊 DIRECT API RESPONSE:`, updatedCourse);
           
           // ENTERPRISE: Validate quiz completion in fresh data
-          const targetLesson = updatedCourse.lessons?.find(lesson => lesson.quizId === quizId);
+          const targetLesson = updatedCourse.lessons?.find((lesson: LearnerLessonDto) => lesson.quizId === quizId);
           const isQuizMarkedComplete = targetLesson?.isQuizCompleted;
           
           console.log(`📊 Quiz ${quizId} completion in DIRECT API:`, isQuizMarkedComplete);
@@ -364,7 +362,7 @@ const LearnerCourseOverview: React.FC = () => {
           const updatedDocs: Record<number, ProgressItem> = {};
           const updatedQuizzes: Record<number, boolean> = {};
 
-          updatedCourse.lessons.forEach(lesson => {
+          updatedCourse.lessons.forEach((lesson: LearnerLessonDto) => {
             lesson.documents.forEach(doc => {
               updatedDocs[doc.id] = {
                 isCompleted: doc.isCompleted,
@@ -505,12 +503,12 @@ const LearnerCourseOverview: React.FC = () => {
     try {
       await generateCertificate(courseId);
       
-      sessionStorage.setItem(`certificateGenerated_${courseId}`, 'true');
+      localStorage.setItem(`certificateGenerated_${courseId}`, 'true');
       setIsCertificateGenerated(true);
 
-      // ENTERPRISE: Track certificate generation history
+      // ENTERPRISE: Track certificate generation history in localStorage
       try {
-        const existingGensRaw = sessionStorage.getItem(CERTIFICATE_GEN_STORAGE_KEY);
+        const existingGensRaw = localStorage.getItem(CERTIFICATE_GEN_STORAGE_KEY);
         const existingGens = existingGensRaw ? JSON.parse(existingGensRaw) : [];
         
         const newGen = {
@@ -520,9 +518,14 @@ const LearnerCourseOverview: React.FC = () => {
         };
 
         const updatedGens = [newGen, ...existingGens].slice(0, 5);
-        sessionStorage.setItem(CERTIFICATE_GEN_STORAGE_KEY, JSON.stringify(updatedGens));
+        localStorage.setItem(CERTIFICATE_GEN_STORAGE_KEY, JSON.stringify(updatedGens));
+
+        // MODIFIED: Emit event to refresh recent activities on the dashboard
+        emitLearnerDashboardRefreshNeeded('recent-activities-updated');
+        console.log('✅ Emitted event: recent-activities-updated');
+
       } catch (e) {
-        console.error("Could not save certificate generation to session storage:", e);
+        console.error("Could not save certificate generation to local storage:", e);
       }
       
       toast.success("🎉 Certificate generated successfully!", {
