@@ -242,7 +242,6 @@ const CreateThreadModal: React.FC<CreateThreadModalProps> = ({
 
     return (
         <div className="fixed inset-0 bg-[#1B0A3F]/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            {/* --- MODIFIED: Added flex, flex-col, and max-h-[90vh] --- */}
             <div className="bg-white/95 w-full max-w-2xl rounded-xl border border-purple-300/50 p-6 shadow-xl relative flex flex-col max-h-[90vh]">
                 {isFormBusy && (
                     <div className="absolute inset-0 bg-white/70 backdrop-blur-xs z-20 flex flex-col items-center justify-center rounded-xl">
@@ -252,16 +251,14 @@ const CreateThreadModal: React.FC<CreateThreadModalProps> = ({
                         </p>
                     </div>
                 )}
-                {/* --- MODIFIED: This div is now a flex container for the form elements --- */}
                 <div className={`flex flex-col flex-1 min-h-0 transition-opacity duration-300 ${isFormBusy ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
-                    {/* --- MODIFIED: Header is now a non-shrinking flex item --- */}
                     <div className="flex-shrink-0 flex justify-between items-center mb-6">
                         <h2 className="text-2xl font-bold text-purple-800">Create New Thread</h2>
                         <button onClick={handleModalClose} className="text-purple-600 hover:text-purple-800" disabled={isFormBusy}><X className="h-6 w-6" /></button>
                     </div>
                     
-                    {/* --- MODIFIED: Form is now a scrollable, growing flex item --- */}
-                    <form onSubmit={handleSubmitForm} className="flex-1 overflow-y-auto pr-4 space-y-5 pb-4">
+                    {/* --- FIX: Added id="create-thread-form-id" to link the form with the external submit button --- */}
+                    <form id="create-thread-form-id" onSubmit={handleSubmitForm} className="flex-1 overflow-y-auto pr-4 space-y-5 pb-4">
                         <div>
                             <label htmlFor="createThreadTitle" className="block text-sm font-medium text-purple-700 mb-1">Title</label>
                             <input id="createThreadTitle" type="text" value={title} onChange={(e) => setTitle(e.target.value)} disabled={isFormBusy} className="w-full px-3 py-2.5 text-sm border-purple-300 rounded-lg shadow-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500 bg-purple-50/60 placeholder-purple-400 text-purple-900" placeholder="Enter thread title" required />
@@ -303,7 +300,6 @@ const CreateThreadModal: React.FC<CreateThreadModalProps> = ({
                         </div>
                     </form>
 
-                    {/* --- MODIFIED: Footer is now a non-shrinking flex item --- */}
                     <div className="flex-shrink-0 flex justify-end gap-3 pt-4 border-t border-purple-200/30 mt-6">
                         <button type="button" onClick={handleModalClose} className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors" disabled={isFormBusy}>Cancel</button>
                         <button type="submit" form="create-thread-form-id" className="px-6 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold disabled:opacity-60 min-w-[140px]" disabled={isFormBusy || !selectedCategoryOption?.value }>
