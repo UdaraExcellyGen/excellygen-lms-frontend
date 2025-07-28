@@ -18,7 +18,13 @@ const LearnerNotificationItem: React.FC<LearnerNotificationItemProps> = ({ notif
   
   const { markAsRead, deleteNotification } = useNotifications();
 
-  const handleMarkAsRead = async () => { if (notification.isRead || isMarkingRead) return; setIsMarkingRead(true); try { await markAsRead(notification.id); toast.success('Notification marked as read'); } catch (error) { toast.error('Failed to mark notification as read'); } finally { setIsMarkingRead(false); } };
+  const handleMarkAsRead = async () => { if (notification.isRead || isMarkingRead) return; setIsMarkingRead(true); 
+    try
+     { 
+      await markAsRead(notification.id); toast.success('Notification marked as read');
+
+      } 
+    catch (error) { toast.error('Failed to mark notification as read'); } finally { setIsMarkingRead(false); } };
   const handleDelete = async () => { setIsDeleting(true); try { await deleteNotification(notification.id); toast.success('Notification deleted'); } catch (error) { toast.error('Failed to delete notification'); } finally { setIsDeleting(false); } };
   const getTypeIcon = () => { switch (notification.type) { case 'project_assignment': return '🎯'; case 'project_update': return '🔄'; case 'project_removal': return '❌'; default: return '🎁'; } };
   const getTypeColor = () => { switch (notification.type) { case 'project_assignment': return 'bg-[#F6E6FF] border-[#BF4BF6] text-[#52007C]'; case 'project_update': return 'bg-[#E6F3FF] border-[#3B82F6] text-[#1D4ED8]'; case 'project_removal': return 'bg-[#FEE2E2] border-[#EF4444] text-[#DC2626]'; default: return 'bg-amber-100 border-amber-400 text-amber-800'; } };

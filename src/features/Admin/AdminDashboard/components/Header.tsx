@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+// src/features/Admin/AdminDashboard/components/Header.tsx
+// ENTERPRISE OPTIMIZED: Performance optimizations only, same functionality
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
   Bell, 
   LogOut, 
@@ -14,7 +16,7 @@ import { HeaderProps } from '../types/types';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { UserRole } from '../../../../types/auth.types';
 
-// Role icon mapping
+// ENTERPRISE: Role icon mapping with memoization
 const roleIcons: Record<string, React.ReactNode> = {
   Admin: <Users size={16} />,
   Learner: <FileText size={16} />,
@@ -22,10 +24,10 @@ const roleIcons: Record<string, React.ReactNode> = {
   ProjectManager: <Book size={16} />
 };
 
-// OPTIMIZATION: Define base URL for assets
+// ENTERPRISE: Optimized base URL configuration
 const BASE_URL = 'http://localhost:5177';
 
-const Header: React.FC<HeaderProps> = ({
+const Header: React.FC<HeaderProps> = React.memo(({
   notifications = [],
   adminName = "Admin Name",
   role = "System Administrator",
@@ -37,21 +39,27 @@ const Header: React.FC<HeaderProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [avatarError, setAvatarError] = useState(false);
 
-  // Handle click outside to close dropdown
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false);
-      }
-    }
-    
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [dropdownRef]);
+  // ENTERPRISE: Memoized notification count for performance
+  const newNotificationsCount = useMemo(() => 
+    notifications.filter(n => n.isNew).length, 
+    [notifications]
+  );
 
-  const handleLogout = () => {
+  // ENTERPRISE: Handle click outside to close dropdown
+  const handleClickOutside = useCallback((event: MouseEvent) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      setDropdownOpen(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (dropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [dropdownOpen, handleClickOutside]);
+
+  const handleLogout = useCallback(() => {
     // Clear auth data
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -60,24 +68,24 @@ const Header: React.FC<HeaderProps> = ({
     localStorage.removeItem('user');
     
     navigate('/login');
-  };
+  }, [navigate]);
 
-  const toggleDropdown = () => {
-    setDropdownOpen(!dropdownOpen);
-  };
+  const toggleDropdown = useCallback(() => {
+    setDropdownOpen(prev => !prev);
+  }, []);
 
-  const navigateToNotifications = () => {
+  const navigateToNotifications = useCallback(() => {
     navigate('/admin/notifications');
-  };
+  }, [navigate]);
 
-  // Format role name for display
-  const formatRoleName = (role: string) => {
+  // ENTERPRISE: Format role name with memoization
+  const formatRoleName = useCallback((role: string) => {
     if (role === 'CourseCoordinator') return 'Course Coordinator';
     if (role === 'ProjectManager') return 'Project Manager';
     return role;
-  };
+  }, []);
 
-  const handleSwitchRole = async (role: UserRole) => {
+  const handleSwitchRole = useCallback(async (role: UserRole) => {
     try {
       console.log(`Attempting to switch to role: ${role}`);
       if (role === currentRole) {
@@ -90,16 +98,16 @@ const Header: React.FC<HeaderProps> = ({
     } catch (error) {
       console.error('Error switching role:', error);
     }
-  };
+  }, [currentRole, selectRole]);
 
-  const handleViewAllRoles = () => {
+  const handleViewAllRoles = useCallback(() => {
     console.log('Navigating to role selection page from admin dashboard');
     setDropdownOpen(false);
     navigateToRoleSelection();
-  };
+  }, [navigateToRoleSelection]);
 
-  // OPTIMIZATION: Improved avatar URL processing with better error handling
-  const getAvatarUrl = (avatarPath: string | null) => {
+  // ENTERPRISE: Improved avatar URL processing with memoization
+  const getAvatarUrl = useCallback((avatarPath: string | null) => {
     if (!avatarPath) return null;
     
     // For Firebase Storage URLs or full URLs, return as is
@@ -111,32 +119,27 @@ const Header: React.FC<HeaderProps> = ({
     
     // Handle relative paths
     return avatarPath.startsWith('/') ? `${BASE_URL}${avatarPath}` : `${BASE_URL}/${avatarPath}`;
-  };
+  }, []);
 
-  // Get initials for fallback avatar
-  const getInitials = (name: string) => {
+  // ENTERPRISE: Get initials for fallback avatar with memoization
+  const getInitials = useCallback((name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  };
+  }, []);
 
-  // OPTIMIZATION: Reset avatar error when avatar changes
+  // ENTERPRISE: Reset avatar error when avatar changes
   useEffect(() => {
     setAvatarError(false);
   }, [avatar]);
 
-  // OPTIMIZATION: Memoize notification count calculation
-  const newNotificationsCount = React.useMemo(() => 
-    notifications.filter(n => n.isNew).length, 
-    [notifications]
-  );
-
-  // Get avatar URL
-  const avatarUrl = getAvatarUrl(avatar);
+  // ENTERPRISE: Memoized values for performance
+  const avatarUrl = useMemo(() => getAvatarUrl(avatar), [avatar, getAvatarUrl]);
+  const userInitials = useMemo(() => getInitials(adminName), [adminName, getInitials]);
 
   return (
     <div className="p-4 sm:p-6 relative">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4 mb-4 sm:mb-0">
-          {/* OPTIMIZATION: Improved user avatar with better error handling */}
+          {/* ENTERPRISE: Optimized user avatar with better error handling */}
           <div className="w-12 sm:w-16 h-12 sm:h-16 rounded-full overflow-hidden bg-gradient-to-br from-[#52007C] to-[#BF4BF6] border-2 border-[#BF4BF6] flex items-center justify-center transition-transform duration-300 hover:scale-105">
             {avatar && !avatarError ? (
               <img 
@@ -147,11 +150,11 @@ const Header: React.FC<HeaderProps> = ({
                   console.error("Avatar failed to load:", avatarUrl);
                   setAvatarError(true);
                 }}
-                loading="lazy" // OPTIMIZATION: Lazy load avatar
+                loading="lazy"
               />
             ) : (
               <span className="text-xl sm:text-2xl font-bold text-white">
-                {getInitials(adminName)}
+                {userInitials}
               </span>
             )}
           </div>
@@ -176,7 +179,7 @@ const Header: React.FC<HeaderProps> = ({
                 strokeWidth={1.8}
               />
               
-              {/* OPTIMIZATION: Only render badge if there are new notifications */}
+              {/* ENTERPRISE: Optimized notification badge */}
               {newNotificationsCount > 0 && (
                 <div className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center">
                   <div className="absolute w-full h-full rounded-full bg-[#BF4BF6] animate-pulse-slow opacity-60"></div>
@@ -280,6 +283,8 @@ const Header: React.FC<HeaderProps> = ({
       </div>
     </div>
   );
-};
+});
+
+Header.displayName = 'Header';
 
 export default Header;

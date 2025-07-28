@@ -10,13 +10,16 @@ interface StatCardProps {
 
 const StatCard: React.FC<StatCardProps> = ({ icon: Icon, label, value }) => {
   return (
-    <div className="flex items-center p-4 md:p-6 bg-gradient-to-br from-purple-800/70 to-indigo-900/70 rounded-xl md:rounded-2xl backdrop-blur-lg shadow-xl border border-purple-500/20 transition-all duration-300 hover:shadow-purple-500/10 hover:border-purple-400/30 hover:translate-y-[-2px]">
-      <div className="flex-shrink-0 bg-gradient-to-br from-purple-500 to-violet-600 p-3 md:p-4 rounded-lg md:rounded-xl mr-4 md:mr-6 shadow-lg">
-        <Icon size={20} className="text-white md:w-7 md:h-7" />
+    <div className="flex items-center p-6 bg-white/85 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg transition-all duration-300 hover:shadow-[0_0_15px_rgba(191,75,246,0.3)] hover:translate-y-[-2px]">
+      <div className="flex-shrink-0 bg-gradient-to-br from-[#BF4BF6] to-[#D68BF9] p-4 rounded-xl mr-5 shadow-lg">
+        <Icon size={24} className="text-white" />
       </div>
       <div>
-        <h3 className="text-purple-200 text-xs md:text-sm font-medium uppercase tracking-wider mb-0.5 md:mb-1">{label}</h3>
-        <p className="text-white text-2xl md:text-4xl font-bold">{value}</p>
+        <h3 className="text-[#52007C] text-sm font-medium uppercase tracking-wider mb-1 font-nunito">{label}</h3>
+        <div className="flex items-baseline">
+          <p className="text-[#1B0A3F] text-3xl font-bold font-nunito">{value.replace('+', '')}</p>
+          {value.includes('+') && <span className="text-[#BF4BF6] text-xl font-bold ml-1">+</span>}
+        </div>
       </div>
     </div>
   );

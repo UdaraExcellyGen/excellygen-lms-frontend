@@ -1,137 +1,315 @@
 // src/api/services/LearnerDashboard/learnerOverallStatsService.ts
-// OPTIMIZED SERVICE FILE FOR LEARNER-FACING OVERALL STATS
+// ENTERPRISE OPTIMIZED: Ultra-fast stats service with smart caching and graceful degradation
 import apiClient from "../../apiClient";
 import { OverallLmsStatsDto } from "../../../types/course.types"; 
 import { DailyLearningTime } from "../../../features/Learner/LearnerDashboard/types/types";
+import { emitLearnerDashboardRefreshNeeded } from "../../../utils/learnerDashboardEvents";
 
-// Cache for stats to avoid repeated API calls
-let statsCache: {
-  data: OverallLmsStatsDto | null;
+// ENTERPRISE: Advanced caching system with intelligent invalidation
+interface CacheEntry<T> {
+  data: T;
   timestamp: number;
-  isLoading: boolean;
-} = {
-  data: null,
-  timestamp: 0,
-  isLoading: false
-};
+  expiry: number;
+  requestId?: string;
+}
 
-// Cache duration: 5 minutes
-const CACHE_DURATION = 5 * 60 * 1000;
+interface RequestMetrics {
+  requestCount: number;
+  cacheHits: number;
+  averageResponseTime: number;
+  lastRequestTime: number;
+  errorCount: number;
+}
 
-/**
- * Fetches overall LMS statistics from the API for learner-facing pages.
- * Includes caching and graceful error handling for better performance.
- * @returns Overall LMS statistics including total published courses, active learners, etc.
- */
-export const getOverallLmsStatsForLearner = async (): Promise<OverallLmsStatsDto> => { 
-  const now = Date.now();
-  
-  if (statsCache.data && (now - statsCache.timestamp) < CACHE_DURATION && !statsCache.isLoading) {
-    console.log('Returning cached stats data');
-    return statsCache.data;
-  }
-  
-  if (statsCache.isLoading) {
-    console.log('Stats request already in progress, waiting...');
-    let attempts = 0;
-    while (statsCache.isLoading && attempts < 100) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
-    }
-    
-    if (statsCache.data) {
-      return statsCache.data;
-    }
-  }
-  
-  const defaultStats: OverallLmsStatsDto = {
-    totalCategories: 0,
-    totalPublishedCourses: 0,
-    totalActiveLearners: 0,
-    totalActiveCoordinators: 0,
-    totalProjectManagers: 0,
-    averageCourseDurationOverall: 'N/A'
+class EnterpriseStatsCache {
+  private cache = new Map<string, CacheEntry<any>>();
+  private metrics: RequestMetrics = {
+    requestCount: 0,
+    cacheHits: 0,
+    averageResponseTime: 0,
+    lastRequestTime: 0,
+    errorCount: 0
   };
   
-  try {
-    statsCache.isLoading = true;
-    console.log('Fetching fresh stats data from API...');
+  private readonly STATS_TTL = 5 * 60 * 1000; // 5 minutes for stats
+  private readonly ACTIVITY_TTL = 2 * 60 * 1000; // 2 minutes for activity data
+  private readonly ERROR_RETRY_TTL = 30 * 1000; // 30 seconds before retry on error
+
+  private updateMetrics(responseTime: number, fromCache: boolean, isError: boolean = false): void {
+    this.metrics.requestCount++;
+    if (fromCache) this.metrics.cacheHits++;
+    if (isError) this.metrics.errorCount++;
     
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    this.metrics.averageResponseTime = 
+      (this.metrics.averageResponseTime * (this.metrics.requestCount - 1) + responseTime) 
+      / this.metrics.requestCount;
     
-    const response = await apiClient.get<OverallLmsStatsDto>('/learner/stats/overall', {
-      signal: controller.signal
+    this.metrics.lastRequestTime = Date.now();
+  }
+
+  set<T>(key: string, data: T, customTTL?: number): void {
+    const ttl = customTTL || this.STATS_TTL;
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      expiry: Date.now() + ttl,
+      requestId: `${key}_${Date.now()}`
     });
+    this.cleanupExpiredEntries();
+  }
+
+  get<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+
+    const now = Date.now();
+    if (now > entry.expiry) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    this.updateMetrics(0, true);
+    return entry.data as T;
+  }
+  
+  public delete(key: string): boolean {
+    return this.cache.delete(key);
+  }
+
+  private cleanupExpiredEntries(): void {
+    const now = Date.now();
+    const keysToDelete: string[] = [];
     
-    clearTimeout(timeoutId);
+    for (const [key, entry] of this.cache) {
+      if (now > entry.expiry) {
+        keysToDelete.push(key);
+      }
+    }
     
-    console.log('Overall LMS stats response:', response.data);
+    keysToDelete.forEach(key => this.cache.delete(key));
     
-    if (response.data && typeof response.data === 'object') {
-      statsCache.data = response.data;
-      statsCache.timestamp = now;
-      return response.data;
-    } else {
-      console.warn('Invalid stats response format, using defaults');
+    if (this.cache.size > 20) {
+      const oldestEntries = Array.from(this.cache.entries())
+        .sort(([,a], [,b]) => a.timestamp - b.timestamp)
+        .slice(0, 5);
+      
+      oldestEntries.forEach(([key]) => this.cache.delete(key));
+    }
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+
+  getMetrics(): RequestMetrics & { cacheSize: number; hitRate: number; errorRate: number } {
+    return {
+      ...this.metrics,
+      cacheSize: this.cache.size,
+      hitRate: this.metrics.requestCount > 0 ? this.metrics.cacheHits / this.metrics.requestCount : 0,
+      errorRate: this.metrics.requestCount > 0 ? this.metrics.errorCount / this.metrics.requestCount : 0
+    };
+  }
+}
+
+export const dashboardCache = new EnterpriseStatsCache();
+const activeRequests = new Map<string, Promise<any>>();
+
+function dedupedRequest<T>(
+  key: string, 
+  requestFn: () => Promise<T>, 
+  priority: 'high' | 'normal' | 'low' = 'normal'
+): Promise<T> {
+  if (activeRequests.has(key)) {
+    console.log(`⚡ Deduped ${priority} priority stats request: ${key}`);
+    return activeRequests.get(key)!;
+  }
+
+  const startTime = performance.now();
+  const promise = requestFn()
+    .then(result => {
+      const responseTime = performance.now() - startTime;
+      console.log(`✅ ${priority} stats request completed in ${responseTime.toFixed(2)}ms: ${key}`);
+      return result;
+    })
+    .finally(() => {
+      const cleanupDelay = priority === 'high' ? 500 : priority === 'normal' ? 1000 : 2000;
+      setTimeout(() => {
+        activeRequests.delete(key);
+      }, cleanupDelay);
+    });
+
+  activeRequests.set(key, promise);
+  return promise;
+}
+
+const createDefaultStats = (): OverallLmsStatsDto => ({
+  totalCategories: 0,
+  totalPublishedCourses: 0,
+  totalActiveLearners: 0,
+  totalActiveCoordinators: 0,
+  totalProjectManagers: 0,
+  averageCourseDurationOverall: 'N/A'
+});
+
+const validateStatsResponse = (data: any): OverallLmsStatsDto => {
+  if (!data || typeof data !== 'object') {
+    console.warn('Invalid stats response format, using defaults');
+    return createDefaultStats();
+  }
+
+  return {
+    totalCategories: Number(data.totalCategories) || 0,
+    totalPublishedCourses: Number(data.totalPublishedCourses) || 0,
+    totalActiveLearners: Number(data.totalActiveLearners) || 0,
+    totalActiveCoordinators: Number(data.totalActiveCoordinators) || 0,
+    totalProjectManagers: Number(data.totalProjectManagers) || 0,
+    averageCourseDurationOverall: data.averageCourseDurationOverall || 'N/A'
+  };
+};
+
+export const getOverallLmsStatsForLearner = async (): Promise<OverallLmsStatsDto> => {
+  const cacheKey = 'learner_overall_stats';
+  
+  const cachedData = dashboardCache.get<OverallLmsStatsDto>(cacheKey);
+  if (cachedData) {
+    console.log('📊 Stats served from cache');
+    return cachedData;
+  }
+
+  return dedupedRequest(cacheKey, async () => {
+    console.log('🔄 Fetching fresh stats data from API...');
+    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const response = await apiClient.get<OverallLmsStatsDto>('/learner/stats/overall', {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      console.log('📈 Overall LMS stats response received');
+      const validatedStats = validateStatsResponse(response.data);
+      dashboardCache.set(cacheKey, validatedStats);
+      emitLearnerDashboardRefreshNeeded('stats-updated');
+      
+      return validatedStats;
+      
+    } catch (error: any) {
+      // *** THIS IS THE FIX ***
+      // Silently handle cancellation errors, as they are expected during navigation.
+      if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+        console.log(`↩️ API request for overall stats was canceled. This is normal.`);
+        return createDefaultStats(); // Return default data without logging a scary error.
+      }
+      
+      // For all other actual errors, log them and handle gracefully.
+      console.error('❌ Error fetching overall LMS stats for learner:', error);
+      
+      const expiredCache = dashboardCache.get<OverallLmsStatsDto>(cacheKey);
+      if (expiredCache) {
+        console.log('🔄 Returning expired cached stats due to error');
+        return expiredCache;
+      }
+      
+      const defaultStats = createDefaultStats();
+      
+      if (error.name === 'AbortError') {
+        console.warn('⏱️ Stats request timed out, using default values');
+      } else if (error.code === 'NETWORK_ERROR' || !error.response) {
+        console.warn('🌐 Network error fetching stats, using default values');
+      } else if (error.response?.status >= 500) {
+        console.warn('🛠️ Server error fetching stats, using default values');
+      } else if (error.response?.status === 403) {
+        console.warn('🔒 Access denied for stats, using default values');
+      } else {
+        console.warn('❓ Unknown error fetching stats:', error.response?.status, error.response?.data);
+      }
+      
+      dashboardCache.set(cacheKey, defaultStats, 30000);
+      
       return defaultStats;
     }
-    
-  } catch (error: any) {
-    console.error('Error fetching overall LMS stats for learner:', error);
-    
-    if (statsCache.data) {
-      console.log('Returning expired cached data due to error');
-      return statsCache.data;
-    }
-    
-    if (error.name === 'AbortError') {
-      console.warn('Stats request timed out, using default values');
-    } else if (error.code === 'NETWORK_ERROR' || !error.response) {
-      console.warn('Network error fetching stats, using default values');
-    } else {
-      console.warn('API error fetching stats:', error.response?.status, error.response?.data);
-    }
-    
-    return defaultStats;
-  } finally {
-    statsCache.isLoading = false;
-  }
+  }, 'normal');
 };
 
-/**
- * THIS ENTIRE FUNCTION IS NEW
- * Fetches the current week's learning activity from the API.
- * The backend handles calculating the days from Monday to the current day.
- * @returns A promise that resolves to an array of daily learning time objects.
- */
 export const getWeeklyActivity = async (): Promise<DailyLearningTime[]> => {
+  const cacheKey = 'learner_weekly_activity';
+  
+  const cachedData = dashboardCache.get<DailyLearningTime[]>(cacheKey);
+  if (cachedData) {
+    console.log('📊 Weekly activity served from cache');
+    return cachedData;
+  }
+
+  return dedupedRequest(cacheKey, async () => {
+    console.log('🔄 Fetching weekly activity from API...');
+    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      
+      const response = await apiClient.get<DailyLearningTime[]>('/learner/stats/weekly-activity', {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      const validatedData = Array.isArray(response.data) ? response.data : [];
+      dashboardCache.set(cacheKey, validatedData, 2 * 60 * 1000);
+      
+      console.log(`✅ Weekly activity cached (${validatedData.length} days)`);
+      return validatedData;
+      
+    } catch (error: any) {
+      // Silently handle cancellation errors
+      if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+        console.log(`↩️ API request for weekly activity was canceled. This is normal.`);
+        return [];
+      }
+
+      console.error("❌ Error fetching weekly learning activity:", error);
+      
+      const expiredCache = dashboardCache.get<DailyLearningTime[]>(cacheKey);
+      if (expiredCache) {
+        console.log('🔄 Returning expired cached activity due to error');
+        return expiredCache;
+      }
+      
+      return [];
+    }
+  }, 'low');
+};
+
+export const clearStatsCache = (): void => {
+  dashboardCache.clear();
+  activeRequests.clear();
+  console.log('🧹 Stats cache cleared');
+  emitLearnerDashboardRefreshNeeded('stats-updated');
+};
+
+export async function preloadStats(): Promise<void> {
   try {
-    const response = await apiClient.get<DailyLearningTime[]>('/learner/stats/weekly-activity');
-    return response.data;
+    await Promise.all([
+      getOverallLmsStatsForLearner(),
+      getWeeklyActivity()
+    ]);
+    console.log('⚡ Stats data preloaded successfully');
   } catch (error) {
-    console.error("Error fetching weekly learning activity:", error);
-    // Return an empty array to prevent the UI from crashing on an API error.
-    return [];
+    console.warn('Failed to preload stats:', error);
   }
 };
 
+export const getStatsMetrics = () => dashboardCache.getMetrics();
 
-/**
- * Clear the stats cache - useful for forcing a refresh
- */
-export const clearStatsCache = () => {
-  statsCache.data = null;
-  statsCache.timestamp = 0;
-  statsCache.isLoading = false;
-  console.log('Stats cache cleared');
-};
-
-/**
- * Preload stats data in the background
- */
-export const preloadStats = () => {
-  getOverallLmsStatsForLearner().catch(() => {
-    // Silently handle errors for preload
-  });
+export const invalidateStatsCache = (type?: 'stats' | 'activity' | 'all'): void => {
+  if (type === 'stats') {
+    dashboardCache.delete('learner_overall_stats');
+  } else if (type === 'activity') {
+    dashboardCache.delete('learner_weekly_activity');
+  } else {
+    dashboardCache.clear();
+  }
+  console.log(`🧹 Stats cache invalidated: ${type || 'all'}`);
 };

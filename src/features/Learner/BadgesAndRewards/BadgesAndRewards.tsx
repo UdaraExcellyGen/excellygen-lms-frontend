@@ -19,7 +19,8 @@ const BadgesAndRewards: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isClaiming, setIsClaiming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const previousBadgesRef = useRef<Badge[]>([]);
+  // The ref for comparing previous badges is no longer needed here.
+  // const previousBadgesRef = useRef<Badge[]>([]);
 
   const fetchBadges = useCallback(async () => {
     // No setLoading(true) here to allow for background refresh
@@ -27,6 +28,16 @@ const BadgesAndRewards: React.FC = () => {
       const userBadges = await getBadgesAndRewards();
       setBadges(userBadges);
       setError(null);
+
+      // --- FIX ADDED ---
+      // This is a new piece of logic to keep the notification system robust.
+      // When the user visits the main badges page, we synchronize the list of
+      // notified badges with the actual state of unlocked badges.
+      // This prevents old notifications from appearing if the session was cleared.
+      const unlockedIds = userBadges.filter(b => b.isUnlocked).map(b => b.id);
+      sessionStorage.setItem('notifiedBadges', JSON.stringify(unlockedIds));
+      // --- END FIX ---
+
     } catch (err) {
       setError("Failed to load your badges. Please try again later.");
       console.error("Error fetching badges:", err);
@@ -39,36 +50,11 @@ const BadgesAndRewards: React.FC = () => {
     fetchBadges();
   }, [fetchBadges]);
 
-  // THIS IS THE NEW LOGIC FOR THE TOAST NOTIFICATION
-  useEffect(() => {
-    // Only run if we have a previous state to compare against
-    if (previousBadgesRef.current.length > 0) {
-      const newlyUnlockedBadges = badges.filter(currentBadge => {
-        // Find the corresponding badge in the previous state
-        const prevBadge = previousBadgesRef.current.find(b => b.id === currentBadge.id);
-        // A badge is "newly unlocked" if it is now unlocked but was previously locked.
-        return currentBadge.isUnlocked && (!prevBadge || !prevBadge.isUnlocked);
-      });
-
-      // Fire a toast for each newly unlocked badge
-      newlyUnlockedBadges.forEach(badge => {
-        toast.success(t => (
-          <div className="flex items-center gap-3">
-            <Gift className="w-6 h-6 text-yellow-400" />
-            <div>
-              <p className="font-bold">New Badge Unlocked!</p>
-              <p>You've earned the '{badge.title}' badge. Go to Badges & Rewards to claim it!</p>
-            </div>
-          </div>
-        ), {
-          duration: 6000, // Keep the toast on screen a bit longer
-        });
-      });
-    }
-
-    // Update the ref with the current state for the next render
-    previousBadgesRef.current = badges;
-  }, [badges]);
+  // --- FIX APPLIED ---
+  // The entire useEffect block that showed toast notifications has been removed from this file.
+  // This is the CRITICAL FIX that prevents duplicate notifications.
+  // The `useBadgeChecker` hook now handles all of this logic globally.
+  // --- END FIX ---
 
   const handleClaimBadge = (badge: Badge) => {
     setSelectedBadge(badge);
