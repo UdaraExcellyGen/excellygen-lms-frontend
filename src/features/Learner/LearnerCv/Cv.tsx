@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, ArrowLeft } from 'lucide-react';
 
 // Component Imports
 import ProfessionalSummary from './Components/ProfessionalSummary';
@@ -19,7 +19,6 @@ import { getUserProfile } from '../../../api/services/LearnerProfile/userProfile
 import { getUserProjects } from '../../../api/services/LearnerProfile/userProjectService';
 import { getCertificatesForUser, getExternalCertificatesForUser } from '../../../api/services/Course/certificateService';
 import { getUserTechnologies } from '../../../api/services/LearnerProfile/userTechnologyService';
-// FIX: Importing the new proxy service
 import { getProxiedImageBlob } from '../../../api/services/common/proxyService';
 
 const CV: React.FC = () => {
@@ -30,12 +29,12 @@ const CV: React.FC = () => {
     const [avatarBlobUrl, setAvatarBlobUrl] = useState<string | null>(null);
 
     const location = useLocation();
-    const navigate = useNavigate(); 
+    const navigate = useNavigate();
+    
+    const queryParams = new URLSearchParams(location.search);
+    const userIdToFetch = queryParams.get('userId');
 
     useEffect(() => {
-        const queryParams = new URLSearchParams(location.search);
-        const userIdToFetch = queryParams.get('userId');
-
         if (!userIdToFetch) {
             toast.error('User ID not provided for CV.');
             setError('User ID is missing. Cannot load CV.');
@@ -82,7 +81,6 @@ const CV: React.FC = () => {
 
                 if (finalCvData.personalInfo.photo) {
                     try {
-                        // FIX: Using the new, authenticated proxy service instead of global fetch
                         const blob = await getProxiedImageBlob(finalCvData.personalInfo.photo);
                         setAvatarBlobUrl(URL.createObjectURL(blob));
                     } catch (e) {
@@ -105,19 +103,14 @@ const CV: React.FC = () => {
                 URL.revokeObjectURL(avatarBlobUrl);
             }
         };
-    }, [location.search]);
+    }, [userIdToFetch]);
 
     const handleDownloadCV = async (): Promise<void> => {
         if (!cvData || !cvRef.current) return;
         const toastId = toast.loading('Generating PDF...');
         try {
             const element = cvRef.current;
-            const downloadButton = element.querySelector('.download-button') as HTMLElement;
-            if (downloadButton) downloadButton.style.display = 'none';
-            
             const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
-            
-            if (downloadButton) downloadButton.style.display = '';
             
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF('p', 'mm', 'a4');
@@ -161,63 +154,79 @@ const CV: React.FC = () => {
     if (!cvData) return null;
 
     return (
-        <div className="min-h-screen bg-[#f5f3f9] p-4 flex justify-center">
-            <div className="relative">
-                 <button onClick={handleDownloadCV} className="download-button absolute top-4 right-4 z-10 bg-[#2a135b] hover:bg-[#4F2B9A] px-3 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200 shadow-lg text-white text-xs">
-                    <Download size={14} />
+        <div className="min-h-screen bg-[#f5f3f9] p-4 flex flex-col items-center">
+            <div className="w-full max-w-4xl flex justify-between items-center mb-4 px-2">
+                {/* --- THE FIX ---
+                    - Classes reverted to link style, but `text-sm` is removed to use default font size.
+                    - `font-medium` is used for consistent font weight with the other button.
+                */}
+                <Link
+                    to={`/learner/profile/${userIdToFetch}`}
+                    className="inline-flex items-center gap-2 text-[#2a135b] hover:text-[#4F2B9A] font-medium transition-colors group"
+                >
+                    {/* - Icon size changed to 16px to match the download icon. */}
+                    <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
+                    Back to Profile
+                </Link>
+
+                 <button 
+                    onClick={handleDownloadCV} 
+                    className="bg-[#4F2B9A] hover:bg-[#2a135b] px-5 py-2.5 rounded-lg flex items-center gap-2 transition-colors duration-200 shadow-lg text-white font-medium">
+                    <Download size={16} />
                     Download CV
                 </button>
-                <div className="max-w-4xl mx-auto bg-white shadow-2xl overflow-hidden" style={{ width: '794px', minHeight: '1123px' }} ref={cvRef}>
-                    <div className="flex" style={{ minHeight: '1123px' }}>
-                        <div className="w-1/3 bg-[#2a135b] text-white p-6">
-                            <div className="mb-6">
-                                <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-white shadow-lg mx-auto">
-                                    {cvData.personalInfo.photo ? (
-                                        <img 
-                                            src={avatarBlobUrl || cvData.personalInfo.photo} 
-                                            alt={cvData.personalInfo.name}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                                            <span className="text-gray-400 text-2xl font-bold">
-                                                {cvData.personalInfo.name.split(' ').map(n => n[0]).join('')}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="mb-6 text-center">
-                                <h1 className="text-xl font-bold text-white mb-2 uppercase tracking-wide">
-                                    {cvData.personalInfo.name}
-                                </h1>
-                                <h2 className="text-sm text-gray-300 font-medium">
-                                    {cvData.personalInfo.position}
-                                </h2>
-                            </div>
-                            <div className="mb-6">
-                                <h3 className="text-sm font-bold mb-3 bg-[#4F2B9A] text-white p-2 text-center">Contact</h3>
-                                <div className="space-y-3">
-                                    <div><p className="text-xs font-bold text-white mb-1">Phone</p><p className="text-xs text-gray-300">{cvData.personalInfo.phone}</p></div>
-                                    <div><p className="text-xs font-bold text-white mb-1">Email</p><p className="text-xs text-gray-300 break-all">{cvData.personalInfo.email}</p></div>
-                                    <div><p className="text-xs font-bold text-white mb-1">Department</p><p className="text-xs text-gray-300">{cvData.personalInfo.department}</p></div>
-                                </div>
-                            </div>
-                            <div className="mb-6">
-                                <h3 className="text-sm font-bold mb-3 bg-[#4F2B9A] text-white p-2 text-center">Technical Skills</h3>
-                                <div>
-                                    {cvData.skills.map((skill, index) => (
-                                        <div key={index} className="mb-2"><span className="cv-skill-item text-xs text-gray-300 font-medium">{skill}</span></div>
-                                    ))}
-                                </div>
+            </div>
+             
+            <div className="max-w-4xl mx-auto bg-white shadow-2xl overflow-hidden" style={{ width: '794px', minHeight: '1123px' }} ref={cvRef}>
+                <div className="flex" style={{ minHeight: '1123px' }}>
+                    <div className="w-1/3 bg-[#2a135b] text-white p-6">
+                        <div className="mb-6">
+                            <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-white shadow-lg mx-auto">
+                                {cvData.personalInfo.photo ? (
+                                    <img 
+                                        src={avatarBlobUrl || cvData.personalInfo.photo} 
+                                        alt={cvData.personalInfo.name}
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                                        <span className="text-gray-400 text-2xl font-bold">
+                                            {cvData.personalInfo.name.split(' ').map(n => n[0]).join('')}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        <div className="w-2/3 bg-gray-50 p-6 flex flex-col">
-                            <ProfessionalSummary summary={cvData.personalInfo.summary} />
-                            <ProjectsSection projects={cvData.projects} />
-                            <CertificationsSection certifications={cvData.certifications} />
-                            <div className="mt-auto"><CVFooter /></div>
+                        <div className="mb-6 text-center">
+                            <h1 className="text-xl font-bold text-white mb-2 uppercase tracking-wide">
+                                {cvData.personalInfo.name}
+                            </h1>
+                            <h2 className="text-sm text-gray-300 font-medium">
+                                {cvData.personalInfo.position}
+                            </h2>
                         </div>
+                        <div className="mb-6">
+                            <h3 className="text-sm font-bold mb-3 bg-[#4F2B9A] text-white p-2 text-center">Contact</h3>
+                            <div className="space-y-3">
+                                <div><p className="text-xs font-bold text-white mb-1">Phone</p><p className="text-xs text-gray-300">{cvData.personalInfo.phone}</p></div>
+                                <div><p className="text-xs font-bold text-white mb-1">Email</p><p className="text-xs text-gray-300 break-all">{cvData.personalInfo.email}</p></div>
+                                <div><p className="text-xs font-bold text-white mb-1">Department</p><p className="text-xs text-gray-300">{cvData.personalInfo.department}</p></div>
+                            </div>
+                        </div>
+                        <div className="mb-6">
+                            <h3 className="text-sm font-bold mb-3 bg-[#4F2B9A] text-white p-2 text-center">Technical Skills</h3>
+                            <div>
+                                {cvData.skills.map((skill, index) => (
+                                    <div key={index} className="mb-2"><span className="cv-skill-item text-xs text-gray-300 font-medium">{skill}</span></div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="w-2/3 bg-gray-50 p-6 flex flex-col">
+                        <ProfessionalSummary summary={cvData.personalInfo.summary} />
+                        <ProjectsSection projects={cvData.projects} />
+                        <CertificationsSection certifications={cvData.certifications} />
+                        <div className="mt-auto"><CVFooter /></div>
                     </div>
                 </div>
             </div>
