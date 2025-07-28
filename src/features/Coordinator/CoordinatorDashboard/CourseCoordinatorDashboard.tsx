@@ -9,18 +9,17 @@ import { getAllEnrollmentsAdminView } from '../../../api/services/Course/enrollm
 // Import Components
 import Header from './components/Header';
 import StatCard from './components/StatCard';
-import NotificationCard from './components/NotificationCard';
 import QuickActionsGrid from './components/QuickActionsGrid';
 import { getUserProfile } from '../../../api/services/LearnerProfile/userProfileService';
 
 // Import Data
-import { initialNotifications, getQuickActions } from './data/dashboardData';
+import { getQuickActions } from './data/dashboardData';
 
 const CourseCoordinatorDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [courseStats, setCourseStats] = useState<{ total: number; active: number }>({ total: 0, active: 0 });
+  const [courseStats, setCourseStats] = useState<{ total: number; active: number; inactive: number }>({ total: 0, active: 0, inactive: 0 });
   const [studentStats, setStudentStats] = useState<{ total: number; active: number }>({ total: 0, active: 0 });
   const [avatar, setAvatar] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,7 +51,8 @@ const CourseCoordinatorDashboard: React.FC = () => {
 
         setCourseStats({
           total: coordinatorCourses.length,
-          active: coordinatorCourses.filter(c => c.status === 'Published').length,
+          active: coordinatorCourses.filter(c => c.status === 'Published' && !c.isInactive).length,
+          inactive: coordinatorCourses.filter(c => c.isInactive).length,
         });
 
         const coordinatorCourseIds = coordinatorCourses.map(course => course.id);
@@ -76,7 +76,7 @@ const CourseCoordinatorDashboard: React.FC = () => {
             errorMessage = `Failed to load dashboard data: ${err.message}.`;
         }
         setError(errorMessage);
-        setCourseStats({ total: 0, active: 0 });
+        setCourseStats({ total: 0, active: 0, inactive: 0 });
         setStudentStats({ total: 0, active: 0 });
       } finally {
         setIsLoading(false);
@@ -130,14 +130,13 @@ const CourseCoordinatorDashboard: React.FC = () => {
       <div className="w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8 relative">
         <div className="bg-white/90 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg relative z-50">
           <Header
-            notifications={initialNotifications}
             coordinatorName={user.name || "Course Coordinator"}
             role="Course Coordinator"
             avatar={avatar}
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6 relative z-10">
           <StatCard
             icon={BookOpen}
             title="My Courses"
@@ -154,7 +153,6 @@ const CourseCoordinatorDashboard: React.FC = () => {
             activeLabel="Unique Students Enrolled"
             onClick={() => navigate('/coordinator/learner-list')}
           />
-          <NotificationCard notifications={initialNotifications} />
         </div>
 
         <div className="bg-white/10 backdrop-blur-md rounded-xl border border-[#BF4BF6]/20 shadow-lg p-6 relative z-10">

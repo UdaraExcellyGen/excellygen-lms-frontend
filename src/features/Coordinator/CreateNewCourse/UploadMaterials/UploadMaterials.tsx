@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 import { useCourseContext } from '../../contexts/CourseContext';
-import { SubtopicFE, ExistingMaterialFile, UpdateLessonPayload, CreateLessonPayload } from '../../../../types/course.types';
+import { SubtopicFE, CourseDocumentDto, UpdateLessonPayload, CreateLessonPayload } from '../../../../types/course.types';
 import { 
     getCourseById, 
     addLesson, 
@@ -75,7 +75,7 @@ const UploadMaterials: React.FC = () => {
                                     id: d.id, name: d.name, fileUrl: d.fileUrl,
                                     documentType: d.documentType, fileSize: d.fileSize, lessonId: d.lessonId,
                                     lastUpdatedDate: d.lastUpdatedDate,filePath: d.filePath,
-                                    uploadedAt: d.uploadedAt
+                                    uploadedAt: d.uploadedAt,isCompleted: false,
                                 })),
                                 isEditing: false, originalName: l.lessonName, originalPoints: l.lessonPoints ?? 1
                             }));
@@ -291,9 +291,8 @@ const UploadMaterials: React.FC = () => {
         for (const file of filesToUpload) {
             try {
                 const docDto = await uploadDocument(lessonId, file);
-                const newDoc: ExistingMaterialFile = {
-                    id: docDto.id, name: docDto.name, fileUrl: docDto.fileUrl,
-                    documentType: docDto.documentType, fileSize: docDto.fileSize, lessonId: docDto.lessonId,lastUpdatedDate: docDto.lastUpdatedDate 
+                const newDoc: CourseDocumentDto = {
+                    ...docDto,isCompleted: false,
                 };
                 addDocumentToLessonState(lessonId, newDoc);
                 successCount++;
@@ -364,7 +363,7 @@ const UploadMaterials: React.FC = () => {
         }
     }, [courseId, navigate]);
 
-    const handleNextNavigation = useCallback(() => {
+    const handleNextNavigation = useCallback(async() => {
         const hasPendingUploads = Object.values(pendingUploadFiles).some(fileList => fileList && fileList.length > 0);
         if (hasPendingUploads) {
             toast.error("You have pending documents to upload or cancel for one or more subtopics.");
@@ -378,6 +377,26 @@ const UploadMaterials: React.FC = () => {
             toast.error("Please add at least one subtopic with content before proceeding.");
             return;
         }
+         const validationToast = toast.loading("Validating lessons...");
+        try {
+            for (const lesson of courseData.lessons) {
+                const hasDocuments = lesson.documents.length > 0;
+                const quizzes = await getQuizzesByLessonId(lesson.id);
+                const hasQuiz = quizzes && quizzes.length > 0;
+
+                if (!hasDocuments && !hasQuiz) {
+                    toast.dismiss(validationToast);
+                    toast.error(`The lesson "${lesson.lessonName}" is empty. Please add documents or a quiz before proceeding.`);
+                    return; // Stop the navigation
+                }
+                }
+        } catch (error) {
+            toast.dismiss(validationToast);
+            toast.error("Could not validate lessons. Please try again.");
+            console.error("Failed to validate lessons:", error);
+            return;
+        }
+        toast.dismiss(validationToast);
         if (courseId) {
             navigate(`/coordinator/publish-Course/${courseId}`);
         } else {

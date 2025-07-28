@@ -18,7 +18,6 @@ import { getQuizzesByLessonId, deleteQuiz } from '../../../../api/services/Cours
 import PageHeader from './components/PageHeader';
 import ProgressSteps from '../commonComponent/ProgressSteps';
 import CourseMaterialsSection from './components/CourseMaterialsSection';
-import ConfirmationDialog from './components/ConfirmationDialog';
 import PublishButton from './components/PublishButton';
 // Import the common confirmation dialog hook
 import { useConfirmationDialog } from '../../coordinatorCourseView/CoordinatorCourseOverview/components/ConfirmationDialog';
@@ -48,13 +47,10 @@ const PublishCoursePage: React.FC = () => {
 
     const [expandedTopics, setExpandedTopics] = useState<string[]>(['materials']);
     const [expandedSubtopicsUI, setExpandedSubtopicsUI] = useState<Record<number, boolean>>({});
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [materialToDelete, setMaterialToDelete] = useState<{ lessonId: number; documentId: number; name: string } | null>(null);
 
     const [showQuizOverviewPage, setShowQuizOverviewPage] = useState<QuizBank | null>(null);
     const [quizzes, setQuizzes] = useState<Record<number, any[]>>({});
     const [loadingQuizzes, setLoadingQuizzes] = useState(false);
-    const [deleteQuizConfirmation, setDeleteQuizConfirmation] = useState<{lessonId: number, quizId: number} | null>(null);
 
     const { showConfirmation, ConfirmationDialog } = useConfirmationDialog();
 
@@ -155,7 +151,7 @@ const PublishCoursePage: React.FC = () => {
                     documents: l.documents.map(d => ({
                         id: d.id, name: d.name, fileUrl: d.fileUrl,
                         documentType: d.documentType, fileSize: d.fileSize, lessonId: d.lessonId, lastUpdatedDate: d.lastUpdatedDate,filePath: d.filePath,
-                        uploadedAt: d.uploadedAt
+                        uploadedAt: d.uploadedAt,isCompleted: false,
                     })),
                     isEditing: false,
                     originalName: l.lessonName,
@@ -310,6 +306,16 @@ const PublishCoursePage: React.FC = () => {
         toast.error("Cannot publish: Course must have at least one lesson/subtopic.");
         return;
     }
+    if (displayCourse) {
+        const emptyLesson = displayCourse.lessons.find(lesson => 
+            lesson.documents.length === 0 && (!quizzes[lesson.id] || quizzes[lesson.id].length === 0)
+        );
+
+        if (emptyLesson) {
+            toast.error(`Cannot publish: The lesson "${emptyLesson.lessonName}" is empty. Please add documents or a quiz.`);
+            return;
+        }
+    }
 
     // 1. Call the confirmation hook instead of directly publishing.
     showConfirmation({
@@ -383,12 +389,6 @@ const PublishCoursePage: React.FC = () => {
         }
     });
 };
-
-    const handleCancelDelete = () => {
-        setIsDeleteDialogOpen(false);
-        setMaterialToDelete(null);
-    };
-
     const toggleSubtopicUI = (subtopicId: number) => {
         setExpandedSubtopicsUI(prev => ({
             ...prev,

@@ -4,7 +4,7 @@ import {
     BasicCourseDetailsState,
     CourseContextState,
     SubtopicFE,
-    ExistingMaterialFile
+    CourseDocumentDto
 } from '../../../types/course.types';
 
 // --- Initial State ---
@@ -34,7 +34,7 @@ type CourseContextType = {
     addLessonToState: (lesson: SubtopicFE) => void;
     updateLessonInState: (updatedLesson: SubtopicFE) => void;
     removeLessonFromState: (lessonId: number) => void;
-    addDocumentToLessonState: (lessonId: number, document: ExistingMaterialFile) => void;
+    addDocumentToLessonState: (lessonId: number, document: CourseDocumentDto) => void;
     removeDocumentFromLessonState: (lessonId: number, documentId: number) => void;
     resetCourseContext: () => void;
 };
@@ -87,7 +87,7 @@ export const CourseProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }));
     }, []);
 
-    const addDocumentToLessonState = useCallback((lessonId: number, document: ExistingMaterialFile) => {
+    const addDocumentToLessonState = useCallback((lessonId: number, document: CourseDocumentDto) => {
         setCourseData(prev => ({
             ...prev,
             lessons: prev.lessons.map(l =>

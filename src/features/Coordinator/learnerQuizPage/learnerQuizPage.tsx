@@ -7,7 +7,6 @@ import NavigationPanel from './components/NavigationPanel';
 import QuizFooter from './components/QuizFooter';
 import ScorePopup from './components/ScorePopup';
 import { quizData } from './data/quizData';
-import { Question } from './types/quiz';
 
 const LearnerQuizPage: React.FC = () => {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -68,13 +67,6 @@ const LearnerQuizPage: React.FC = () => {
     }, [currentQuestionIndex, numQuestions, isAnswerChecked, answeredQuestions, handleCheckAnswer]);
 
 
-    const handleBackPage = useCallback(() => {
-        if (currentQuestionIndex > 0) {
-            setCurrentQuestionIndex(currentQuestionIndex - 1);
-            setSelectedAnswer(answeredQuestions[currentQuestionIndex - 1] || null);
-            setIsAnswerChecked(false);
-        }
-    }, [currentQuestionIndex, answeredQuestions]);
 
     const handleQuestionButtonClick = useCallback((questionIndex: number) => {
         setCurrentQuestionIndex(questionIndex);

@@ -13,7 +13,7 @@ const LearnerListItem: React.FC<LearnerListItemProps> = ({ student }) => {
 
     const handleViewProfileClick = () => {
         if (student.userId) {
-            navigate(`/learner/profile/${student.userId}`);
+            navigate(`/coordinator/view-profile/${student.userId}`);
         } else {
             console.warn("Cannot navigate: User ID is missing for student:", student.name);
         }

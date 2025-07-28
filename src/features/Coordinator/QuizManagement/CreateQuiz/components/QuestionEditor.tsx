@@ -57,7 +57,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
       )}
 
       <div className="flex justify-between mt-4">
-        <button onClick={onBackToDetails} className="px-5 py-2 border border-[#52007C] text-[#1B0A3F] rounded-lg hover:bg-[#BF4BF6]/10 transition-colors">Back to Details</button>
+        <button onClick={onBackToDetails} className="px-5 py-2 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white transition-colors">Back to Details</button>
         <button onClick={onSaveQuiz} className={`px-5 py-2 ${hasRequiredQuestions ? 'c' : 'bg-gray-500 cursor-not-allowed'} px-5 py-2.5 bg-[#52007C] text-white rounded-lg hover:bg-[#D68BF9] rounded-lg hover:bg-[#BF4BF6]/10 transition-colors flex items-center gap-2`} disabled={isSaving || !hasRequiredQuestions}>
           <Save size={16} />
           {isSaving ? 'Saving...' : 'Save Quiz'}
