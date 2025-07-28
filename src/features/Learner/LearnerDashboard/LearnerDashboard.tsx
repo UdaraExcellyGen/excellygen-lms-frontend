@@ -13,12 +13,7 @@ import {
   LearningActivityChart 
 } from './components/Sections';
 import { getLearnerCourseDetails } from '../../../api/services/Course/learnerCourseService';
-
-// --- THIS IS THE FIX ---
-// Added the 'removeCourseFromRecents' function to the import.
 import { getRecentlyAccessedCourseIds, removeCourseFromRecents } from '../../../api/services/Course/courseAccessService';
-// --- END OF FIX ---
-
 import { getRecentActivities } from '../../../api/services/LearnerDashboard/learnerActivitiesService';
 import { getWeeklyActivity, dashboardCache } from '../../../api/services/LearnerDashboard/learnerOverallStatsService';
 import { getUserProfile } from '../../../api/services/LearnerProfile/userProfileService';
@@ -96,22 +91,21 @@ const LearnerDashboard: React.FC = () => {
     }
   }, [user?.id]);
 
-  // --- THIS IS THE FINAL, ROBUST FIX ---
-  // This function is now "self-healing". If it finds a course ID in recents that
-  // no longer exists (e.g., after unenrolling), it will automatically remove it
-  // from the stored list and display only the valid courses.
   const fetchActiveCourses = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setActiveCourses([]);
+      setCoursesInitialLoadComplete(true);
+      return;
+    }
 
     setCoursesInitialLoadComplete(false);
 
     try {
-      const recentIds = getRecentlyAccessedCourseIds();
+      // Pass the user ID to get the correct user's list
+      const recentIds = getRecentlyAccessedCourseIds(user.id);
       
-      // Define how many courses we want to display.
       const MAX_COURSES_TO_SHOW = 3;
-
-      // Fetch a few extra courses to act as a buffer in case some fail.
+      // Fetch a buffer to account for potential failures
       const idsToFetch = recentIds.slice(0, MAX_COURSES_TO_SHOW + 2);
 
       if (idsToFetch.length === 0) {
@@ -130,14 +124,13 @@ const LearnerDashboard: React.FC = () => {
           if (result.status === 'fulfilled') {
               validCourses.push(result.value);
           } else {
-              // THIS IS THE KEY ACTION:
-              // If a course failed to load (likely 404), call the new cleanup function.
               console.warn(`[Dashboard] Could not fetch course ${courseId}. It was likely unenrolled or deleted. Removing from recents list.`);
-              removeCourseFromRecents(courseId);
+              // Pass the user ID to remove from the correct user's list
+              removeCourseFromRecents(courseId, user.id);
           }
       });
 
-      // After collecting all valid courses from the buffer, take the first 3.
+      // Take the first 3 successful courses to display
       const finalCoursesToShow = validCourses.slice(0, MAX_COURSES_TO_SHOW);
 
       const formattedActiveCourses: Course[] = finalCoursesToShow.map(course => ({
@@ -147,7 +140,6 @@ const LearnerDashboard: React.FC = () => {
       }));
 
       setActiveCourses(formattedActiveCourses);
-      console.log('[Dashboard] Successfully set active courses:', formattedActiveCourses);
 
     } catch (error: any) {
       if (error.name !== 'CanceledError') {
@@ -209,6 +201,10 @@ const LearnerDashboard: React.FC = () => {
       fetchActiveCourses();
       fetchLearningActivity();
       fetchRecentActivities();
+    } else {
+        // If there is no user, ensure the dashboard is cleared
+        setActiveCourses([]);
+        setCoursesInitialLoadComplete(true);
     }
   }, [user?.id, fetchUserProfile, fetchActiveCourses, fetchLearningActivity, fetchRecentActivities]);
 

@@ -1,7 +1,7 @@
 // src/api/services/Course/courseAccessService.ts
 
-const STORAGE_KEY = 'recentlyAccessedCourses';
-const MAX_RECENT_COURSES = 10; // Store up to 10 recent courses to be safe
+const BASE_STORAGE_KEY = 'recentlyAccessedCourses';
+const MAX_RECENT_COURSES = 10;
 
 interface CourseAccessRecord {
   courseId: number;
@@ -9,21 +9,27 @@ interface CourseAccessRecord {
 }
 
 /**
- * Logs that a course has been accessed by the user.
- * Stores a timestamped record in localStorage.
+ * Logs that a course has been accessed by a specific user.
+ * Stores a timestamped record in a user-specific localStorage key.
  * @param courseId The ID of the course that was accessed.
+ * @param userId The ID of the current user.
  */
-export const logCourseAccess = (courseId: number): void => {
+export const logCourseAccess = (courseId: number, userId: string): void => {
+  if (!userId) return; // Do nothing if there is no user ID
   try {
+    const userStorageKey = `${BASE_STORAGE_KEY}_${userId}`;
     const now = Date.now();
     let recentCourses: CourseAccessRecord[] = [];
     
-    const storedData = localStorage.getItem(STORAGE_KEY);
+    const storedData = localStorage.getItem(userStorageKey);
     if (storedData) {
       try {
-        recentCourses = JSON.parse(storedData);
-        if (!Array.isArray(recentCourses)) recentCourses = [];
-      } catch {
+        const parsed = JSON.parse(storedData);
+        if (Array.isArray(parsed)) {
+          recentCourses = parsed;
+        }
+      } catch (e) {
+        console.error("Failed to parse recent courses from localStorage:", e);
         recentCourses = [];
       }
     }
@@ -35,7 +41,7 @@ export const logCourseAccess = (courseId: number): void => {
       ...filteredCourses
     ].slice(0, MAX_RECENT_COURSES);
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedCourses));
+    localStorage.setItem(userStorageKey, JSON.stringify(updatedCourses));
 
   } catch (error) {
     console.error("Failed to log course access to localStorage:", error);
@@ -43,12 +49,15 @@ export const logCourseAccess = (courseId: number): void => {
 };
 
 /**
- * Retrieves a sorted list of recently accessed course IDs from localStorage.
+ * Retrieves a sorted list of recently accessed course IDs for a specific user.
+ * @param userId The ID of the current user.
  * @returns An array of course IDs, sorted from most to least recent.
  */
-export const getRecentlyAccessedCourseIds = (): number[] => {
+export const getRecentlyAccessedCourseIds = (userId: string): number[] => {
+  if (!userId) return []; // Return empty if there is no user ID
   try {
-    const storedData = localStorage.getItem(STORAGE_KEY);
+    const userStorageKey = `${BASE_STORAGE_KEY}_${userId}`;
+    const storedData = localStorage.getItem(userStorageKey);
     if (!storedData) {
       return [];
     }
@@ -67,13 +76,15 @@ export const getRecentlyAccessedCourseIds = (): number[] => {
 };
 
 /**
- * Removes a specific course ID from the recently accessed list in localStorage.
- * This is used to clean up data for courses that have been unenrolled or deleted.
+ * Removes a specific course ID from the user-specific recently accessed list.
  * @param courseIdToRemove The ID of the course to remove.
+ * @param userId The ID of the current user.
  */
-export const removeCourseFromRecents = (courseIdToRemove: number): void => {
+export const removeCourseFromRecents = (courseIdToRemove: number, userId: string): void => {
+  if (!userId) return; // Do nothing if there is no user ID
   try {
-    const storedData = localStorage.getItem(STORAGE_KEY);
+    const userStorageKey = `${BASE_STORAGE_KEY}_${userId}`;
+    const storedData = localStorage.getItem(userStorageKey);
     if (!storedData) {
       return;
     }
@@ -84,8 +95,8 @@ export const removeCourseFromRecents = (courseIdToRemove: number): void => {
     const updatedCourses = recentCourses.filter(c => c.courseId !== courseIdToRemove);
 
     if (updatedCourses.length < recentCourses.length) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedCourses));
-      console.log(`[courseAccessService] Cleaned up unenrolled/deleted course ${courseIdToRemove} from recents.`);
+      localStorage.setItem(userStorageKey, JSON.stringify(updatedCourses));
+      console.log(`[courseAccessService] Cleaned up unenrolled/deleted course ${courseIdToRemove} from recents for user ${userId}.`);
     }
   } catch (error) {
     console.error(`Failed to remove course ${courseIdToRemove} from recents in localStorage:`, error);
