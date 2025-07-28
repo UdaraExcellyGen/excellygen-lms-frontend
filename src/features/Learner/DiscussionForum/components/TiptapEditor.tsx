@@ -4,16 +4,14 @@ import React from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Bold, Italic, Strikethrough, Code, List, ListOrdered, Code2 } from 'lucide-react';
-import './TiptapEditor.css'; // Import the CSS
+import './TiptapEditor.css'; // Your existing CSS file
 
 interface TiptapEditorProps {
     content: string;
     onChange: (newContent: string) => void;
     disabled?: boolean;
-    // --- ADDED ---
-    minHeight?: string; // Optional prop for min-height, e.g., '100px'
-    maxHeight?: string; // Optional prop for max-height
-    // --- END ADDED ---
+    minHeight?: string;
+    maxHeight?: string;
 }
 
 const MenuBar: React.FC<{ editor: any, disabled?: boolean }> = ({ editor, disabled }) => {
@@ -95,14 +93,12 @@ const MenuBar: React.FC<{ editor: any, disabled?: boolean }> = ({ editor, disabl
     );
 };
 
-// --- MODIFIED TiptapEditor component ---
+
 const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, disabled, minHeight = '150px', maxHeight = '400px' }) => {
     const editor = useEditor({
-        extensions: [StarterKit.configure({
-            bulletList: { keepMarks: true, keepAttributes: true },
-            orderedList: { keepMarks: true, keepAttributes: true },
-        })],
-        content: content,
+        extensions: [StarterKit],
+        // The editor's content is managed by the useEffect below.
+        // It starts empty and gets populated once.
         onUpdate: ({ editor }) => {
             onChange(editor.getHTML());
         },
@@ -112,13 +108,27 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, disabled
             },
         },
         editable: !disabled,
-    });
-    
+    // --- THE FIX PART 1 ---
+    // The dependency array is now stable. It does NOT include `content`.
+    // This ensures the editor instance is created only once and is NOT destroyed on every keystroke.
+    }, [disabled]);
+
+    // --- THE FIX PART 2 ---
+    // This effect handles setting the initial content and updating it if it changes from an external source.
     React.useEffect(() => {
-        if (editor) {
-            editor.setEditable(!disabled);
+        if (!editor) {
+            return;
         }
-    }, [disabled, editor]);
+
+        // Check if the editor's current content is different from the prop.
+        // This is crucial to prevent this code from running on every keystroke.
+        // It allows the editor to be updated when data is loaded, but not when the user is typing.
+        if (content !== editor.getHTML()) {
+            // Set the content programmatically without triggering the 'onUpdate' callback,
+            // which prevents an infinite loop.
+            editor.commands.setContent(content, false);
+        }
+    }, [content, editor]); // This hook runs only when the 'content' prop or 'editor' instance changes.
 
     return (
         <div>
@@ -126,7 +136,6 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, disabled
             <EditorContent 
                 editor={editor} 
                 className="bg-purple-50/60 text-purple-900 rounded-b-lg"
-                // --- ADDED INLINE STYLES FOR HEIGHT ---
                 style={{ minHeight, maxHeight, overflowY: 'auto' }} 
             />
         </div>

@@ -9,6 +9,9 @@
   max-height: 400px;
   overflow-y: auto;
   background-color: white;
+  /* --- THIS IS THE FIX --- */
+  /* ProseMirror, the library behind Tiptap, requires this for proper line wrapping and rendering. */
+  white-space: pre-wrap;
 }
 
 .ProseMirror:focus {
