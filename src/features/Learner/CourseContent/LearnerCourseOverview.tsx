@@ -12,9 +12,11 @@ import { logCourseAccess } from '../../../api/services/Course/courseAccessServic
 import { useBadgeChecker } from '../../../hooks/useBadgeChecker';
 import { AxiosError } from 'axios';
 import { emitLearnerDashboardRefreshNeeded } from '../../../utils/learnerDashboardEvents';
-import { useAuth } from '../../../contexts/AuthContext'; // <-- THIS LINE IS ADDED
+import { useAuth } from '../../../contexts/AuthContext';
 
 const CERTIFICATE_GEN_STORAGE_KEY = 'recentCertificateGens';
+// NEW: Key for quiz completion tracking
+const QUIZ_COMPLETION_KEY = 'completedQuizzes';
 
 // ENTERPRISE: Enhanced progress tracking with optimistic updates
 type ProgressItem = {
@@ -127,9 +129,48 @@ class ErrorRecovery {
   }
 }
 
+// NEW: Helper function to get quiz completion status from localStorage
+const getQuizCompletionStatus = (courseId: number, quizId: number): { isCompleted: boolean; attemptId?: number } => {
+  try {
+    const stored = localStorage.getItem(QUIZ_COMPLETION_KEY);
+    if (!stored) return { isCompleted: false };
+    
+    const completedQuizzes = JSON.parse(stored);
+    const quizKey = `${courseId}_${quizId}`;
+    const quizData = completedQuizzes[quizKey];
+    
+    return {
+      isCompleted: Boolean(quizData?.isCompleted),
+      attemptId: quizData?.attemptId
+    };
+  } catch (error) {
+    console.error('Failed to get quiz completion status:', error);
+    return { isCompleted: false };
+  }
+};
+
+// NEW: Helper function to set quiz completion status
+const setQuizCompletionStatus = (courseId: number, quizId: number, isCompleted: boolean, attemptId?: number) => {
+  try {
+    const stored = localStorage.getItem(QUIZ_COMPLETION_KEY);
+    const completedQuizzes = stored ? JSON.parse(stored) : {};
+    
+    const quizKey = `${courseId}_${quizId}`;
+    completedQuizzes[quizKey] = {
+      isCompleted,
+      attemptId,
+      completedAt: new Date().toISOString()
+    };
+    
+    localStorage.setItem(QUIZ_COMPLETION_KEY, JSON.stringify(completedQuizzes));
+  } catch (error) {
+    console.error('Failed to set quiz completion status:', error);
+  }
+};
+
 // ENTERPRISE: Main component with ultra-fast loading and optimistic patterns
 const LearnerCourseOverview: React.FC = () => {
-  const { user } = useAuth(); // <-- THIS LINE IS ADDED
+  const { user } = useAuth();
   const { courseId: courseIdParam } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -152,7 +193,7 @@ const LearnerCourseOverview: React.FC = () => {
   useBadgeChecker(courseCompletionTrigger);
 
   const [isCertificateGenerated, setIsCertificateGenerated] = useState(false);
-  const [hasProcessedQuizCompletion, setHasProcessedQuizCompletion] = useState(false);
+  // REMOVED: hasProcessedQuizCompletion - simplifying logic
 
   // ENTERPRISE: Cleanup on unmount
   useEffect(() => {
@@ -208,8 +249,11 @@ const LearnerCourseOverview: React.FC = () => {
           };
         });
         
+        // NEW: Check both API data and localStorage for quiz completion
         if (lesson.quizId) {
-          initialQuizzes[lesson.quizId] = lesson.isQuizCompleted;
+          const localQuizStatus = getQuizCompletionStatus(courseId, lesson.quizId);
+          // Use localStorage data if it indicates completion, otherwise use API data
+          initialQuizzes[lesson.quizId] = localQuizStatus.isCompleted || lesson.isQuizCompleted;
         }
       });
       
@@ -221,14 +265,11 @@ const LearnerCourseOverview: React.FC = () => {
 
       // ENTERPRISE: Background task - log course access and notify dashboard
       try {
-        // --- THIS IS THE FIX ---
-        // Pass the user ID to the logging function
         if (user && typeof logCourseAccess === 'function') {
           logCourseAccess(courseId, user.id);
           emitLearnerDashboardRefreshNeeded('active-courses-updated');
           console.log(`✅ Emitted event: active-courses-updated for user ${user.id}`);
         }
-        // --- END OF FIX ---
       } catch (err) {
         console.warn('Failed to log course access or emit refresh event:', err);
       }
@@ -241,7 +282,7 @@ const LearnerCourseOverview: React.FC = () => {
       toast.error("Failed to load course details.");
       navigate("/learner/course-categories");
     }
-  }, [courseId, navigate, user]); // <-- user IS ADDED to the dependency array
+  }, [courseId, navigate, user]);
 
   // ENTERPRISE: Initial load effect
   useEffect(() => {
@@ -306,78 +347,29 @@ const LearnerCourseOverview: React.FC = () => {
     }));
   }, [progressCalculation, courseData?.progressPercentage, courseId]);
 
-  // ENTERPRISE: Enhanced quiz completion handling with direct API bypass
+  // SIMPLIFIED: Quiz completion handling
   useEffect(() => {
-    if (location.state?.quizCompleted && courseId && !hasProcessedQuizCompletion) {
+    if (location.state?.quizCompleted && location.state?.quizId && courseId) {
       const { quizId, attemptId } = location.state;
       
-      const refreshCourseData = async (retryCount = 0) => {
-        try {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          const authToken = localStorage.getItem('access_token') || localStorage.getItem('token') || '';
-          const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5177/api';
-          const apiEndpoint = `${baseURL}/LearnerCourses/${courseId}?_t=${Date.now()}&nocache=true`;
-          
-          const response = await fetch(apiEndpoint, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': authToken ? `Bearer ${authToken}` : '',
-              'Cache-Control': 'no-cache',
-              'Pragma': 'no-cache',
-            },
-            cache: 'no-store'
-          });
-          
-          if (!response.ok) {
-            throw new Error(`Direct API failed: ${response.status} ${response.statusText}`);
-          }
-          
-          const updatedCourse = await response.json();
-          const targetLesson = updatedCourse.lessons?.find((lesson: LearnerLessonDto) => lesson.quizId === quizId);
-          const isQuizMarkedComplete = targetLesson?.isQuizCompleted;
-          
-          if (!isQuizMarkedComplete && retryCount < 2) {
-            setTimeout(() => refreshCourseData(retryCount + 1), 2000);
-            return;
-          }
-          
-          setCourseData(updatedCourse);
-          const updatedDocs: Record<number, ProgressItem> = {};
-          const updatedQuizzes: Record<number, boolean> = {};
-          updatedCourse.lessons.forEach((lesson: LearnerLessonDto) => {
-            lesson.documents.forEach(doc => {
-              updatedDocs[doc.id] = { isCompleted: doc.isCompleted, isProcessing: false, };
-            });
-            if (lesson.quizId) { updatedQuizzes[lesson.quizId] = lesson.isQuizCompleted; }
-          });
-          setDocProgress(updatedDocs);
-          setQuizProgress(updatedQuizzes);
-          
-          if (!attemptId && retryCount === 0) {
-            toast.success("Quiz completed! Your progress has been updated.", {
-              id: `quiz-completed-${quizId}`,
-              duration: 3000
-            });
-          }
-        } catch (error) {
-          console.error('DIRECT API CALL FAILED:', error);
-          setQuizProgress(prev => ({ ...prev, [quizId]: true }));
-          if (!attemptId) {
-            toast.success("Quiz completed! Your progress has been updated.", {
-              id: `quiz-completed-${quizId}`,
-              duration: 3000
-            });
-          }
-        }
-      };
+      // NEW: Update localStorage immediately
+      setQuizCompletionStatus(courseId, quizId, true, attemptId);
       
-      refreshCourseData();
-      setHasProcessedQuizCompletion(true);
+      // Update local state
+      setQuizProgress(prev => ({ ...prev, [quizId]: true }));
+      
+      // Show success message only once
+      if (!location.state.silent) {
+        toast.success("Quiz completed! Your progress has been updated.", {
+          id: `quiz-completed-${quizId}`,
+          duration: 3000
+        });
+      }
+      
+      // Clear the state to prevent repeated processing
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state, courseId, navigate, location.pathname, hasProcessedQuizCompletion]);
+  }, [location.state, courseId, navigate, location.pathname]);
 
   // ENTERPRISE: Enhanced document completion with optimistic updates
   const handleMarkDocumentComplete = useCallback(async (documentId: number) => {
@@ -397,12 +389,22 @@ const LearnerCourseOverview: React.FC = () => {
     }
   }, [courseId, docProgress]);
 
-  // ENTERPRISE: Enhanced quiz action handling
+  // ENHANCED: Quiz action handling with localStorage check
   const handleQuizAction = useCallback((lesson: LearnerLessonDto) => {
-    if (!lesson.quizId) return;
-    const isQuizDone = quizProgress[lesson.quizId] || lesson.isQuizCompleted;
-    if (isQuizDone && lesson.lastAttemptId) {
-      navigate(`/learner/quiz-results/${lesson.lastAttemptId}`, { state: { courseId } });
+    if (!lesson.quizId || !courseId) return;
+    
+    // Check both local state and localStorage
+    const localQuizStatus = getQuizCompletionStatus(courseId, lesson.quizId);
+    const isQuizDone = quizProgress[lesson.quizId] || localQuizStatus.isCompleted || lesson.isQuizCompleted;
+    
+    if (isQuizDone) {
+      // Try to use stored attemptId, fallback to lesson's lastAttemptId
+      const attemptId = localQuizStatus.attemptId || lesson.lastAttemptId;
+      if (attemptId) {
+        navigate(`/learner/quiz-results/${attemptId}`, { state: { courseId, silent: true } });
+      } else {
+        toast.error("Quiz results not found. Please try taking the quiz again.");
+      }
     } else {
       navigate(`/learner/take-quiz/${lesson.quizId}`, { state: { courseId } });
     }
@@ -535,7 +537,10 @@ const LearnerCourseOverview: React.FC = () => {
           <h2 className="text-xl font-semibold text-[#1B0A3F] mb-6">Course Content</h2>
           <div className="space-y-4">
             {courseData.lessons.map((lesson) => {
-              const isQuizCompleted = (lesson.quizId ? quizProgress[lesson.quizId] : false) || lesson.isQuizCompleted;
+              // ENHANCED: Check quiz completion from multiple sources
+              const localQuizStatus = lesson.quizId ? getQuizCompletionStatus(courseId!, lesson.quizId) : { isCompleted: false };
+              const isQuizCompleted = (lesson.quizId ? quizProgress[lesson.quizId] : false) || localQuizStatus.isCompleted || lesson.isQuizCompleted;
+              
               return (
                 <div key={lesson.id} className="border border-[#52007C] rounded-lg overflow-hidden transition-all duration-200 hover:shadow-md">
                   <div className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition-colors duration-200" onClick={() => toggleLessonExpand(lesson.id)}>

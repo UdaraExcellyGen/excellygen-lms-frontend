@@ -8,6 +8,9 @@ import { QuizAttemptDetailDto } from '../../../types/quiz.types';
 import { getQuizAttemptDetails } from '../../../api/services/Course/quizService';
 import { useBadgeChecker } from '../../../hooks/useBadgeChecker';
 
+// Key addition: Local storage key for quiz completion tracking
+const QUIZ_COMPLETION_KEY = 'completedQuizzes';
+
 const QuizResults: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,6 +40,24 @@ const QuizResults: React.FC = () => {
     }, 25);
   };
 
+  // NEW: Store quiz completion in localStorage
+  const storeQuizCompletion = (quizId: number, courseId: number, attemptId: number, isCompleted: boolean) => {
+    try {
+      const existing = localStorage.getItem(QUIZ_COMPLETION_KEY);
+      const completedQuizzes = existing ? JSON.parse(existing) : {};
+      
+      completedQuizzes[`${courseId}_${quizId}`] = {
+        isCompleted,
+        attemptId,
+        completedAt: new Date().toISOString()
+      };
+      
+      localStorage.setItem(QUIZ_COMPLETION_KEY, JSON.stringify(completedQuizzes));
+    } catch (error) {
+      console.error('Failed to store quiz completion:', error);
+    }
+  };
+
   useEffect(() => {
     const fetchAttemptDetails = async () => {
       if (!attemptId) {
@@ -57,6 +78,11 @@ const QuizResults: React.FC = () => {
           // Start the animation
           animateScore(scorePercentage);
           setQuizCompletionTrigger(count => count + 1);
+
+          // NEW: Store quiz completion status
+          if (details.quizId && details.courseId) {
+            storeQuizCompletion(details.quizId, details.courseId, attemptId, true);
+          }
         }
       } catch (error: any) {
         if (error.name !== 'CanceledError') {
@@ -77,13 +103,19 @@ const QuizResults: React.FC = () => {
     const targetCourseId = courseIdFromLocation || attemptDetails?.courseId;
     
     if (targetCourseId && attemptDetails) {
-      // Pass state back to the course view for seamless UI updates
+      // UPDATED: Pass more specific state for better handling
       navigate(`/learner/course-view/${targetCourseId}`, {
         replace: true,
         state: { 
           quizCompleted: true, 
           quizId: attemptDetails.quizId, 
-          attemptId: attemptDetails.quizAttemptId 
+          attemptId: attemptDetails.quizAttemptId,
+          // NEW: Add timestamp to ensure fresh state handling
+          completedAt: new Date().toISOString(),
+          // NEW: Add score for potential use
+          score: attemptDetails.totalQuestions > 0 
+            ? Math.round((attemptDetails.correctAnswers / attemptDetails.totalQuestions) * 100)
+            : 0
         }
       });
     } else {
