@@ -1,6 +1,4 @@
-import React, { useEffect, useRef } from 'react';
-import toast from 'react-hot-toast';
-import { Gift } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { getBadgesAndRewards } from '../api/services/Learner/badgesAndRewardsService';
 import { Badge } from '../features/Learner/BadgesAndRewards/types/Badge';
 
@@ -34,28 +32,9 @@ export const useBadgeChecker = (checkTrigger: any) => {
           badge.isUnlocked && !notifiedBadges.includes(badge.id)
         );
         
-        // If we found any new badges to notify about, show the toasts.
+        // If we found any new badges, update the notified list (without showing toast).
         if (newUnlockedBadges.length > 0) {
           newUnlockedBadges.forEach(badge => {
-            const toastContent = (
-              <div className="flex items-center gap-3">
-                <Gift className="w-6 h-6 text-yellow-400 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <p className="font-bold text-base">New Badge Unlocked! 🎉</p>
-                  <p className="text-sm">
-                    You've earned the "{badge.title}" badge. Claim it in the Badges & Rewards page!
-                  </p>
-                </div>
-              </div>
-            );
-
-            // Show a success toast. Using a unique ID prevents duplicate toasts
-            // if the check runs multiple times in quick succession.
-            toast.success(toastContent, {
-              duration: 8000,
-              id: `badge-unlock-${badge.id}`
-            });
-
             // Add the new badge's ID to our list of notified badges.
             notifiedBadges.push(badge.id);
           });
