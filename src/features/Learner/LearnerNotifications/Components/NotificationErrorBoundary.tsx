@@ -1,6 +1,6 @@
 // Path: src/features/Learner/LearnerNotifications/Components/NotificationErrorBoundary.tsx
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface Props {
