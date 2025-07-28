@@ -102,12 +102,7 @@ const CourseThumbnail: React.FC<{
           <div className="text-white text-sm font-semibold font-nunito">
             Progress: {progressPercentage}%
           </div>
-          {progressPercentage === 100 && (
-            <div className="flex items-center text-green-400 text-xs font-semibold">
-              <CheckCircle className="w-3 h-3 mr-1" />
-              Complete
-            </div>
-          )}
+          
         </div>
         <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
           <div 
@@ -202,7 +197,7 @@ const EnrolledCourseCard: React.FC<EnrolledCourseCardProps> = ({
     if (progressPercentage === 0) {
       return { text: 'Start Learning', variant: 'start' };
     } else if (progressPercentage === 100) {
-      return { text: 'View Course', variant: 'completed' };
+      return { text: 'View Course', variant: 'continue' };
     } else {
       return { text: 'Continue Learning', variant: 'continue' };
     }
