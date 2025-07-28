@@ -7,7 +7,8 @@ export interface LearnerNotificationDto {
   userId: string;
   title: string;
   message: string;
-  type: string;
+  
+  type: 'project_assignment' | 'project_update' | 'project_removal' | 'general';
   isRead: boolean;
   createdAt: string;
   projectId?: string;
