@@ -1,11 +1,10 @@
 // src/contexts/NotificationContext.tsx
-// OPTIMIZED: Smart notification polling with activity-based intervals
+// Professional notification context - minimal polling like real-world apps
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
 import { learnerNotificationApi, LearnerNotificationDto, LearnerNotificationSummaryDto } from '../api/services/learnerNotificationService';
 import { useAuth } from './AuthContext';
 import { UserRole } from '../types/auth.types';
-import ActivityTracker from '../api/services/ActivityTracker';
 
 interface NotificationContextType {
   unreadCount: number;
@@ -17,23 +16,6 @@ interface NotificationContextType {
   markAsRead: (notificationId: number) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   deleteNotification: (notificationId: number) => Promise<void>;
-  // OPTIMIZATION: New methods for better control
-  getPollingStatus: () => PollingStatus;
-  pausePolling: () => void;
-  resumePolling: () => void;
-}
-
-interface PollingStatus {
-  isPolling: boolean;
-  interval: number;
-  lastUpdate: number | null;
-  requestCount: number;
-}
-
-interface NotificationCache {
-  summary: LearnerNotificationSummaryDto | null;
-  notifications: LearnerNotificationDto[];
-  timestamp: number;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -51,28 +33,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   
   const { user, initialized, currentRole } = useAuth();
   
-  // OPTIMIZATION: Polling control with refs
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastUpdateRef = useRef<number | null>(null);
-  const requestCountRef = useRef<number>(0);
-  const isPollingPausedRef = useRef<boolean>(false);
-  const activityTrackerRef = useRef<ActivityTracker | null>(null);
+  const refreshInProgressRef = useRef<boolean>(false);
   
-  // OPTIMIZATION: Cache management
-  const cacheRef = useRef<NotificationCache>({
-    summary: null,
-    notifications: [],
-    timestamp: 0
-  });
-  
-  // OPTIMIZATION: Smart polling intervals
-  const POLLING_INTERVALS = {
-    ACTIVE_USER: 2 * 60 * 1000,      // 2 minutes for active users
-    IDLE_USER: 10 * 60 * 1000,       // 10 minutes for idle users
-    VERY_IDLE_USER: 30 * 60 * 1000,  // 30 minutes for very idle users
-    CACHE_DURATION: 60 * 1000,       // 1 minute cache duration
-    MAX_IDLE_TIME: 20 * 60 * 1000    // 20 minutes max idle before stopping
-  };
+  // Professional polling - much less aggressive
+  const POLLING_INTERVAL = 10 * 60 * 1000; // 10 minutes - like most professional apps
 
   // Check if user should get notifications
   const shouldFetchNotifications = (() => {
@@ -80,7 +45,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     const hasUserId = user?.id || false;
     const currentRoleFromStorage = localStorage.getItem('current_role');
     
-    // FIXED: Use consistent UserRole enum values and string comparisons
     const hasLearnerRole = (
       currentRole === UserRole.Learner ||
       user?.roles?.includes(UserRole.Learner) ||
@@ -88,338 +52,181 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       currentRoleFromStorage === UserRole.Learner
     );
     
-    // FIXED: Use initialized and user presence instead of isAuthenticated
     const isUserAuthenticated = initialized && user && hasAccessToken && hasUserId;
     
     return isUserAuthenticated && hasUserId && hasLearnerRole;
   })();
 
-  // OPTIMIZATION: Initialize activity tracker
-  useEffect(() => {
-    if (shouldFetchNotifications) {
-      activityTrackerRef.current = ActivityTracker.getInstance();
-      activityTrackerRef.current.startTracking();
-    }
-    
-    return () => {
-      if (activityTrackerRef.current) {
-        activityTrackerRef.current.stopTracking();
-      }
-    };
-  }, [shouldFetchNotifications]);
-
-  // OPTIMIZATION: Smart cache checking
-  const getCachedData = useCallback((): NotificationCache | null => {
-    const cache = cacheRef.current;
-    const now = Date.now();
-    
-    if (cache.timestamp && (now - cache.timestamp) < POLLING_INTERVALS.CACHE_DURATION) {
-      if (import.meta.env.DEV) {
-        console.log('📦 Using cached notification data');
-      }
-      return cache;
-    }
-    
-    return null;
-  }, []);
-
-  // OPTIMIZATION: Determine polling interval based on user activity
-  const getPollingInterval = useCallback((): number => {
-    if (!activityTrackerRef.current) return POLLING_INTERVALS.IDLE_USER;
-    
-    const idleTime = activityTrackerRef.current.getIdleTime();
-    
-    if (idleTime > POLLING_INTERVALS.MAX_IDLE_TIME) {
-      if (import.meta.env.DEV) {
-        console.log('🛑 User very idle, stopping notification polling');
-      }
-      return 0; // Stop polling
-    }
-    
-    if (idleTime < 5 * 60 * 1000) { // Less than 5 minutes idle
-      return POLLING_INTERVALS.ACTIVE_USER;
-    }
-    
-    if (idleTime < 15 * 60 * 1000) { // Less than 15 minutes idle
-      return POLLING_INTERVALS.IDLE_USER;
-    }
-    
-    return POLLING_INTERVALS.VERY_IDLE_USER;
-  }, []);
-
-  // OPTIMIZATION: Enhanced refresh with caching and deduplication
+  // Professional refresh - minimal API calls
   const refreshNotifications = useCallback(async () => {
-    if (!shouldFetchNotifications || isPollingPausedRef.current) {
+    if (!shouldFetchNotifications || refreshInProgressRef.current) {
       return;
     }
 
-    // Check cache first
-    const cachedData = getCachedData();
-    if (cachedData && !loading) {
-      setSummary(cachedData.summary);
-      setNotifications(cachedData.notifications);
-      setUnreadCount(cachedData.summary?.unreadCount || 0);
-      return;
-    }
-
-    // Prevent multiple simultaneous requests
-    if (loading) {
-      if (import.meta.env.DEV) {
-        console.log('🔄 Notification refresh already in progress, skipping');
-      }
-      return;
-    }
-
+    refreshInProgressRef.current = true;
     setLoading(true);
     setError(null);
-    requestCountRef.current++;
     
     try {
-      if (import.meta.env.DEV) {
-        console.log('🔔 Refreshing notifications from API');
-      }
-      
-      // OPTIMIZATION: Only fetch summary first, then notifications if needed
+      // Only fetch summary for polling - keep it lightweight
       const summaryData = await learnerNotificationApi.getNotificationSummary();
       
-      // Check if we need to fetch full notifications
-      let notificationsData: LearnerNotificationDto[] = [];
+      // Only fetch full notifications if user navigates to notifications page
+      // or if unread count changed significantly
+      const shouldFetchDetails = summaryData.unreadCount !== unreadCount && summaryData.unreadCount > 0;
       
-      if (summaryData.totalCount > 0) {
-        // Only fetch full notifications if there are any
-        notificationsData = await learnerNotificationApi.getNotifications(1, 20);
+      let notificationsData = notifications;
+      if (shouldFetchDetails) {
+        notificationsData = await learnerNotificationApi.getNotifications(1, 10); // Smaller batch
       }
-      
-      // Update cache
-      cacheRef.current = {
-        summary: summaryData,
-        notifications: notificationsData,
-        timestamp: Date.now()
-      };
       
       setSummary(summaryData);
       setUnreadCount(summaryData.unreadCount);
-      setNotifications(notificationsData);
-      lastUpdateRef.current = Date.now();
-      
-      if (import.meta.env.DEV) {
-        console.log(`✅ Notifications updated: ${summaryData.unreadCount} unread`);
+      if (shouldFetchDetails) {
+        setNotifications(notificationsData);
       }
       
     } catch (err: any) {
-      // OPTIMIZATION: Better error handling with retry logic
-      if (err.response) {
-        setError(`API Error: ${err.response.status} - ${err.response.data?.message || 'Unknown error'}`);
-      } else if (err.request) {
-        setError('Network error - unable to reach server');
-      } else {
-        setError(`Error: ${err.message}`);
-      }
-      
-      if (import.meta.env.DEV) {
-        console.error('❌ Notification refresh failed:', err);
+      // Silent errors for background polling - don't disturb user
+      if (err.response?.status !== 401) {
+        setError('Failed to fetch notifications');
       }
     } finally {
       setLoading(false);
+      refreshInProgressRef.current = false;
     }
-  }, [shouldFetchNotifications, loading, getCachedData]);
+  }, [shouldFetchNotifications, unreadCount, notifications]);
 
-  // OPTIMIZATION: Smart polling management
+  // Professional polling - simple and reliable
   const startPolling = useCallback(() => {
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
     }
     
-    const scheduleNext = () => {
-      const interval = getPollingInterval();
-      
-      if (interval === 0) {
-        // Stop polling if user is very idle
-        if (import.meta.env.DEV) {
-          console.log('📴 Stopping notification polling due to user inactivity');
-        }
-        return;
-      }
-      
-      pollingIntervalRef.current = setTimeout(() => {
-        refreshNotifications().finally(() => {
-          scheduleNext(); // Schedule next poll
-        });
-      }, interval);
-      
-      if (import.meta.env.DEV) {
-        console.log(`⏰ Next notification poll in ${interval / 1000}s`);
-      }
-    };
-    
-    scheduleNext();
-  }, [getPollingInterval, refreshNotifications]);
+    pollingIntervalRef.current = setInterval(() => {
+      refreshNotifications();
+    }, POLLING_INTERVAL);
+  }, [refreshNotifications]);
 
   const stopPolling = useCallback(() => {
     if (pollingIntervalRef.current) {
-      clearTimeout(pollingIntervalRef.current);
+      clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
     }
   }, []);
 
-  // OPTIMIZATION: Enhanced mark as read with cache update
+  // Optimistic updates for better UX
   const markAsRead = async (notificationId: number) => {
+    // Optimistic update
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === notificationId 
+          ? { ...notification, isRead: true }
+          : notification
+      )
+    );
+    setUnreadCount(prev => Math.max(0, prev - 1));
+    
     try {
       await learnerNotificationApi.markAsRead(notificationId);
-      
-      // Update local state immediately
+      if (summary) {
+        setSummary({ ...summary, unreadCount: Math.max(0, summary.unreadCount - 1) });
+      }
+    } catch (err) {
+      // Revert on error
       setNotifications(prev => 
         prev.map(notification => 
           notification.id === notificationId 
-            ? { ...notification, isRead: true }
+            ? { ...notification, isRead: false }
             : notification
         )
       );
-      
-      setUnreadCount(prev => Math.max(0, prev - 1));
-      
-      if (summary) {
-        const updatedSummary = { ...summary, unreadCount: Math.max(0, summary.unreadCount - 1) };
-        setSummary(updatedSummary);
-        
-        // Update cache
-        cacheRef.current.summary = updatedSummary;
-        cacheRef.current.notifications = cacheRef.current.notifications.map(n => 
-          n.id === notificationId ? { ...n, isRead: true } : n
-        );
-      }
-    } catch (err) {
+      setUnreadCount(prev => prev + 1);
       setError('Failed to mark notification as read');
-      if (import.meta.env.DEV) {
-        console.error('❌ Mark as read failed:', err);
-      }
     }
   };
 
-  // OPTIMIZATION: Enhanced mark all as read
   const markAllAsRead = async () => {
+    const previousNotifications = notifications;
+    const previousUnreadCount = unreadCount;
+    
+    // Optimistic update
+    setNotifications(prev => 
+      prev.map(notification => ({ ...notification, isRead: true }))
+    );
+    setUnreadCount(0);
+    
     try {
       await learnerNotificationApi.markAllAsRead();
-      
-      // Update local state
-      setNotifications(prev => 
-        prev.map(notification => ({ ...notification, isRead: true }))
-      );
-      
-      setUnreadCount(0);
-      
       if (summary) {
-        const updatedSummary = { ...summary, unreadCount: 0 };
-        setSummary(updatedSummary);
-        
-        // Update cache
-        cacheRef.current.summary = updatedSummary;
-        cacheRef.current.notifications = cacheRef.current.notifications.map(n => ({ ...n, isRead: true }));
+        setSummary({ ...summary, unreadCount: 0 });
       }
     } catch (err) {
+      // Revert on error
+      setNotifications(previousNotifications);
+      setUnreadCount(previousUnreadCount);
       setError('Failed to mark all notifications as read');
-      if (import.meta.env.DEV) {
-        console.error('❌ Mark all as read failed:', err);
-      }
     }
   };
 
-  // OPTIMIZATION: Enhanced delete with cache update
   const deleteNotification = async (notificationId: number) => {
+    const notificationToDelete = notifications.find(n => n.id === notificationId);
+    
+    // Optimistic update
+    setNotifications(prev => prev.filter(notification => notification.id !== notificationId));
+    if (notificationToDelete && !notificationToDelete.isRead) {
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    }
+    
     try {
       await learnerNotificationApi.deleteNotification(notificationId);
-      
-      const notificationToDelete = notifications.find(n => n.id === notificationId);
-      
-      setNotifications(prev => prev.filter(notification => notification.id !== notificationId));
-      
-      if (notificationToDelete && !notificationToDelete.isRead) {
-        setUnreadCount(prev => Math.max(0, prev - 1));
-        if (summary) {
-          const updatedSummary = { 
-            ...summary, 
-            unreadCount: Math.max(0, summary.unreadCount - 1),
-            totalCount: Math.max(0, summary.totalCount - 1)
-          };
-          setSummary(updatedSummary);
-          cacheRef.current.summary = updatedSummary;
-        }
-      } else if (summary) {
-        const updatedSummary = { 
+      if (summary) {
+        setSummary({ 
           ...summary, 
+          unreadCount: notificationToDelete && !notificationToDelete.isRead 
+            ? Math.max(0, summary.unreadCount - 1) 
+            : summary.unreadCount,
           totalCount: Math.max(0, summary.totalCount - 1)
-        };
-        setSummary(updatedSummary);
-        cacheRef.current.summary = updatedSummary;
+        });
       }
-      
-      // Update cache
-      cacheRef.current.notifications = cacheRef.current.notifications.filter(n => n.id !== notificationId);
-      
     } catch (err) {
-      setError('Failed to delete notification');
-      if (import.meta.env.DEV) {
-        console.error('❌ Delete notification failed:', err);
+      // Revert on error
+      if (notificationToDelete) {
+        setNotifications(prev => [...prev, notificationToDelete].sort((a, b) => b.id - a.id));
+        if (!notificationToDelete.isRead) {
+          setUnreadCount(prev => prev + 1);
+        }
       }
+      setError('Failed to delete notification');
     }
   };
 
-  // OPTIMIZATION: Utility methods for external control
-  const getPollingStatus = useCallback((): PollingStatus => {
-    return {
-      isPolling: pollingIntervalRef.current !== null,
-      interval: getPollingInterval(),
-      lastUpdate: lastUpdateRef.current,
-      requestCount: requestCountRef.current
-    };
-  }, [getPollingInterval]);
-
-  const pausePolling = useCallback(() => {
-    isPollingPausedRef.current = true;
-    stopPolling();
-    if (import.meta.env.DEV) {
-      console.log('⏸️ Notification polling paused');
-    }
-  }, [stopPolling]);
-
-  const resumePolling = useCallback(() => {
-    isPollingPausedRef.current = false;
-    startPolling();
-    if (import.meta.env.DEV) {
-      console.log('▶️ Notification polling resumed');
-    }
-  }, [startPolling]);
-
-  // OPTIMIZATION: Initialize notifications and start smart polling
+  // Initialize notifications with professional approach
   useEffect(() => {
     if (shouldFetchNotifications) {
-      // Initial fetch
-      refreshNotifications();
-      // Start smart polling
-      startPolling();
+      // Initial fetch - delayed to not block app startup
+      const timeoutId = setTimeout(() => {
+        refreshNotifications();
+        startPolling(); // Start gentle polling
+      }, 3000); // 3 second delay
+      
+      return () => {
+        clearTimeout(timeoutId);
+        stopPolling();
+      };
     } else {
       // Clear data and stop polling
       setUnreadCount(0);
       setNotifications([]);
       setSummary(null);
       stopPolling();
-      
-      // Clear cache
-      cacheRef.current = { summary: null, notifications: [], timestamp: 0 };
     }
+  }, [shouldFetchNotifications]);
 
-    return () => {
-      stopPolling();
-    };
-  }, [shouldFetchNotifications, refreshNotifications, startPolling, stopPolling]);
-
-  // OPTIMIZATION: Cleanup on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopPolling();
-      if (activityTrackerRef.current) {
-        activityTrackerRef.current.stopTracking();
-      }
     };
   }, [stopPolling]);
 
@@ -432,10 +239,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     refreshNotifications,
     markAsRead,
     markAllAsRead,
-    deleteNotification,
-    getPollingStatus,
-    pausePolling,
-    resumePolling
+    deleteNotification
   };
 
   return (

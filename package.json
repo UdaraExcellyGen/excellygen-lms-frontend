@@ -26,6 +26,7 @@
     "date-fns": "^4.1.0",
     "dompurify": "^3.2.6",
     "firebase": "^11.6.0",
+    "framer-motion": "^12.23.9",
     "highlight.js": "^11.11.1",
     "html-react-parser": "^5.2.6",
     "html2canvas": "^1.4.1",
