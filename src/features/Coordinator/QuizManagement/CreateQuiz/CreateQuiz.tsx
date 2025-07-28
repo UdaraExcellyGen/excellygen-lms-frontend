@@ -31,9 +31,9 @@ const CreateQuiz: React.FC = () => {
   
   const [quizState, setQuizState] = useState<QuizCreationState>({
     quizTitle: '',
-    timeLimitMinutes: 15,
-    quizSize: 10,
-    quizBankSize: 10,
+    timeLimitMinutes: 0,
+    quizSize: 0,
+    quizBankSize: 0,
     questions: [],
     currentQuestionIndex: 0,
     lessonId: lessonId

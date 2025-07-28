@@ -143,7 +143,6 @@ const CourseCoordinatorDashboard: React.FC = () => {
             stats={courseStats}
             totalLabel="Total Created Courses"
             activeLabel="My Published Courses"
-            inactiveLabel="Inactive Courses"
             onClick={() => navigate('/coordinator/course-display-page')}
           />
           <StatCard
