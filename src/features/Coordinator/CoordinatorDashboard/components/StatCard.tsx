@@ -7,6 +7,7 @@ const StatCard: React.FC<StatCardProps> = ({
   stats,
   totalLabel,
   activeLabel,
+   inactiveLabel,
   onClick
 }) => {
   return (
@@ -30,6 +31,12 @@ const StatCard: React.FC<StatCardProps> = ({
           <p className="text-4xl text-[#BF4BF6] font-['Unbounded'] mb-2">{stats.active}</p>
           <p className="text-gray-500 font-['Nunito_Sans']">{activeLabel}</p>
         </div>
+        {stats.inactive !== undefined && inactiveLabel && (
+          <div>
+            <p className="text-4xl text-gray-500 font-['Unbounded'] mb-2">{stats.inactive}</p>
+            <p className="text-gray-500 font-['Nunito_Sans']">{inactiveLabel}</p>
+          </div>
+        )}
       </div>
     </div>
   );

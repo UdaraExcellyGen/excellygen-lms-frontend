@@ -20,20 +20,31 @@ const getStatusColor = (status: string) => {
 
 export const ProjectCard = ({ project }: { project: Project }) => {
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-      {/* Reduced height from h-48 to h-32 */}
-      <div className="relative h-25 bg-gradient-to-br from-[#52007C] to-[#BF4BF6] p-6">
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow flex flex-col h-full">
+      {/* Increased total height to h-40 (10rem) to comfortably fit the new structure with padding. */}
+      <div className="relative h-40 bg-gradient-to-br from-[#52007C] to-[#BF4BF6] p-6 flex flex-col justify-start">
         <div className="absolute inset-0 flex items-center justify-center">
-          {/* Adjusted icon size slightly to fit the new height better, if needed, but keeping it as is first */}
           <Briefcase className="h-16 w-16 text-white/20" />
         </div>
-        <div className="relative">
-          <h3 className="text-lg font-semibold text-white">{project.title}</h3>
-          <p className="text-[#D68BF9] mt-1 text-sm">{project.description}</p> {/* Optionally make description text smaller if it overflows */}
+        
+        <div className="relative z-10">
+          {/* Title Area: Fixed height for 2 lines of 'text-lg'. (h-14 = 3.5rem) */}
+          <div className="h-14">
+            <h3 className="text-lg font-semibold text-white" title={project.title}>
+              {project.title}
+            </h3>
+          </div>
+          
+          {/* THE FIX: Description Area with its own fixed height for 2 lines of 'text-sm'. (h-10 = 2.5rem) */}
+          <div className="h-10 mt-1">
+            <p className="text-[#D68BF9] text-sm line-clamp-2">
+              {project.description}
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="p-6 flex-grow">
         <div className="flex justify-between items-start mb-4">
           <div>
             <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(project.status)}`}>

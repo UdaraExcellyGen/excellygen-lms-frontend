@@ -15,8 +15,7 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({
     onCancel,
     onBackToDetails,
     onContinueToQuestions,
-    onSaveQuiz,
-    setCurrentTab
+    onSaveQuiz
 }) => {
     if (currentTab === 'details') {
         return (

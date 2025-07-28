@@ -10,7 +10,7 @@ interface ScorePopupProps {
     answeredQuestionsStatus: { [key: number]: 'answered' | 'correct' | 'incorrect' | 'unanswered' };
 }
 
-const ScorePopup: React.FC<ScorePopupProps> = ({ score, numQuestions, onClose, quizData, answeredQuestions, answeredQuestionsStatus }) => {
+const ScorePopup: React.FC<ScorePopupProps> = ({ score, numQuestions, onClose }) => {
     return (
         <div className="fixed inset-0 bg-russian-violet bg-opacity-75 flex justify-center items-center overflow-y-auto">
             <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">

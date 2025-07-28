@@ -19,17 +19,17 @@ export const QuizDetailsForm: React.FC<QuizDetailsFormProps> = ({ quizState, err
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div>
         <label className="block text-[#1B0A3F] mb-2">Time Limit (minutes)</label>
-        <input type="number" name="timeLimitMinutes" value={quizState.timeLimitMinutes} onChange={onInputChange} className={`w-full p-3 rounded-lg bg-white/90 text-[#1B0A3F] border ${errors.timeLimitMinutes ? 'border-red-500' : 'border-[#52007C]'}`} min="1" max="180" />
+        <input type="number" name="timeLimitMinutes" value={quizState.timeLimitMinutes === 0 ? '' : quizState.timeLimitMinutes} onChange={onInputChange} className={`w-full p-3 rounded-lg bg-white/90 text-[#1B0A3F] border ${errors.timeLimitMinutes ? 'border-red-500' : 'border-[#52007C]'}`} min="1" max="180" placeholder="15 minutes" />
         {errors.timeLimitMinutes && <p className="text-red-500 mt-1">{errors.timeLimitMinutes}</p>}
       </div>
       <div>
         <label className="block text-[#1B0A3F] mb-2">Quiz Size (questions shown)</label>
-        <input type="number" name="quizSize" value={quizState.quizSize} onChange={onInputChange} className={`w-full p-3 rounded-lg bg-white/90 text-[#1B0A3F] border ${errors.quizSize ? 'border-red-500' : 'border-[#52007C]'}`} min="1" max="100" />
+        <input type="number" name="quizSize" value={quizState.quizSize === 0 ? '' : quizState.quizSize} onChange={onInputChange} className={`w-full p-3 rounded-lg bg-white/90 text-[#1B0A3F] border ${errors.quizSize ? 'border-red-500' : 'border-[#52007C]'}`} min="1" max="100" placeholder="5 questions" />
         {errors.quizSize && <p className="text-red-500 mt-1">{errors.quizSize}</p>}
       </div>
       <div>
         <label className="block text-[#1B0A3F] mb-2">Question Bank Size</label>
-        <input type="number" name="quizBankSize" value={quizState.quizBankSize} onChange={onInputChange} className={`w-full p-3 rounded-lg bg-white/90 text-[#1B0A3F] border ${errors.quizBankSize ? 'border-red-500' : 'border-[#52007C]'}`} min={quizState.quizSize} />
+        <input type="number" name="quizBankSize" value={quizState.quizBankSize === 0 ? '' : quizState.quizBankSize} onChange={onInputChange} className={`w-full p-3 rounded-lg bg-white/90 text-[#1B0A3F] border ${errors.quizBankSize ? 'border-red-500' : 'border-[#52007C]'}`} min={quizState.quizSize} placeholder="10 questions" />
         {errors.quizBankSize && <p className="text-red-500 mt-1">{errors.quizBankSize}</p>}
       </div>
     </div>
@@ -39,7 +39,7 @@ export const QuizDetailsForm: React.FC<QuizDetailsFormProps> = ({ quizState, err
       <p className="text-sm mt-2"><strong>Note:</strong> You must create exactly the number of questions specified in the "Question Bank Size" field.</p>
     </div>
     <div className="flex justify-end mt-4">
-      <button onClick={onContinue} className="px-5 py-2 border border-[#52007C] hover:bg-[#BF4BF6]/10 text-[#1B0A3F] rounded-lg transition-colors">Continue to Questions</button>
+      <button onClick={onContinue} className="px-5 py-2 bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white rounded-lg transition-colors">Continue to Questions</button>
     </div>
   </div>
 );

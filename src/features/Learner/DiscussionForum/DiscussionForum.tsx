@@ -70,10 +70,10 @@ const DiscussionForum: React.FC = () => {
     const [totalPages, setTotalPages] = useState(0);
     const [totalThreads, setTotalThreads] = useState(0);
 
+    // FIXED: Only trigger badge check when comments/replies are actually posted
     const [commentPostTrigger, setCommentPostTrigger] = useState(0);
     useBadgeChecker(commentPostTrigger);
 
-    // ... (rest of the functions are unchanged)
     useEffect(() => {
         const loadCategories = async () => { 
             setIsLoadingCategories(true); 
@@ -158,8 +158,12 @@ const DiscussionForum: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [debouncedSearchQuery, selectedCategoryFilterOption?.value, showMyThreads]);
 
+    // FIXED: Enhanced comment posting handler with badge trigger
     const handleCommentPosted = () => {
-        setCommentPostTrigger(count => count + 1);
+        // Trigger badge check with a delay to ensure backend has processed the comment
+        setTimeout(() => {
+            setCommentPostTrigger(count => count + 1);
+        }, 1000);
     };
 
     const handleCreateThread = async (formDataFromModal: ThreadFormData) => { 
@@ -278,7 +282,6 @@ const DiscussionForum: React.FC = () => {
         <Layout>
             <div className="min-h-screen bg-gradient-to-b from-[#52007C] to-[#34137C] p-4 sm:p-6 flex flex-col">
                 <div className="w-full px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8 flex-grow">
-                    {/* ... header and action bar ... */}
                     <div>
                         <div className="text-center mb-4">
                             <h1 className="text-3xl md:text-4xl font-bold text-white">
@@ -309,7 +312,6 @@ const DiscussionForum: React.FC = () => {
                         </div>
                     </div>
                     
-                    {/* ... loading, error, and no threads states ... */}
                     {isLoading && (
                         <div className="space-y-4">
                             {Array.from({ length: 5 }).map((_, index) => (
@@ -412,7 +414,6 @@ const DiscussionForum: React.FC = () => {
                                                         </button>
                                                     </div>
                                                     {thread.showComments && (
-                                                        // --- THIS IS THE FIX ---
                                                         <div 
                                                             className="mt-3 pt-3 border-t border-purple-200/30"
                                                             onClick={(e) => e.stopPropagation()}
@@ -435,7 +436,6 @@ const DiscussionForum: React.FC = () => {
                     )}
                 </div>
 
-                {/* ... pagination and modals ... */}
                 {!isLoading && threads.length > 0 && totalPages > 1 && (
                     <div className="w-full px-4 sm:px-6 lg:px-8 mt-8 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                         <button onClick={handlePreviousPage} disabled={currentPage <= 1 || isLoading || isActionLoading} className="w-full sm:w-auto px-4 py-2 bg-white/90 text-[#52007C] rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center sm:justify-start gap-1 font-nunito transition-colors"><ChevronLeft className="h-4 w-4" /> Previous</button>

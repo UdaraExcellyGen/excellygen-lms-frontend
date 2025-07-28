@@ -8,7 +8,7 @@ interface QuizFooterProps {
     onCheckAnswer: () => void;
 }
 
-const QuizFooter: React.FC<QuizFooterProps> = ({ onNextPage,  disableNext, currentQuestionIndex, isAnswerChecked, onCheckAnswer }) => {
+const QuizFooter: React.FC<QuizFooterProps> = ({ onNextPage,  disableNext, isAnswerChecked, onCheckAnswer }) => {
     return (
         <footer className="quiz-footer p-6 border-t border-indigo-200 bg-[#52007C] flex justify-end items-center">
             {!isAnswerChecked ? (
