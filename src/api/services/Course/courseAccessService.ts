@@ -1,3 +1,5 @@
+// src/api/services/Course/courseAccessService.ts
+
 const STORAGE_KEY = 'recentlyAccessedCourses';
 const MAX_RECENT_COURSES = 10; // Store up to 10 recent courses to be safe
 
@@ -18,17 +20,20 @@ export const logCourseAccess = (courseId: number): void => {
     
     const storedData = localStorage.getItem(STORAGE_KEY);
     if (storedData) {
-      recentCourses = JSON.parse(storedData);
+      try {
+        recentCourses = JSON.parse(storedData);
+        if (!Array.isArray(recentCourses)) recentCourses = [];
+      } catch {
+        recentCourses = [];
+      }
     }
 
-    // Remove any existing record for this courseId to update its timestamp
     const filteredCourses = recentCourses.filter(c => c.courseId !== courseId);
 
-    // Add the new access record to the top
     const updatedCourses: CourseAccessRecord[] = [
       { courseId, lastAccessed: now },
       ...filteredCourses
-    ].slice(0, MAX_RECENT_COURSES); // Keep the list from growing indefinitely
+    ].slice(0, MAX_RECENT_COURSES);
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedCourses));
 
@@ -49,8 +54,8 @@ export const getRecentlyAccessedCourseIds = (): number[] => {
     }
 
     const recentCourses: CourseAccessRecord[] = JSON.parse(storedData);
+    if (!Array.isArray(recentCourses)) return [];
 
-    // The list is already sorted by insertion, but we can sort just in case
     recentCourses.sort((a, b) => b.lastAccessed - a.lastAccessed);
 
     return recentCourses.map(c => c.courseId);
@@ -58,5 +63,31 @@ export const getRecentlyAccessedCourseIds = (): number[] => {
   } catch (error) {
     console.error("Failed to get recently accessed courses from localStorage:", error);
     return [];
+  }
+};
+
+/**
+ * Removes a specific course ID from the recently accessed list in localStorage.
+ * This is used to clean up data for courses that have been unenrolled or deleted.
+ * @param courseIdToRemove The ID of the course to remove.
+ */
+export const removeCourseFromRecents = (courseIdToRemove: number): void => {
+  try {
+    const storedData = localStorage.getItem(STORAGE_KEY);
+    if (!storedData) {
+      return;
+    }
+
+    let recentCourses: CourseAccessRecord[] = JSON.parse(storedData);
+    if (!Array.isArray(recentCourses)) return;
+
+    const updatedCourses = recentCourses.filter(c => c.courseId !== courseIdToRemove);
+
+    if (updatedCourses.length < recentCourses.length) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedCourses));
+      console.log(`[courseAccessService] Cleaned up unenrolled/deleted course ${courseIdToRemove} from recents.`);
+    }
+  } catch (error) {
+    console.error(`Failed to remove course ${courseIdToRemove} from recents in localStorage:`, error);
   }
 };

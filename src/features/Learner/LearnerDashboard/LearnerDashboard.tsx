@@ -6,13 +6,19 @@ import Layout from '../../../components/Sidebar/Layout';
 import { useAuth } from '../../../contexts/AuthContext';
 import { UserRole } from '../../../types/auth.types';
 import { Course, Activity, DailyLearningTime } from './types/types';
+import { LearnerCourseDto } from '../../../types/course.types'; 
 import { 
   ActiveCourses, 
   RecentActivities, 
   LearningActivityChart 
 } from './components/Sections';
 import { getLearnerCourseDetails } from '../../../api/services/Course/learnerCourseService';
-import { getRecentlyAccessedCourseIds } from '../../../api/services/Course/courseAccessService';
+
+// --- THIS IS THE FIX ---
+// Added the 'removeCourseFromRecents' function to the import.
+import { getRecentlyAccessedCourseIds, removeCourseFromRecents } from '../../../api/services/Course/courseAccessService';
+// --- END OF FIX ---
+
 import { getRecentActivities } from '../../../api/services/LearnerDashboard/learnerActivitiesService';
 import { getWeeklyActivity, dashboardCache } from '../../../api/services/LearnerDashboard/learnerOverallStatsService';
 import { getUserProfile } from '../../../api/services/LearnerProfile/userProfileService';
@@ -90,55 +96,63 @@ const LearnerDashboard: React.FC = () => {
     }
   }, [user?.id]);
 
-  // --- FINAL FIX ---
-  // This logic is now foolproof. It uses the recently accessed IDs as the single
-  // source of truth for what to display, eliminating all race conditions.
+  // --- THIS IS THE FINAL, ROBUST FIX ---
+  // This function is now "self-healing". If it finds a course ID in recents that
+  // no longer exists (e.g., after unenrolling), it will automatically remove it
+  // from the stored list and display only the valid courses.
   const fetchActiveCourses = useCallback(async () => {
     if (!user?.id) return;
 
     setCoursesInitialLoadComplete(false);
-    console.log('[Dashboard] Fetching active courses...');
 
     try {
-      // 1. Get the ground truth: the list of recently accessed course IDs.
       const recentIds = getRecentlyAccessedCourseIds();
-      console.log('[Dashboard] Recently accessed course IDs:', recentIds);
-
-      // 2. Take the top 3, or fewer if the user hasn't accessed 3 yet.
-      const topThreeIds = recentIds.slice(0, 3);
       
-      if (topThreeIds.length === 0) {
-          console.log('[Dashboard] No recent courses found. Displaying empty.');
+      // Define how many courses we want to display.
+      const MAX_COURSES_TO_SHOW = 3;
+
+      // Fetch a few extra courses to act as a buffer in case some fail.
+      const idsToFetch = recentIds.slice(0, MAX_COURSES_TO_SHOW + 2);
+
+      if (idsToFetch.length === 0) {
           setActiveCourses([]);
           setCoursesInitialLoadComplete(true);
           return;
       }
-      
-      console.log('[Dashboard] Fetching details for top 3 IDs:', topThreeIds);
 
-      // 3. Fetch details for ONLY these top 3 courses.
-      const courseDetailPromises = topThreeIds.map(id => 
-        getLearnerCourseDetails(id) // This service uses its own cache, which is efficient.
-      );
-      
-      // 4. Wait for all details to be fetched.
-      const detailedCourses = await Promise.all(courseDetailPromises);
+      const courseDetailPromises = idsToFetch.map(id => getLearnerCourseDetails(id));
+      const results = await Promise.allSettled(courseDetailPromises);
 
-      const formattedActiveCourses: Course[] = detailedCourses.map(course => ({
+      const validCourses: LearnerCourseDto[] = [];
+      
+      results.forEach((result, index) => {
+          const courseId = idsToFetch[index];
+          if (result.status === 'fulfilled') {
+              validCourses.push(result.value);
+          } else {
+              // THIS IS THE KEY ACTION:
+              // If a course failed to load (likely 404), call the new cleanup function.
+              console.warn(`[Dashboard] Could not fetch course ${courseId}. It was likely unenrolled or deleted. Removing from recents list.`);
+              removeCourseFromRecents(courseId);
+          }
+      });
+
+      // After collecting all valid courses from the buffer, take the first 3.
+      const finalCoursesToShow = validCourses.slice(0, MAX_COURSES_TO_SHOW);
+
+      const formattedActiveCourses: Course[] = finalCoursesToShow.map(course => ({
         id: course.id,
         title: course.title,
         progress: course.progressPercentage,
       }));
 
-      // 5. Set the final, correctly ordered state.
       setActiveCourses(formattedActiveCourses);
       console.log('[Dashboard] Successfully set active courses:', formattedActiveCourses);
 
     } catch (error: any) {
-      // This will catch errors if fetching details fails, etc.
       if (error.name !== 'CanceledError') {
-        console.error("Failed to fetch active courses details:", error);
-        setActiveCourses([]); // Show empty state on error
+        console.error("A critical error occurred while fetching active courses details:", error);
+        setActiveCourses([]);
       }
     } finally {
       setCoursesInitialLoadComplete(true);
@@ -171,14 +185,13 @@ const LearnerDashboard: React.FC = () => {
     }
   }, []);
   
-  // This listener now correctly triggers the new fetch logic.
   useEffect(() => {
     const handleRefresh = (event: CustomEvent<LearnerDashboardEvent>) => {
       const reason = event.detail;
       console.log(`[LearnerDashboard] Received refresh event for: ${reason}`);
       
       if (reason === 'active-courses-updated') {
-        fetchActiveCourses(); // Re-run the foolproof fetch logic
+        fetchActiveCourses();
       }
       if (reason === 'recent-activities-updated') {
         fetchRecentActivities();
@@ -189,7 +202,6 @@ const LearnerDashboard: React.FC = () => {
     return () => unsubscribe();
   }, [fetchActiveCourses, fetchRecentActivities]);
 
-  // Main data fetching effect on initial load and user change.
   useEffect(() => {
     if (user?.id) {
       setHeaderInitialLoadComplete(true);
@@ -200,7 +212,6 @@ const LearnerDashboard: React.FC = () => {
     }
   }, [user?.id, fetchUserProfile, fetchActiveCourses, fetchLearningActivity, fetchRecentActivities]);
 
-  // UI and helper effects (no changes needed below)
   useEffect(() => {
     const now = new Date();
     setCurrentDate(now.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }));
