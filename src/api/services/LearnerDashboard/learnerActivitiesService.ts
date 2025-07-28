@@ -29,29 +29,31 @@ interface StoredCertificateGenDto {
 }
 
 /**
- * Fetches recent badge claims from session storage.
+ * Fetches recent badge claims from localStorage.
+ * MODIFIED: Switched from sessionStorage to localStorage for persistence.
  */
-const getRecentBadgeClaimsFromSession = async (): Promise<StoredBadgeClaimDto[]> => {
+const getRecentBadgeClaimsFromStorage = async (): Promise<StoredBadgeClaimDto[]> => {
     try {
-        const storedData = sessionStorage.getItem(BADGE_CLAIM_STORAGE_KEY);
+        const storedData = localStorage.getItem(BADGE_CLAIM_STORAGE_KEY);
         return storedData ? JSON.parse(storedData) : [];
     } catch (error) {
-        console.error("Failed to parse badge claims from session storage:", error);
-        sessionStorage.removeItem(BADGE_CLAIM_STORAGE_KEY);
+        console.error("Failed to parse badge claims from storage:", error);
+        localStorage.removeItem(BADGE_CLAIM_STORAGE_KEY);
         return [];
     }
 };
 
 /**
- * Fetches recent certificate generations from session storage.
+ * Fetches recent certificate generations from localStorage.
+ * MODIFIED: Switched from sessionStorage to localStorage for persistence.
  */
-const getRecentCertificateGensFromSession = async (): Promise<StoredCertificateGenDto[]> => {
+const getRecentCertificateGensFromStorage = async (): Promise<StoredCertificateGenDto[]> => {
     try {
-        const storedData = sessionStorage.getItem(CERTIFICATE_GEN_STORAGE_KEY);
+        const storedData = localStorage.getItem(CERTIFICATE_GEN_STORAGE_KEY);
         return storedData ? JSON.parse(storedData) : [];
     } catch (error) {
-        console.error("Failed to parse certificate generations from session storage:", error);
-        sessionStorage.removeItem(CERTIFICATE_GEN_STORAGE_KEY);
+        console.error("Failed to parse certificate generations from storage:", error);
+        localStorage.removeItem(CERTIFICATE_GEN_STORAGE_KEY);
         return [];
     }
 };
@@ -65,14 +67,15 @@ const getRecentCertificateGensFromSession = async (): Promise<StoredCertificateG
 export const getRecentActivities = async (): Promise<Activity[]> => {
     try {
         // Fetch all data sources in parallel
-        const [apiCertificates, sessionCertificateGens, sessionBadgeClaims] = await Promise.all([
+        // MODIFIED: Calling the new functions that use localStorage.
+        const [apiCertificates, storageCertificateGens, storageBadgeClaims] = await Promise.all([
             getAllCertificates(),
-            getRecentCertificateGensFromSession(),
-            getRecentBadgeClaimsFromSession(),
+            getRecentCertificateGensFromStorage(),
+            getRecentBadgeClaimsFromStorage(),
         ]);
 
         // 1. Process real-time certificate events from the current session
-        const recentCertificateActivities: ProcessedActivity[] = sessionCertificateGens.map(gen => ({
+        const recentCertificateActivities: ProcessedActivity[] = storageCertificateGens.map(gen => ({
             id: `cert-session-${gen.courseId}`,
             type: 'Certificate Earned',
             description: gen.courseTitle,
@@ -80,7 +83,7 @@ export const getRecentActivities = async (): Promise<Activity[]> => {
         }));
         
         // Create a set of course IDs from recent session events to avoid duplication
-        const recentCourseIds = new Set(sessionCertificateGens.map(gen => gen.courseId));
+        const recentCourseIds = new Set(storageCertificateGens.map(gen => gen.courseId));
 
         // 2. Process historical certificates from the API, excluding any that just happened in this session
         const historicalCertificateActivities: ProcessedActivity[] = apiCertificates
@@ -100,7 +103,7 @@ export const getRecentActivities = async (): Promise<Activity[]> => {
             }));
 
         // 3. Process real-time badge claim events from the current session
-        const badgeActivities: ProcessedActivity[] = sessionBadgeClaims.map((badge) => ({
+        const badgeActivities: ProcessedActivity[] = storageBadgeClaims.map((badge) => ({
             id: `badge-${badge.badgeId}`,
             type: 'Badge Earned',
             description: badge.badgeTitle,

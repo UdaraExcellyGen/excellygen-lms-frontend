@@ -1,4 +1,5 @@
 // src/features/Admin/ManageCourseCategory/ManageCourseCategory.tsx
+// ENTERPRISE OPTIMIZED: Instant loading, professional UX
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   Plus, Search, X, Check, ArrowLeft, Trash2, BookOpen, AlertCircle, Loader2, RefreshCw, ServerCrash, Pencil
@@ -17,7 +18,31 @@ import { Category, CreateCategoryDto, UpdateCategoryDto } from './types/category
 import useDebounce from './components/useDebounce';
 import IconSelector, { renderIcon } from './components/IconSelector';
 
-// VirtualizedCategoryCard Component - UPDATED: Removed ash styling for inactive categories
+// ENTERPRISE: Skeleton placeholder for instant loading experience
+const CategorySkeleton: React.FC = () => (
+  <div className="bg-white/90 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 h-full flex flex-col animate-pulse">
+    <div className="h-28 bg-gray-200"></div>
+    <div className="p-4 flex-1 flex flex-col space-y-3">
+      <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+      <div className="space-y-2">
+        <div className="h-4 bg-gray-200 rounded"></div>
+        <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+      </div>
+      <div className="mt-auto space-y-2">
+        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        <div className="flex justify-between">
+          <div className="h-8 bg-gray-200 rounded w-24"></div>
+          <div className="flex gap-2">
+            <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+            <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// ENTERPRISE: Optimized category card - No loading states
 const VirtualizedCategoryCard: React.FC<{
   category: Category;
   onEdit: (category: Category) => void;
@@ -25,8 +50,8 @@ const VirtualizedCategoryCard: React.FC<{
   onToggleStatus: (id: string) => void;
   onViewCourses: (id: string) => void;
   onRestore: (id: string) => void;
-  isLoading: boolean;
-}> = React.memo(({ category, onEdit, onDelete, onToggleStatus, onViewCourses, onRestore, isLoading }) => {
+  isActionInProgress: boolean; // Only for specific action feedback
+}> = React.memo(({ category, onEdit, onDelete, onToggleStatus, onViewCourses, onRestore, isActionInProgress }) => {
   const cardRef = useRef<HTMLDivElement>(null);
 
   const handleEdit = useCallback(() => onEdit(category), [onEdit, category]);
@@ -53,16 +78,15 @@ const VirtualizedCategoryCard: React.FC<{
         <button
           onClick={handleRestore}
           className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full text-sm flex items-center gap-2 transition-colors shadow-sm disabled:bg-blue-300"
-          disabled={isLoading}
+          disabled={isActionInProgress}
         >
-          {isLoading ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw size={16} />}
+          {isActionInProgress ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw size={16} />}
           Restore
         </button>
       </div>
     );
   }
 
-  // ✅ UPDATED: Same styling for both active and inactive categories
   const isActive = category.status === 'active';
 
   return (
@@ -70,12 +94,10 @@ const VirtualizedCategoryCard: React.FC<{
       ref={cardRef}
       className="bg-white/90 backdrop-blur-md rounded-xl overflow-hidden border border-[#BF4BF6]/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(191,75,246,0.3)] h-full flex flex-col"
     >
-      {/* ✅ UPDATED: Same header styling for all categories */}
       <div className="relative h-28 overflow-hidden bg-[#34137C] flex items-center justify-center">
         <div className="text-[#D68BF9]">
           {renderIcon(category.icon, 40)}
         </div>
-        {/* ✅ UPDATED: Simple status badge in corner */}
         <div className="absolute top-2 right-2">
           <span className={`text-xs font-medium px-3 py-1.5 rounded-full ${
             isActive 
@@ -102,7 +124,6 @@ const VirtualizedCategoryCard: React.FC<{
             {category.totalCourses} {category.totalCourses === 1 ? 'Course' : 'Courses'}
           </div>
           
-          {/* Creator and Date Information */}
           <div className="text-xs text-gray-500 space-y-1">
             <div className="flex justify-between items-center">
               <span>Created by:</span>
@@ -124,7 +145,6 @@ const VirtualizedCategoryCard: React.FC<{
             <button
               onClick={handleViewCourses}
               className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-3 py-1.5 rounded-full text-xs flex items-center transition-colors shadow-sm"
-              disabled={isLoading}
             >
               View Courses
             </button>
@@ -133,14 +153,12 @@ const VirtualizedCategoryCard: React.FC<{
               <button
                 onClick={handleEdit}
                 className="border-[#BF4BF6] text-[#BF4BF6] hover:bg-[#BF4BF6] hover:text-white border p-1.5 rounded-full text-xs flex items-center transition-colors"
-                disabled={isLoading}
               >
                 <Pencil size={14} />
               </button>
               <button
                 onClick={handleDelete}
                 className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white border p-1.5 rounded-full text-xs flex items-center transition-colors"
-                disabled={isLoading}
                 title={category.totalCourses > 0 ? "Cannot delete category with courses" : "Delete category"}
               >
                 <Trash2 size={14} />
@@ -156,7 +174,6 @@ const VirtualizedCategoryCard: React.FC<{
                 checked={isActive}
                 onChange={handleToggleStatus}
                 className="sr-only peer"
-                disabled={isLoading}
               />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer 
                   peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full 
@@ -172,7 +189,7 @@ const VirtualizedCategoryCard: React.FC<{
   );
 });
 
-// CategoryFormModal Component
+// CategoryFormModal Component (unchanged - keeping your interface)
 const CategoryFormModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -184,7 +201,6 @@ const CategoryFormModal: React.FC<{
 }> = ({ isOpen, onClose, onSubmit, category, setCategory, isEditing, isSubmitting }) => {
   const [showIconDropdown, setShowIconDropdown] = useState(false);
 
-  // Reset dropdown when modal closes
   useEffect(() => {
     if (!isOpen) {
       setShowIconDropdown(false);
@@ -212,9 +228,7 @@ const CategoryFormModal: React.FC<{
     setShowIconDropdown(prev => !prev);
   }, []);
 
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   return (
    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-20">
@@ -303,7 +317,7 @@ const CategoryFormModal: React.FC<{
   );
 };
 
-// ConfirmationDialog Component
+// ConfirmationDialog Component (unchanged)
 const ConfirmationDialog: React.FC<{
   isOpen: boolean;
   onConfirm: () => void;
@@ -353,12 +367,12 @@ const ConfirmationDialog: React.FC<{
   );
 };
 
-// MAIN COMPONENT
+// ENTERPRISE MAIN COMPONENT - Optimized for instant loading
 const ManageCourseCategory: React.FC = () => {
   const navigate = useNavigate();
   
   const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -380,19 +394,19 @@ const ManageCourseCategory: React.FC = () => {
   
   const [newCategory, setNewCategory] = useState({ title: '', description: '', icon: 'Code2' });
 
+  // ENTERPRISE: Instant data loading - no blocking loading state
   const fetchCategories = useCallback(async () => {
     try {
-      setIsLoading(true);
       setError(null);
       const data = await getAllCategories(true);
       setCategories(data);
+      setInitialLoadComplete(true);
     } catch (err: any) {
       console.error('Error fetching categories:', err);
       const errorMessage = err.response?.data?.message || 'Failed to load categories.';
       setError(errorMessage);
       toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
+      setInitialLoadComplete(true);
     }
   }, []);
 
@@ -564,7 +578,6 @@ const ManageCourseCategory: React.FC = () => {
               setShowAddModal(true);
             }}
             className="bg-gradient-to-r from-[#BF4BF6] to-[#D68BF9] hover:from-[#A845E8] hover:to-[#BF4BF6] text-white px-5 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
-            disabled={isLoading}
           >
             <Plus size={20} />
             Add New Category
@@ -605,16 +618,18 @@ const ManageCourseCategory: React.FC = () => {
               className="w-full p-3 pl-10 rounded-lg bg-[#F6E6FF]/50 text-[#52007C] border border-[#BF4BF6]/30 focus:outline-none focus:border-[#BF4BF6]" 
               value={searchTerm} 
               onChange={(e) => setSearchTerm(e.target.value)} 
-              disabled={isLoading} 
             />
           </div>
         </div>
 
+        {/* ENTERPRISE: Instant content display */}
         <div className="min-h-[400px]">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-64">
-              <Loader2 className="animate-spin h-12 w-12 text-[#BF4BF6] mb-4" />
-              <p className="text-white text-lg">Loading Categories...</p>
+          {!initialLoadComplete ? (
+            // Show skeleton placeholders during initial load
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array(6).fill(0).map((_, index) => (
+                <CategorySkeleton key={index} />
+              ))}
             </div>
           ) : filteredCategories.length === 0 ? (
             <div className="bg-white/90 backdrop-blur-md rounded-xl p-8 text-center border border-[#BF4BF6]/20 shadow-lg">
@@ -635,7 +650,7 @@ const ManageCourseCategory: React.FC = () => {
                   onToggleStatus={handleToggleStatus} 
                   onViewCourses={handleViewCourses} 
                   onRestore={handleRestoreCategory} 
-                  isLoading={loadingCategoryIds.has(category.id)} 
+                  isActionInProgress={loadingCategoryIds.has(category.id)} 
                 />
               ))}
             </div>

@@ -1,4 +1,5 @@
 // src/api/apiClient.ts
+// ENTERPRISE: Ultra-selective loading like Google/Microsoft
 import axios from 'axios';
 
 // Create an axios instance with default config
@@ -7,100 +8,164 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 15000, // OPTIMIZATION: Increased timeout to 15 seconds
+  timeout: 30000,
 });
 
-// Flag to prevent multiple token refresh attempts at the same time
+// Professional request deduplication
+class RequestDeduplicator {
+  private pendingRequests = new Map<string, Promise<any>>();
+  private cache = new Map<string, { data: any; timestamp: number }>();
+  private readonly CACHE_DURATION = 30000; // 30 seconds
+
+  private getRequestKey(config: any): string {
+    const { method, url, params } = config;
+    return `${method?.toUpperCase()}_${url}_${JSON.stringify(params || {})}`;
+  }
+
+  private isCacheable(config: any): boolean {
+    return config.method?.toLowerCase() === 'get' && 
+           !config.url?.includes('/heartbeat') &&
+           !config.url?.includes('/notifications');
+  }
+
+  private getCachedData(key: string): any | null {
+    const cached = this.cache.get(key);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      return cached.data;
+    }
+    this.cache.delete(key);
+    return null;
+  }
+
+  async deduplicate(config: any): Promise<any> {
+    const requestKey = this.getRequestKey(config);
+
+    // Check cache for GET requests
+    if (this.isCacheable(config)) {
+      const cachedData = this.getCachedData(requestKey);
+      if (cachedData) {
+        return Promise.resolve({ data: cachedData, config });
+      }
+    }
+
+    // Check pending requests
+    if (this.pendingRequests.has(requestKey)) {
+      return this.pendingRequests.get(requestKey)!;
+    }
+
+    // Make the request
+    const requestPromise = axios(config)
+      .then(response => {
+        if (this.isCacheable(config)) {
+          this.cache.set(requestKey, {
+            data: response.data,
+            timestamp: Date.now()
+          });
+        }
+        return response;
+      })
+      .finally(() => {
+        this.pendingRequests.delete(requestKey);
+      });
+
+    this.pendingRequests.set(requestKey, requestPromise);
+    return requestPromise;
+  }
+
+  clearCache(): void {
+    this.cache.clear();
+    this.pendingRequests.clear();
+  }
+}
+
+const requestDeduplicator = new RequestDeduplicator();
+
+// ENTERPRISE: Ultra-selective loading management like Google/Microsoft
+class LoadingManager {
+  private activeRequests = new Set<string>();
+  
+  // ENTERPRISE: Only these critical operations show global loading
+  private globalLoadingEndpoints = [
+    '/auth/login',
+    '/auth/logout',
+    '/auth/refresh-token',
+    '/auth/switch-role',
+    // Remove most endpoints - let components handle their own loading
+  ];
+
+  private startLoading: () => void = () => {};
+  private stopLoading: () => void = () => {};
+
+  setLoadingFunctions(start: () => void, stop: () => void) {
+    this.startLoading = start;
+    this.stopLoading = stop;
+  }
+
+  private shouldShowGlobalLoading(url: string, method: string): boolean {
+    // ENTERPRISE: Only show for critical auth/navigation operations
+    const isCriticalAuth = this.globalLoadingEndpoints.some(endpoint => 
+      url?.includes(endpoint)
+    );
+    
+    // ENTERPRISE: Don't show loading for regular CRUD operations
+    // Let individual components handle their own loading states
+    return isCriticalAuth;
+  }
+
+  private getRequestId(config: any): string {
+    return `${config.method?.toUpperCase()}_${config.url}`;
+  }
+
+  startRequest(config: any): void {
+    if (!this.shouldShowGlobalLoading(config.url, config.method)) return;
+
+    const requestId = this.getRequestId(config);
+    if (this.activeRequests.has(requestId)) return;
+
+    this.activeRequests.add(requestId);
+    
+    // ENTERPRISE: Add small delay to prevent flash loading for quick requests
+    setTimeout(() => {
+      if (this.activeRequests.has(requestId)) {
+        this.startLoading();
+      }
+    }, 300);
+  }
+
+  endRequest(config: any): void {
+    if (!this.shouldShowGlobalLoading(config.url, config.method)) return;
+
+    const requestId = this.getRequestId(config);
+    if (this.activeRequests.has(requestId)) {
+      this.activeRequests.delete(requestId);
+      
+      // ENTERPRISE: Only stop if no other critical requests are active
+      if (this.activeRequests.size === 0) {
+        this.stopLoading();
+      }
+    }
+  }
+
+  clearAll(): void {
+    this.activeRequests.clear();
+    this.stopLoading();
+  }
+}
+
+const loadingManager = new LoadingManager();
+
+// Token refresh handling
 let isRefreshing = false;
-// Queue of failed requests to retry after token refresh
-let failedQueue: {
+let failedQueue: Array<{
   resolve: (value: unknown) => void;
   reject: (reason?: any) => void;
   config: any;
-}[] = [];
+}> = [];
 
-// OPTIMIZATION: Active request tracking with better management
-let requestQueue = new Set<string>(); // Track request URLs to prevent duplicates
-
-// Functions for loader management that will be injected
-let startLoading: () => void = () => {};
-let stopLoading: () => void = () => {};
-
-// Set up the loading functions
-export const setupLoaderFunctions = (
-  start: () => void,
-  stop: () => void
-) => {
-  startLoading = start;
-  stopLoading = stop;
+export const setupLoaderFunctions = (start: () => void, stop: () => void) => {
+  loadingManager.setLoadingFunctions(start, stop);
 };
 
-// OPTIMIZATION: Enhanced loading management with request deduplication
-const manageLoading = (increment: boolean, config?: any) => {
-  // FIXED: More comprehensive endpoint exclusions for background requests
-  const excludedEndpoints = [
-    '/learner/stats/overall',
-    '/admin/dashboard/stats',
-    '/admin/dashboard/notifications',
-    '/learner-notifications/summary',        // Notification summary polling
-    '/learner-notifications?',               // Any notification pagination requests
-    '/auth/heartbeat',                       // FIXED: Was missing 'auth/'
-    '/heartbeat',                           // Keep both for safety
-    '/auth/refresh-token',
-    // Add more background endpoints as needed
-    '/notifications/summary',
-    '/dashboard/stats',
-    '/stats/overall'
-  ];
-  
-  // Check if this request should show global loading
-  const shouldShowGlobalLoading = !excludedEndpoints.some(endpoint => 
-    config?.url?.includes(endpoint)
-  );
-  
-  if (!shouldShowGlobalLoading) {
-    // Log excluded requests in development for debugging
-    if (import.meta.env.DEV) {
-      console.log(`🔇 Background request (no loading): ${config?.url}`);
-    }
-    return;
-  }
-  
-  // OPTIMIZATION: Prevent duplicate requests from affecting loading state
-  const requestKey = `${config?.method?.toUpperCase()}_${config?.url}`;
-  
-  if (increment) {
-    // FIXED: Better duplicate request handling
-    if (requestQueue.has(requestKey)) {
-      if (import.meta.env.DEV) {
-        console.log(`🔄 Duplicate request detected, skipping loading increment: ${requestKey}`);
-      }
-      return; // Don't increment loading for duplicate requests
-    }
-    
-    requestQueue.add(requestKey);
-    
-    // FIXED: Let LoadingContext handle all the counting
-    startLoading();
-    
-    if (import.meta.env.DEV) {
-      console.log(`🔄 Loading started for: ${config?.url}`);
-    }
-  } else {
-    // FIXED: Always remove from queue
-    const wasInQueue = requestQueue.has(requestKey);
-    requestQueue.delete(requestKey);
-    
-    // FIXED: Let LoadingContext handle all the counting
-    stopLoading();
-    
-    if (import.meta.env.DEV) {
-      console.log(`✅ Loading stopped for: ${config?.url} (was in queue: ${wasInQueue})`);
-    }
-  }
-};
-
-// Process the queue of failed requests
 const processQueue = (error: any = null, token: string | null = null) => {
   failedQueue.forEach(promise => {
     if (error) {
@@ -110,37 +175,19 @@ const processQueue = (error: any = null, token: string | null = null) => {
       promise.resolve(axios(promise.config));
     }
   });
-  
   failedQueue = [];
 };
 
-// OPTIMIZATION: Request deduplication for critical endpoints
-const pendingRequests = new Map<string, Promise<any>>();
-
-const getRequestKey = (config: any): string => {
-  return `${config.method?.toUpperCase()}_${config.url}_${JSON.stringify(config.params || {})}`;
-};
-
-// Request interceptor to add authorization header and active role
+// Request interceptor
 apiClient.interceptors.request.use(
-  (config) => {
-    // OPTIMIZATION: Request deduplication for GET requests
-    if (config.method === 'get') {
-      const requestKey = getRequestKey(config);
-      if (pendingRequests.has(requestKey)) {
-        console.log(`Deduplicating request: ${requestKey}`);
-        return pendingRequests.get(requestKey)!.then(() => config);
-      }
-    }
-    
-    manageLoading(true, config);
+  async (config) => {
+    loadingManager.startRequest(config);
     
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
     
-    // Add active role header
     const currentRole = localStorage.getItem('current_role');
     if (currentRole) {
       const roleMap: {[key: string]: string} = {
@@ -154,73 +201,30 @@ apiClient.interceptors.request.use(
       
       const normalizedRole = roleMap[currentRole] || currentRole;
       config.headers['X-Active-Role'] = normalizedRole;
-      
-      // Add debug logging in development (reduced noise)
-      if (import.meta.env.DEV && !config.url?.includes('/heartbeat') && !config.url?.includes('/notifications')) {
-        console.log(`Request with role: ${normalizedRole} to ${config.url}`);
-      }
     }
     
     return config;
   },
   (error) => {
-    manageLoading(false);
+    loadingManager.endRequest(error.config);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor to handle common errors and token refresh
+// Response interceptor
 apiClient.interceptors.response.use(
   (response) => {
-    manageLoading(false, response.config);
-    
-    // OPTIMIZATION: Clean up deduplication cache for successful requests
-    if (response.config.method === 'get') {
-      const requestKey = getRequestKey(response.config);
-      pendingRequests.delete(requestKey);
-    }
-    
+    loadingManager.endRequest(response.config);
     return response;
   },
   async (error) => {
-    manageLoading(false, error.config);
-    
-    // OPTIMIZATION: Clean up deduplication cache for failed requests
-    if (error.config?.method === 'get') {
-      const requestKey = getRequestKey(error.config);
-      pendingRequests.delete(requestKey);
-    }
+    loadingManager.endRequest(error.config);
     
     const originalRequest = error.config;
     
-    // OPTIMIZATION: Better handling of aborted requests
-    if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
-      console.log('Request was cancelled:', originalRequest?.url);
-      return Promise.reject(error);
-    }
-    
-    // Prevent infinite loops when refreshing token
-    if (error.response?.status === 401 && originalRequest.url?.includes('/auth/refresh-token')) {
-      // Clear auth data on refresh token failure
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('token_expiry');
-      localStorage.removeItem('current_role');
-      localStorage.removeItem('user');
-      
-      // Dispatch custom event that the auth context can listen for
-      window.dispatchEvent(new Event('auth:expired'));
-      
-      // Redirect to home page
-      window.location.href = '/';
-      
-      return Promise.reject(error);
-    }
-    
-    // If the error is 401 (unauthorized) and we're not already refreshing tokens
+    // Handle 401 errors with token refresh
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        // If already refreshing, add to queue
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject, config: originalRequest });
         });
@@ -230,69 +234,32 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
       
       try {
-        // Get refresh token from localStorage
         const refreshToken = localStorage.getItem('refresh_token');
         const accessToken = localStorage.getItem('access_token');
         
         if (!refreshToken || !accessToken) {
-          // If no refresh token, redirect to login
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('token_expiry');
-          localStorage.removeItem('current_role');
-          localStorage.removeItem('user');
-          
-          window.dispatchEvent(new Event('auth:expired'));
-          window.location.href = '/';
-          return Promise.reject(error);
+          throw new Error('No refresh token available');
         }
         
-        // Call refresh token endpoint
         const response = await axios.post(
           `${apiClient.defaults.baseURL}/auth/refresh-token`,
-          {
-            accessToken,
-            refreshToken,
-          }
+          { accessToken, refreshToken }
         );
         
-        // If refresh successful
         if (response.data) {
-          // Update tokens in localStorage
           localStorage.setItem('access_token', response.data.accessToken);
           localStorage.setItem('refresh_token', response.data.refreshToken);
           localStorage.setItem('token_expiry', response.data.expiresAt);
           localStorage.setItem('current_role', response.data.currentRole);
           
-          // Update the authorization header for the original request
           originalRequest.headers['Authorization'] = `Bearer ${response.data.accessToken}`;
-          
-          // Also set the X-Active-Role header
-          if (response.data.currentRole) {
-            const roleMap: {[key: string]: string} = {
-              'Admin': 'Admin',
-              'Project Manager': 'ProjectManager',
-              'ProjectManager': 'ProjectManager',
-              'Learner': 'Learner',
-              'Course Coordinator': 'CourseCoordinator',
-              'CourseCoordinator': 'CourseCoordinator'
-            };
-            
-            const normalizedRole = roleMap[response.data.currentRole] || response.data.currentRole;
-            originalRequest.headers['X-Active-Role'] = normalizedRole;
-          }
-          
-          // Process any queued requests with the new token
           processQueue(null, response.data.accessToken);
           
-          // Retry the original request
           return apiClient(originalRequest);
         }
       } catch (refreshError) {
-        // Process any queued requests with the error
         processQueue(refreshError, null);
         
-        // If refresh fails, clear auth data and redirect to login
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('token_expiry');
@@ -307,58 +274,19 @@ apiClient.interceptors.response.use(
       }
     }
     
-    // OPTIMIZATION: Enhanced error handling with better classification
-    if (error.response) {
-      const status = error.response.status;
-      const message = error.response.data?.message || error.message;
-      const endpoint = error.config?.url || 'unknown';
-      
-      // Don't log certain expected errors or background requests
-      const expectedErrors = [401, 403, 404];
-      const isBackgroundRequest = endpoint.includes('/heartbeat') || endpoint.includes('/notifications');
-      
-      if (!expectedErrors.includes(status) && !isBackgroundRequest) {
-        switch (status) {
-          case 500:
-            console.error(`Server error at ${endpoint}:`, message);
-            break;
-          case 502:
-            console.error(`Bad Gateway for ${endpoint}:`, message);
-            break;
-          case 503:
-            console.error(`Service Unavailable for ${endpoint}:`, message);
-            break;
-          case 504:
-            console.error(`Gateway Timeout for ${endpoint}:`, message);
-            break;
-          default:
-            console.error(`Error (${status}) at ${endpoint}:`, message);
-        }
-      }
-    } else if (error.request) {
-      // The request was made but no response was received
-      if (error.code !== 'ERR_CANCELED') {
-        console.error('Network error:', 'No response received from server. Please check your internet connection.');
-      }
-    } else {
-      // Something happened in setting up the request
-      console.error('Request error:', error.message);
-    }
-    
     return Promise.reject(error);
   }
 );
 
-// OPTIMIZATION: Enhanced utilities for better performance monitoring
-export const clearActiveRequests = () => {
-  requestQueue.clear();
-  pendingRequests.clear();
-  console.log('🧹 Request queues cleared');
+// Override request method for deduplication
+const originalRequest = apiClient.request;
+apiClient.request = function(config) {
+  return requestDeduplicator.deduplicate(config);
 };
 
-export const getRequestQueueStatus = () => ({
-  queuedRequests: Array.from(requestQueue),
-  pendingRequests: Array.from(pendingRequests.keys())
-});
+export const clearAllCaches = () => {
+  requestDeduplicator.clearCache();
+  loadingManager.clearAll();
+};
 
 export default apiClient;

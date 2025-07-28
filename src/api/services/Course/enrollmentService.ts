@@ -1,6 +1,7 @@
 // src/api/services/Course/enrollmentService.ts
 import apiClient from '../../apiClient';
 import { EnrollmentDto, CreateEnrollmentPayload, UpdateEnrollmentPayload } from '../../../types/course.types';
+import { clearCourseCaches } from './learnerCourseService';
 
 // OPTIMIZATION: Add enrollment cache for better performance
 let enrollmentCache: {
@@ -55,7 +56,10 @@ export const createEnrollment = async (courseId: number): Promise<EnrollmentDto>
         enrollmentCache.adminEnrollments.data = null;
         enrollmentCache.adminEnrollments.timestamp = 0;
         
-        console.log('Enrollment created successfully, cache cleared');
+        // CRITICAL FIX: Invalidate the course data cache as well
+        clearCourseCaches();
+        
+        console.log('Enrollment created successfully, all relevant caches cleared');
         
         return response.data;
     } catch (error: any) {
@@ -104,7 +108,10 @@ export const deleteEnrollment = async (enrollmentId: number): Promise<void> => {
             delete enrollmentCache.enrollmentDetails[enrollmentId];
         }
         
-        console.log('Enrollment deleted successfully, cache cleared');
+        // CRITICAL FIX: Invalidate the course data cache as well
+        clearCourseCaches();
+        
+        console.log('Enrollment deleted successfully, all relevant caches cleared');
         
     } catch (error: any) {
         console.error('Error deleting enrollment:', error);
