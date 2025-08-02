@@ -227,12 +227,11 @@ const CertificatesPage = () => {
         }}
       >
         <div className="max-w-7xl mx-auto px-8 space-y-8">
-          {/* Header */}
-          <div className="mb-16">
-            <h1 className="text-3xl md:text-4xl text-center font-bold text-white font-nunito">
+          <div className="text-center mb-4">
+            <h1 className="text-3xl md:text-4xl font-bold text-white">
               My Certificates
             </h1>
-            <p style={{ color: BRAND_COLORS.heliotrope }} className="text-center mt-1 font-nunito">
+            <p className="text-base text-[#D68BF9] mt-2">
               Track your learning achievements from all platforms
             </p>
           </div>
@@ -318,7 +317,7 @@ const CertificatesPage = () => {
 
           {/* Certificates Section */}
           <div className="space-y-8">
-            <h2 className="text-2xl font-semibold text-white font-nunito">My Certificates</h2>
+            
             {loading && allCertificates.length === 0 && !error ? (
               <div className="flex justify-center items-center h-40">
                 <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white"></div>

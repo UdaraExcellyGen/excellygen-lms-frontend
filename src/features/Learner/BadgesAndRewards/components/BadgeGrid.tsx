@@ -49,7 +49,7 @@ const BadgeGrid: React.FC<BadgeGridProps> = ({ badges, searchQuery, setSearchQue
       </div>
 
       <div>
-        <h2 className="mb-6 text-2xl font-semibold text-white font-unbounded">My Badges</h2>
+        
         {loading ? (
           <div className="flex items-center justify-center h-40"><div className="w-10 h-10 border-t-2 border-b-2 border-white rounded-full animate-spin"></div></div>
         ) : filteredBadges.length === 0 ? (

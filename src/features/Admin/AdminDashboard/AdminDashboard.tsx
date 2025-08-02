@@ -382,23 +382,7 @@ const AdminDashboard: React.FC = () => {
           
         </div>
 
-        {/* ENTERPRISE: Optimized Stats Grid with real-time indicators */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 relative z-10">
-          <div className="cursor-default [&>*]:cursor-default [&_*]:!cursor-default relative">
-            <StatCard
-              icon={Book}
-              title="Course Category Management"
-              stats={stats.courseCategories}
-              totalLabel="Total Course Categories"
-              activeLabel="Active Course Categories"
-              isRefreshing={pendingUpdates.some(update => update.includes('category'))}
-            />
-            {/* Real-time update indicator */}
-            {pendingUpdates.some(update => update.includes('category')) && (
-              <div className="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-            )}
-          </div>
-
           <div className="cursor-default [&>*]:cursor-default [&_*]:!cursor-default relative">
             <StatCard
               icon={Users}
@@ -410,6 +394,21 @@ const AdminDashboard: React.FC = () => {
             />
             {/* Real-time update indicator */}
             {pendingUpdates.some(update => update.includes('user')) && (
+              <div className="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            )}
+          </div>
+
+          <div className="cursor-default [&>*]:cursor-default [&_*]:!cursor-default relative">
+            <StatCard
+              icon={Book}
+              title="Course Category Management"
+              stats={stats.courseCategories}
+              totalLabel="Total Course Categories"
+              activeLabel="Active Course Categories"
+              isRefreshing={pendingUpdates.some(update => update.includes('category'))}
+            />
+            {/* Real-time update indicator */}
+            {pendingUpdates.some(update => update.includes('category')) && (
               <div className="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
             )}
           </div>
